@@ -1,0 +1,51 @@
+UNOPSIS (TEAM 5): PROJECT NOTES
+================================
+Weekly progress, notes for teammates, reminders, clarifications and challenges.
+Newest week at the bottom. Keep adding an entry every week.
+
+Lines marked [TEAM: ...] are for the team to fill in with real information.
+
+
+TEAMMATES
+---------
+[TEAM: names, netids, and who owns what]
+
+
+WEEK 1-2: DATA MODELING AND ADMIN (Part 4, already submitted)
+-------------------------------------------------------------
+- Six models: Space, Connection, Person, Message, Brief, BriefItem (see docs/design/DESIGN.md).
+- Django admin customised so the whole chain can be walked in a browser.
+- seed_demo fills the database with demo data; verify_constraints proves the database rules.
+- ER diagram: docs/design/unopsis-erd.xlsx. Wireframes: docs/wireframes/v1/.
+
+
+WEEK 3: STRUCTURE, SECURITY, GITHUB, VIEWS, TEMPLATES (this assignment)
+-----------------------------------------------------------------------
+Done so far:
+- Repository created as 5_Unopsis with a .gitignore that excludes .env, local databases and caches.
+- Settings split into inboxtriage/settings/{base,development,production}.py
+  (DEBUG=True only in development, DEBUG=False in production).
+- SECRET_KEY and API keys moved into .env (git-ignored). .env.example is committed with placeholders.
+- Work done on feature branches and merged back into main.
+
+Still to do:
+- Four views (HttpResponse FBV, render() FBV, base CBV, generic CBV) with named URLs.
+- base.html and a list template with {% for %} / {% empty %}.
+- Browser screenshots and the view inventory (below).
+
+Challenges / lessons so far:
+- Moving settings.py one folder deeper broke BASE_DIR; it needed one more .parent.
+- The original settings.py had a hard-coded SECRET_KEY. A new key was generated and the old one
+  was deliberately kept out of the Git history.
+
+[TEAM: reminders, clarifications, meeting notes, blockers]
+
+
+VIEW INVENTORY
+--------------
+(To be filled in when the views are built: name, type, URL, purpose.)
+
+
+REFLECTION (optional bonus)
+---------------------------
+(To be written by the team once the views are built.)
