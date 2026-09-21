@@ -1,64 +1,162 @@
 UNOPSIS (TEAM 5): PROJECT NOTES
 ================================
 Weekly progress, notes for teammates, reminders, clarifications and challenges.
-Newest week at the bottom. Keep adding an entry every week.
+Newest week at the bottom of each section. Keep adding an entry every week.
 
-Lines marked [TEAM: ...] are for the team to fill in with real information.
-
-
-TEAMMATES
----------
-[TEAM: names, netids, and who owns what]
+Lines marked [TEAM: ...] are for a teammate to fill in with real information.
 
 
-WEEK 1-2: DATA MODELING AND ADMIN (Part 4, already submitted)
--------------------------------------------------------------
-- Six models: Space, Connection, Person, Message, Brief, BriefItem (see docs/design/DESIGN.md).
-- Django admin customised so the whole chain can be walked in a browser.
-- seed_demo fills the database with demo data; verify_constraints proves the database rules.
-- ER diagram: docs/design/unopsis-erd.xlsx. Wireframes: docs/wireframes/v1/.
+1. TEAM
+-------
+Member 1: [TEAM: full name]   netid: [TEAM]   GitHub: Revaant-D   (owns the repository)
+Member 2: [TEAM: full name]   netid: [TEAM]   GitHub: [TEAM]
+Member 3: [TEAM: full name]   netid: [TEAM]   GitHub: [TEAM]
+Member 4: [TEAM: full name]   netid: [TEAM]   GitHub: [TEAM]
+
+Project: Unopsis (Django project "inboxtriage", app "unopsis").
+Repository: 5_Unopsis. Instructor collaborator: 27guptamohit.
 
 
-WEEK 3: STRUCTURE, SECURITY, GITHUB, VIEWS, TEMPLATES (updated 2026-09-21)
---------------------------------------------------------------------------
-Section 1: structure, security, GitHub
-- Repository 5_Unopsis with a .gitignore that excludes .env, local databases and caches.
-- Settings split into inboxtriage/settings/{base,development,production}.py.
-  DEBUG=True only in development, DEBUG=False in production, ALLOWED_HOSTS configured in both.
-- SECRET_KEY and the (dummy) API key live in .env, which is git-ignored. .env.example is committed.
-- Work was done on feature branches (split-settings, env-secrets, views, templates, docs) and
-  merged into main with merge commits. See docs/branching_strategy/.
+2. WEEK 3 UPDATE (team level, updated 2026-09-21)
+-------------------------------------------------
+Assignment: repository setup, split settings, secrets, GitHub workflow, four kinds of views, templates.
 
-Section 2: views (all on the BriefItem model, one ranked card on a brief)
-Section 3: templates (base.html, a shared list template with for/empty, a detail template)
-Screenshots of every view and of the empty state are in docs/screenshots/.
+Done:
+- Section 1: settings split into inboxtriage/settings/{base,development,production}.py
+  (DEBUG=True only in development, DEBUG=False in production, ALLOWED_HOSTS set in both).
+  SECRET_KEY and the dummy API key live in .env (git-ignored); .env.example is committed.
+  .gitignore excludes .env, local databases and caches.
+- GitHub workflow: work done on feature branches (split-settings, env-secrets, views, templates,
+  docs) and merged into main with merge commits. See docs/branching_strategy/.
+- Section 2: four kinds of views on the BriefItem model (see VIEW INVENTORY below).
+- Section 3: base.html, one shared list template with for/empty, and a detail template.
+- Tests: 7 tests (python manage.py test) cover the views, ordering, empty state and detail page.
+- Screenshots of every view and of the empty state: docs/screenshots/.
+- Wireframes: an error-state screen (a connected account such as Slack stops working) was added as
+  the last page of docs/wireframes/v1/Wireframe.pdf and as error_state.png.
 
-Still to do:
-- error_state wireframe (the sample layout lists one; wireframes v1 has no error page yet).
-- [TEAM: anything else the team plans next week]
+Still to do before submitting: see REMINDERS.
 
-Challenges and lessons so far:
+
+3. WEEK 3 UPDATE (per person)
+-----------------------------
+Each teammate: fill in your own block in your own words. Two or three lines each is enough.
+(Examples of what to write: "reviewed the four views and ran the tests", "wrote the notes and the
+reflection", "ran the project from a fresh clone on my machine", "checked the wireframes".)
+
+Member 1: [TEAM: name]
+  What I did this week:        [TEAM]
+  What I will do next:         [TEAM]
+  Blocked on / need help with: [TEAM: or write "nothing"]
+
+Member 2: [TEAM: name]
+  What I did this week:        [TEAM]
+  What I will do next:         [TEAM]
+  Blocked on / need help with: [TEAM: or write "nothing"]
+
+Member 3: [TEAM: name]
+  What I did this week:        [TEAM]
+  What I will do next:         [TEAM]
+  Blocked on / need help with: [TEAM: or write "nothing"]
+
+Member 4: [TEAM: name]
+  What I did this week:        [TEAM]
+  What I will do next:         [TEAM]
+  Blocked on / need help with: [TEAM: or write "nothing"]
+
+Suggested split for the remaining work (edit freely):
+- Repository owner: invite the instructor, make the repo public, submit the link on Canvas.
+- Teammate B: click through all four views, the empty state and the detail page; run the tests.
+- Teammate C: fill in this file and write the reflection; check the wireframes.
+- Teammate D: run the project from a fresh clone on their own machine and report anything that fails.
+
+
+4. NOTES FOR TEAMMATES
+----------------------
+Getting the project running (first time):
+  git clone https://github.com/Revaant-D/5_Unopsis.git
+  cd 5_Unopsis
+  python -m venv .venv
+  .venv\Scripts\activate                 (Mac/Linux: source .venv/bin/activate)
+  pip install -r requirements.txt
+  copy .env.example .env                 (Mac/Linux: cp .env.example .env)
+  python -c "import secrets; print(secrets.token_urlsafe(50))"   then paste the result as SECRET_KEY in .env
+  python manage.py migrate
+  python manage.py createsuperuser       (use the username mohitg2, the demo data is owned by it)
+  python manage.py seed_demo
+  python manage.py runserver
+Use "python", not "py", once the virtual environment is active. "py" can pick a different Python that
+does not have this project's packages installed.
+
+Rules for working together:
+- Never commit .env. Run "git status" before every commit and check nothing secret is staged.
+- Work on your own branch (feature/<topic> or docs/<topic>), commit in small steps, then merge into
+  main. Prefer a Pull Request that another teammate has looked at. See docs/branching_strategy/.
+- Commit under your own GitHub account so the history shows who did what.
+- Run "python manage.py test" before merging into main.
+- Do not rewrite shared history (no force-push) once teammates have cloned the repo.
+- Update this file every week.
+
+
+5. REMINDERS
+------------
+Before submitting:
+  [ ] Instructor 27guptamohit invited as a collaborator (Settings > Collaborators) and has accepted
+  [ ] Repository is public (open the link in an incognito window to check)
+  [ ] Every [TEAM: ...] line in this file is filled in or removed
+  [ ] Reflection (bonus) written in the team's own words
+  [ ] Each teammate has run the project from a fresh clone at least once
+  [ ] Link submitted on Canvas (only ONE teammate submits for the whole team)
+Due date: [TEAM: date and time]
+
+
+6. CLARIFICATIONS AND DECISIONS
+-------------------------------
+- Repository name: 5_Unopsis (team number + project name).
+- The four views all use the BriefItem model, so they can share one list template.
+- Lane order: BriefItem.lane is text, so the default ordering would list FYI first. The views sort
+  Needs you, then Moving, then FYI, so the database schema was left unchanged. [TEAM: confirm]
+- db.sqlite3 is not committed (it is data, not code). Teammates rebuild it with migrate and seed_demo.
+- manage.py runs the development settings by default; wsgi.py and asgi.py default to production.
+  Run production locally with: python manage.py runserver --settings=inboxtriage.settings.production
+- Screenshots are stored in docs/screenshots/ and shown in the README.
+- The wireframe error state shows an account (Slack) that stops working: the brief still opens with
+  the sources that work, says what is missing, and offers one way to fix it.
+
+
+7. CHALLENGES AND LESSONS SO FAR
+--------------------------------
 - Moving settings.py one folder deeper broke BASE_DIR; it needed one more .parent.
 - The original settings.py had a hard-coded SECRET_KEY. A new key was generated and the old one
   was kept out of the Git history.
 - BriefItem.lane is text, so Meta.ordering = ["lane", "rank"] sorts alphabetically: "fyi" first and
-  "needs_you" last, the opposite of what the product wants. The views sort the lanes explicitly
-  (Needs you, Moving, FYI) instead of changing the database schema. [TEAM: confirm this choice]
+  "needs_you" last, the opposite of what the product wants. The views sort the lanes explicitly.
 - Django still runs template tags that appear inside HTML comments, so a comment mentioning
   {% block title %} broke the page. Use {% comment %}...{% endcomment %} or {# ... #} instead.
 - With DEBUG=False the local development server does not serve static files, so the admin looks
   unstyled in production mode. That is expected, not a bug.
+- Running "py manage.py runserver" failed with "No module named 'environ'" because "py" used a Python
+  without this project's packages. Activate the project's .venv and use "python".
 
 Known issue for teammates:
 - Running "python manage.py seed_demo" a second time adds duplicate briefs and items (the lookup
   includes the current time). To reset cleanly: delete db.sqlite3, then run migrate,
   createsuperuser (username mohitg2) and seed_demo once.
 
-[TEAM: reminders, clarifications, meeting notes, blockers]
+Open problems: [TEAM: anything the team is stuck on]
 
 
-HOW TO RUN AND WHAT TO OPEN
----------------------------
+8. MEETING NOTES
+----------------
+[TEAM: date, who attended, what was decided, who does what next. Copy this block for each meeting.]
+  Date:
+  Attendees:
+  Decisions:
+  Action items (who, what, by when):
+
+
+9. HOW TO RUN AND WHAT TO OPEN
+------------------------------
   python manage.py runserver                     (development, DEBUG=True)
   python manage.py runserver --settings=inboxtriage.settings.production   (production, DEBUG=False)
   python manage.py test                          (7 tests for the views and templates)
@@ -71,8 +169,8 @@ HOW TO RUN AND WHAT TO OPEN
   Empty state: add ?state=snoozed to any list URL, e.g. /items/cbv-generic/?state=snoozed
 
 
-VIEW INVENTORY (name, type, URL, purpose)
------------------------------------------
+10. VIEW INVENTORY (name, type, URL, purpose)
+---------------------------------------------
 All views live in unopsis/views.py, routes in unopsis/urls.py. Every route has a name=.
 
 1. item_list_manual
@@ -105,8 +203,8 @@ Templates: templates/base.html (blocks: title, content), templates/unopsis/brief
 (shared by all four list views; for/empty), templates/unopsis/briefitem_detail.html.
 
 
-REFLECTION (optional bonus)
----------------------------
+11. REFLECTION (optional bonus)
+-------------------------------
 [TEAM: rewrite this in your own words from your own experience. The points below are a starting
 point drawn from what was built; delete or change anything that does not match what you felt.]
 
