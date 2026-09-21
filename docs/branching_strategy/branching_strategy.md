@@ -72,7 +72,7 @@ git push
 | 3 | `feature/env-secrets` | `SECRET_KEY` and API keys moved into `.env` | 3 |
 | 4 | `feature/views` | Four view kinds and their named URLs | 5 |
 | 5 | `feature/templates` | `base.html`, list template with `{% empty %}`, detail template, tests | 5 |
-| 6 | `docs/notes-and-branching` | Screenshots, this document, notes, README | in progress |
+| 6 | `docs/notes-and-branching` | Screenshots, this document, notes, README | 4 |
 
 Run `git log --oneline --graph --all` to see the same picture from the real history.
 
