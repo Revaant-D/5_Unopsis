@@ -19,33 +19,106 @@ WEEK 1-2: DATA MODELING AND ADMIN (Part 4, already submitted)
 - ER diagram: docs/design/unopsis-erd.xlsx. Wireframes: docs/wireframes/v1/.
 
 
-WEEK 3: STRUCTURE, SECURITY, GITHUB, VIEWS, TEMPLATES (this assignment)
------------------------------------------------------------------------
-Done so far:
-- Repository created as 5_Unopsis with a .gitignore that excludes .env, local databases and caches.
-- Settings split into inboxtriage/settings/{base,development,production}.py
-  (DEBUG=True only in development, DEBUG=False in production).
-- SECRET_KEY and API keys moved into .env (git-ignored). .env.example is committed with placeholders.
-- Work done on feature branches and merged back into main.
+WEEK 3: STRUCTURE, SECURITY, GITHUB, VIEWS, TEMPLATES (updated 2026-09-21)
+--------------------------------------------------------------------------
+Section 1: structure, security, GitHub
+- Repository 5_Unopsis with a .gitignore that excludes .env, local databases and caches.
+- Settings split into inboxtriage/settings/{base,development,production}.py.
+  DEBUG=True only in development, DEBUG=False in production, ALLOWED_HOSTS configured in both.
+- SECRET_KEY and the (dummy) API key live in .env, which is git-ignored. .env.example is committed.
+- Work was done on feature branches (split-settings, env-secrets, views, templates, docs) and
+  merged into main with merge commits. See docs/branching_strategy/.
+
+Section 2: views (all on the BriefItem model, one ranked card on a brief)
+Section 3: templates (base.html, a shared list template with for/empty, a detail template)
+Screenshots of every view and of the empty state are in docs/screenshots/.
 
 Still to do:
-- Four views (HttpResponse FBV, render() FBV, base CBV, generic CBV) with named URLs.
-- base.html and a list template with {% for %} / {% empty %}.
-- Browser screenshots and the view inventory (below).
+- error_state wireframe (the sample layout lists one; wireframes v1 has no error page yet).
+- [TEAM: anything else the team plans next week]
 
-Challenges / lessons so far:
+Challenges and lessons so far:
 - Moving settings.py one folder deeper broke BASE_DIR; it needed one more .parent.
 - The original settings.py had a hard-coded SECRET_KEY. A new key was generated and the old one
-  was deliberately kept out of the Git history.
+  was kept out of the Git history.
+- BriefItem.lane is text, so Meta.ordering = ["lane", "rank"] sorts alphabetically: "fyi" first and
+  "needs_you" last, the opposite of what the product wants. The views sort the lanes explicitly
+  (Needs you, Moving, FYI) instead of changing the database schema. [TEAM: confirm this choice]
+- Django still runs template tags that appear inside HTML comments, so a comment mentioning
+  {% block title %} broke the page. Use {% comment %}...{% endcomment %} or {# ... #} instead.
+- With DEBUG=False the local development server does not serve static files, so the admin looks
+  unstyled in production mode. That is expected, not a bug.
+
+Known issue for teammates:
+- Running "python manage.py seed_demo" a second time adds duplicate briefs and items (the lookup
+  includes the current time). To reset cleanly: delete db.sqlite3, then run migrate,
+  createsuperuser (username mohitg2) and seed_demo once.
 
 [TEAM: reminders, clarifications, meeting notes, blockers]
 
 
-VIEW INVENTORY
---------------
-(To be filled in when the views are built: name, type, URL, purpose.)
+HOW TO RUN AND WHAT TO OPEN
+---------------------------
+  python manage.py runserver                     (development, DEBUG=True)
+  python manage.py runserver --settings=inboxtriage.settings.production   (production, DEBUG=False)
+  python manage.py test                          (7 tests for the views and templates)
+
+  /items/manual/         view 1
+  /items/render/         view 2
+  /items/cbv-base/       view 3
+  /items/cbv-generic/    view 4 (list)
+  /items/<id>/           view 4 (detail), e.g. /items/1/
+  Empty state: add ?state=snoozed to any list URL, e.g. /items/cbv-generic/?state=snoozed
+
+
+VIEW INVENTORY (name, type, URL, purpose)
+-----------------------------------------
+All views live in unopsis/views.py, routes in unopsis/urls.py. Every route has a name=.
+
+1. item_list_manual
+   Type:    function-based view, HttpResponse (manual)
+   URL:     /items/manual/        name: item-list-manual
+   Purpose: lists every BriefItem. Loads the template with loader.get_template(), renders it with
+            the context, and wraps the result in HttpResponse by hand, so each step is visible.
+
+2. item_list_render
+   Type:    function-based view, render() shortcut
+   URL:     /items/render/        name: item-list-render
+   Purpose: same page as view 1, but render(request, template, context) does the load, fill and
+            wrap steps in one call.
+
+3. ItemListBaseView
+   Type:    class-based view, inherits from django.views.View
+   URL:     /items/cbv-base/      name: item-list-cbv-base
+   Purpose: same page again. get() queries BriefItem itself and returns render(...). The base
+            View does not know about the model, so the query is written by hand.
+
+4. ItemListView and ItemDetailView
+   Type:    class-based generic views (ListView, DetailView), model = BriefItem
+   URL:     /items/cbv-generic/   name: item-list-cbv-generic
+            /items/<int:pk>/      name: item-detail
+   Purpose: ListView shows the same list using the default template name
+            (unopsis/briefitem_list.html) with context_object_name = "items". DetailView opens one
+            item and its "receipts" (the messages it was built from).
+
+Templates: templates/base.html (blocks: title, content), templates/unopsis/briefitem_list.html
+(shared by all four list views; for/empty), templates/unopsis/briefitem_detail.html.
 
 
 REFLECTION (optional bonus)
 ---------------------------
-(To be written by the team once the views are built.)
+[TEAM: rewrite this in your own words from your own experience. The points below are a starting
+point drawn from what was built; delete or change anything that does not match what you felt.]
+
+HttpResponse vs render:
+- HttpResponse (manual) was useful for seeing what Django really does: find the template, fill it
+  with data, wrap it as a response. It is fine for plain text or tiny responses.
+- render() was what we would use for every real page. It is the same three steps in one line, so
+  the view stays short and readable.
+
+Base CBV vs Generic CBV:
+- The base View gave full control: we wrote the query and chose the template ourselves. That is
+  useful when the page does not fit a standard pattern.
+- ListView/DetailView needed almost no code because "model = BriefItem" is enough for Django to
+  fetch rows and find the template. That is best for standard list and detail pages, and we only
+  overrode get_queryset() to keep the Needs-you-first ordering.
