@@ -1,0 +1,55 @@
+# ================================
+# Environments & Secrets
+# (.env holds the real SECRET_KEY / API keys and must NEVER be committed)
+# ================================
+.env
+.env.*
+!.env.example
+env.py
+venv/
+env/
+.venv/
+
+# ================================
+# Python
+# ================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# ================================
+# Django
+# ================================
+# Local database: data, not code. Rebuild with `migrate` + `seed_demo` (see README).
+db.sqlite3
+staticfiles/
+media/
+*.log
+
+# ================================
+# macOS / Windows junk
+# ================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ================================
+# IDEs & editors
+# ================================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ================================
+# Tests & coverage output
+# ================================
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ================================
+# Jupyter
+# ================================
+.ipynb_checkpoints/
