@@ -7,6 +7,16 @@ development.py or production.py, which start with `from .base import *`.
 
 from pathlib import Path
 
+# The `.env` reader (see inboxtriage/secrets_environment.py). Secrets never appear in code.
+from inboxtriage.secrets_environment import env
+
+# SECURITY: the signing key comes from .env, never from source control.
+# The project refuses to start if SECRET_KEY is missing.
+SECRET_KEY = env('SECRET_KEY')
+
+# Example third-party API key. A dummy value is fine until something actually calls the API.
+OPENAI_API_KEY = env('OPENAI_API_KEY', default='')
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # This file now lives at <project>/inboxtriage/settings/base.py, one folder deeper than the
 # old settings.py, so we need one more .parent to climb back up to the folder with manage.py.
