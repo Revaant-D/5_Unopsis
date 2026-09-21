@@ -1,0 +1,71 @@
+{% comment %}
+  base.html: the page frame every other template inherits from.
+  Child templates fill the two named blocks: title and content.
+  Write the header, navigation and footer once here instead of copying them into every page.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Unopsis{% endblock %} | Unopsis</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <style>
+    body { background: #f7f5f1; }
+    .brand-mark { letter-spacing: .04em; }
+    .item-card { border-left: 4px solid #adb5bd; }
+    .item-card.lane-needs_you { border-left-color: #dc3545; }
+    .item-card.lane-moving    { border-left-color: #6c757d; }
+    .item-card.lane-fyi       { border-left-color: #0dcaf0; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="bg-dark text-white py-3 mb-3">
+    <div class="container">
+      <h1 class="h4 mb-0 brand-mark">Unopsis</h1>
+      <p class="mb-0 small text-white-50">One view of everything that needs you. Team 5, INFO 490.</p>
+    </div>
+  </header>
+
+  {# Navigation: one link per view kind. The url tag looks each address up by its name= in urls.py #}
+  <nav class="container mb-4" aria-label="Views">
+    {% with current=request.resolver_match.url_name %}
+    <ul class="nav nav-pills flex-wrap gap-1">
+      <li class="nav-item">
+        <a class="nav-link {% if current == 'item-list-manual' %}active{% endif %}"
+           href="{% url 'item-list-manual' %}">1. HttpResponse (FBV)</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current == 'item-list-render' %}active{% endif %}"
+           href="{% url 'item-list-render' %}">2. render() (FBV)</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current == 'item-list-cbv-base' %}active{% endif %}"
+           href="{% url 'item-list-cbv-base' %}">3. Base View (CBV)</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current == 'item-list-cbv-generic' or current == 'item-detail' %}active{% endif %}"
+           href="{% url 'item-list-cbv-generic' %}">4. Generic ListView (CBV)</a>
+      </li>
+    </ul>
+    {% endwith %}
+  </nav>
+
+  <!-- Main content: each page fills this block -->
+  <main class="container mb-5">
+    {% block content %}
+      <p class="text-muted">This is the default content. Pages override this block.</p>
+    {% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-white-50 py-3">
+    <div class="container small text-center">
+      5_Unopsis &middot; INFO 490 &middot; Team 5
+    </div>
+  </footer>
+
+</body>
+</html>

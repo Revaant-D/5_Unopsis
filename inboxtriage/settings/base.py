@@ -51,7 +51,9 @@ ROOT_URLCONF = 'inboxtriage.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        # Project-level templates/ folder (templates/base.html, templates/unopsis/...).
+        # Without this Django only looks inside each app and raises TemplateDoesNotExist.
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% comment %}
+  The list page. All four list views (FBV manual, FBV render(), base CBV, generic ListView)
+  render THIS one template. It only needs a variable called `items`; it does not know or care
+  how the view produced it. That is the separation of concerns the assignment asks for.
+{% endcomment %}
+
+{% block title %}Brief items{% endblock %}
+
+{% block content %}
+
+  <div class="d-flex flex-wrap justify-content-between align-items-end mb-3 gap-2">
+    <div>
+      <h2 class="h3 mb-1">Brief items</h2>
+      <p class="text-muted small mb-0">Rendered by: <strong>{{ view_label }}</strong></p>
+    </div>
+
+    {# Quick filters. A filter that matches nothing is how you reach the empty state below. #}
+    <div class="btn-group btn-group-sm" role="group" aria-label="Filter by state">
+      <a class="btn btn-outline-secondary {% if not filters %}active{% endif %}" href="?">All</a>
+      <a class="btn btn-outline-secondary {% if filters.state == 'open' %}active{% endif %}" href="?state=open">Open</a>
+      <a class="btn btn-outline-secondary {% if filters.state == 'snoozed' %}active{% endif %}" href="?state=snoozed">Snoozed</a>
+      <a class="btn btn-outline-secondary {% if filters.state == 'handled' %}active{% endif %}" href="?state=handled">Handled</a>
+    </div>
+  </div>
+
+  {% for item in items %}
+    <div class="card item-card lane-{{ item.lane }} shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <span class="badge {% if item.lane == 'needs_you' %}text-bg-danger{% elif item.lane == 'moving' %}text-bg-secondary{% else %}text-bg-info{% endif %}">
+            {{ item.get_lane_display }} #{{ item.rank }}
+          </span>
+          <span class="badge text-bg-light border">{{ item.brief.space.get_kind_display }}</span>
+          <span class="badge text-bg-light border">{{ item.get_state_display }}</span>
+          {% if item.deadline_at %}
+            <span class="badge text-bg-warning">Due {{ item.deadline_at|date:"D M j, g:i A" }}</span>
+          {% endif %}
+        </div>
+
+        <h3 class="h5 card-title">
+          <a class="text-decoration-none" href="{% url 'item-detail' item.pk %}">{{ item.title }}</a>
+        </h3>
+        <p class="card-text text-muted mb-0">{{ item.summary|truncatewords:32 }}</p>
+      </div>
+    </div>
+
+  {% empty %}
+    {# Empty state: shown when the loop has nothing to show. It explains why and what to do next. #}
+    <div class="card border-0 shadow-sm text-center py-5" data-testid="empty-state">
+      <div class="card-body">
+        <h3 class="h5">Nothing needs you here</h3>
+        {% if filters %}
+          <p class="text-muted mb-3">
+            No brief items match
+            {% for name, value in filters.items %}<code>{{ name }} = {{ value }}</code>{% if not forloop.last %} and {% endif %}{% endfor %}.
+            The filter may be too narrow.
+          </p>
+          <a class="btn btn-primary btn-sm" href="?">Clear filters</a>
+        {% else %}
+          <p class="text-muted mb-0">
+            There are no brief items yet. Load the demo data with
+            <code>python manage.py seed_demo</code> and refresh this page.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+
+{% endblock %}

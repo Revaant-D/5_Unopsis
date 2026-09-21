@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% comment %}
+  One brief item in full. DetailView passes the row as `item` (context_object_name = "item").
+  "Receipts" walks the many-to-many relationship: every message this summary is based on.
+{% endcomment %}
+
+{% block title %}{{ item.title }}{% endblock %}
+
+{% block content %}
+
+  <p class="mb-2"><a href="{% url 'item-list-cbv-generic' %}">&larr; Back to all items</a></p>
+
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <span class="badge {% if item.lane == 'needs_you' %}text-bg-danger{% elif item.lane == 'moving' %}text-bg-secondary{% else %}text-bg-info{% endif %}">
+      {{ item.get_lane_display }} #{{ item.rank }}
+    </span>
+    <span class="badge text-bg-light border">{{ item.brief.space.get_kind_display }}</span>
+    <span class="badge text-bg-light border">{{ item.get_state_display }}</span>
+    {% if item.deadline_at %}
+      <span class="badge text-bg-warning">Due {{ item.deadline_at|date:"D M j, g:i A" }}</span>
+    {% endif %}
+  </div>
+
+  <h2 class="h3">{{ item.title }}</h2>
+  <p class="lead">{{ item.summary }}</p>
+
+  {% if item.why %}
+    <p class="text-muted"><strong>Why this surfaced:</strong> {{ item.why }}</p>
+  {% endif %}
+
+  {% if item.actions %}
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      {% for action in item.actions %}
+        {# Buttons are display-only for now: nothing is ever sent on the user's behalf. #}
+        <button type="button" class="btn btn-sm {% if action.primary %}btn-primary{% else %}btn-outline-secondary{% endif %}" disabled>
+          {{ action.label }}
+        </button>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if item.draft_body %}
+    <div class="card mb-4">
+      <div class="card-header small text-muted">Draft reply (not sent)</div>
+      <div class="card-body"><p class="mb-0">{{ item.draft_body }}</p></div>
+    </div>
+  {% endif %}
+
+  <h3 class="h5 mt-4">Receipts <span class="text-muted fw-normal">({{ item.messages.count }} messages)</span></h3>
+  <ul class="list-group mb-4">
+    {% for message in item.messages.all %}
+      <li class="list-group-item">
+        <div class="small text-muted">
+          {{ message.author.display_name }}
+          &middot; {{ message.connection.get_provider_display }}{% if message.scope_name %} / {{ message.scope_name }}{% endif %}
+          &middot; {{ message.sent_at|date:"M j, g:i A" }}
+          {% if message.pk == item.primary_message_id %}<span class="badge text-bg-primary ms-1">Quoted</span>{% endif %}
+        </div>
+        <div>{{ message.body }}</div>
+      </li>
+    {% empty %}
+      <li class="list-group-item text-muted">No messages are cited for this item.</li>
+    {% endfor %}
+  </ul>
+
+{% endblock %}
