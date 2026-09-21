@@ -5,6 +5,7 @@ four styles this assignment asks for.
     1. item_list_manual   function-based view, loads the template by hand + HttpResponse
     2. item_list_render   function-based view, render() shortcut
     3. ItemListBaseView   class-based view, inherits from View and queries by hand
+    4. ItemListView       class-based generic view (ListView), plus ItemDetailView (DetailView)
 
 All four list views send the SAME context to the SAME template
 (templates/unopsis/briefitem_list.html), so the template does not care how the data arrived.
@@ -15,6 +16,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.template import loader
 from django.views import View
+from django.views.generic import DetailView, ListView
 
 from .models import BriefItem
 
@@ -107,3 +109,42 @@ class ItemListBaseView(View):
     def get(self, request):
         context = list_context(request, "Class-based view: base View")
         return render(request, LIST_TEMPLATE, context)
+
+
+# --------------------------------------------------------------------------------------
+# 4. Class-based view, generic: ListView / DetailView do the querying and template lookup
+# --------------------------------------------------------------------------------------
+class ItemListView(ListView):
+    """
+    model = BriefItem is enough for ListView to fetch rows and to find its template by
+    convention: <app>/<model>_list.html  ->  unopsis/briefitem_list.html.
+    We only override get_queryset (to reuse the Needs-you-first ordering and the filters) and
+    name the context variable `items` so it matches the shared template.
+    """
+
+    model = BriefItem
+    context_object_name = "items"
+
+    def get_queryset(self):
+        return filtered_items(self.request)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["filters"] = active_filters(self.request)
+        context["view_label"] = "Class-based view: generic ListView"
+        return context
+
+
+class ItemDetailView(DetailView):
+    """
+    One card in full, including its "receipts" (the messages it was built from).
+    Default template by convention: unopsis/briefitem_detail.html, with the object as `item`.
+    """
+
+    model = BriefItem
+    context_object_name = "item"
+
+    def get_queryset(self):
+        return BriefItem.objects.select_related(
+            "brief__space", "primary_message"
+        ).prefetch_related("messages__author", "messages__connection")
