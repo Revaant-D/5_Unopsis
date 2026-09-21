@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1750" height="620" viewBox="0 0 1750 620" font-family="Helvetica, Arial, sans-serif">
+  <rect width="1750" height="620" fill="#ffffff"/>
+  <text x="40" y="44" font-size="26" font-weight="bold" fill="#212529">Branching strategy: main + short-lived feature branches</text>
+  <text x="40" y="70" font-size="14" fill="#6c757d">Each piece of work lives on its own branch, then merges back into main with a merge commit (--no-ff) so the branch stays visible in the history.</text>
+
+  <!-- lane labels -->
+  <g font-size="15" font-weight="bold" fill="#212529">
+    <text x="40" y="129">main</text>
+    <text x="40" y="209" fill="#0d6efd">feature/split-settings</text>
+    <text x="40" y="289" fill="#0d6efd">feature/env-secrets</text>
+    <text x="40" y="369" fill="#0d6efd">feature/views</text>
+    <text x="40" y="449" fill="#0d6efd">feature/templates</text>
+    <text x="40" y="529" fill="#198754">docs/notes-and-branching</text>
+  </g>
+
+  <!-- lane guide lines -->
+  <g stroke="#e9ecef" stroke-width="2">
+    <line x1="260" y1="120" x2="1690" y2="120"/>
+    <line x1="260" y1="200" x2="1690" y2="200"/>
+    <line x1="260" y1="280" x2="1690" y2="280"/>
+    <line x1="260" y1="360" x2="1690" y2="360"/>
+    <line x1="260" y1="440" x2="1690" y2="440"/>
+    <line x1="260" y1="520" x2="1690" y2="520"/>
+  </g>
+
+  <!-- main line -->
+  <line x1="290" y1="120" x2="1610" y2="120" stroke="#212529" stroke-width="5"/>
+
+  <!-- branch paths: down from main, along the lane, back up to the merge commit -->
+  <g fill="none" stroke-width="4" stroke-linejoin="round">
+    <polyline stroke="#0d6efd" points="450,120 480,200 640,200 670,120"/>
+    <polyline stroke="#0d6efd" points="670,120 700,280 860,280 890,120"/>
+    <polyline stroke="#0d6efd" points="890,120 920,360 1100,360 1130,120"/>
+    <polyline stroke="#0d6efd" points="1130,120 1160,440 1320,440 1350,120"/>
+    <polyline stroke="#198754" points="1350,120 1380,520 1560,520 1600,120"/>
+  </g>
+
+  <!-- main commits: 4 baseline commits, then one merge commit per branch -->
+  <g fill="#212529" stroke="#ffffff" stroke-width="3">
+    <circle cx="300" cy="120" r="11"/><circle cx="345" cy="120" r="11"/>
+    <circle cx="390" cy="120" r="11"/><circle cx="435" cy="120" r="11"/>
+    <circle cx="670" cy="120" r="14"/><circle cx="890" cy="120" r="14"/>
+    <circle cx="1130" cy="120" r="14"/><circle cx="1350" cy="120" r="14"/><circle cx="1600" cy="120" r="14"/>
+  </g>
+  <!-- the first merge sits at the end of the split-settings branch -->
+  <text x="292" y="98" font-size="12" fill="#495057">4 baseline commits</text>
+
+  <!-- feature commits (blue) -->
+  <g fill="#0d6efd" stroke="#ffffff" stroke-width="3">
+    <circle cx="520" cy="200" r="10"/><circle cx="560" cy="200" r="10"/><circle cx="600" cy="200" r="10"/>
+    <circle cx="740" cy="280" r="10"/><circle cx="780" cy="280" r="10"/><circle cx="820" cy="280" r="10"/>
+    <circle cx="965" cy="360" r="10"/><circle cx="1000" cy="360" r="10"/><circle cx="1035" cy="360" r="10"/>
+    <circle cx="1070" cy="360" r="10"/><circle cx="1090" cy="360" r="10"/>
+    <circle cx="1195" cy="440" r="10"/><circle cx="1225" cy="440" r="10"/><circle cx="1255" cy="440" r="10"/>
+    <circle cx="1285" cy="440" r="10"/><circle cx="1305" cy="440" r="10"/>
+  </g>
+  <!-- docs commits (green, dashed lane = in progress) -->
+  <g fill="#198754" stroke="#ffffff" stroke-width="3">
+    <circle cx="1420" cy="520" r="10"/><circle cx="1465" cy="520" r="10"/><circle cx="1510" cy="520" r="10"/><circle cx="1540" cy="520" r="10"/>
+  </g>
+
+  <!-- commit counts and merge labels -->
+  <g font-size="12" fill="#495057" text-anchor="middle">
+    <text x="560" y="228">3 commits</text>
+    <text x="780" y="308">3 commits</text>
+    <text x="1030" y="388">5 commits</text>
+    <text x="1245" y="468">5 commits</text>
+    <text x="1480" y="548">4 commits</text>
+  </g>
+  <g font-size="12" fill="#212529" text-anchor="middle" font-weight="bold">
+    <text x="670" y="92">merge</text>
+    <text x="890" y="92">merge</text>
+    <text x="1130" y="92">merge</text>
+    <text x="1350" y="92">merge</text>
+    <text x="1600" y="92">merge</text>
+  </g>
+
+  <!-- legend / rules -->
+  <rect x="40" y="570" width="1670" height="34" rx="6" fill="#f8f9fa" stroke="#dee2e6"/>
+  <text x="56" y="592" font-size="13" fill="#495057">Rules:  1) main always runs, never commit secrets   2) one branch per task, named feature/... or docs/...   3) small meaningful commits   4) tests pass, then merge with --no-ff</text>
+</svg>
