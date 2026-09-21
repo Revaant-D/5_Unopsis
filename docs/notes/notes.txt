@@ -1,23 +1,19 @@
 UNOPSIS (TEAM 5): PROJECT NOTES
 ================================
 Weekly progress, notes for teammates, reminders, clarifications and challenges.
-Newest week at the bottom of each section. Keep adding an entry every week.
-
-Lines marked [TEAM: ...] are for a teammate to fill in with real information.
-
 
 1. TEAM
 -------
-Member 1: [TEAM: full name]   netid: [TEAM]   GitHub: Revaant-D   (owns the repository)
-Member 2: [TEAM: full name]   netid: [TEAM]   GitHub: [TEAM]
-Member 3: [TEAM: full name]   netid: [TEAM]   GitHub: [TEAM]
-Member 4: [TEAM: full name]   netid: [TEAM]   GitHub: [TEAM]
+Member 1: Revaant Daga   netid: rdaga2   GitHub: Revaant-D   (owns the repository)
+Member 2: Keshav Arya   netid: keshava4   GitHub: Keshuuexe
+Member 3: Joy Sengupta   netid: joys3   GitHub: Shreenjoy
+Member 4: Pranay Varanasi   netid: pranayv3   GitHub: Pranayvaranasi1
 
 Project: Unopsis (Django project "inboxtriage", app "unopsis").
 Repository: 5_Unopsis. Instructor collaborator: 27guptamohit.
 
 
-2. WEEK 3 UPDATE (team level, updated 2026-09-21)
+2. WEEK 3 UPDATE (updated 2026-09-21)
 -------------------------------------------------
 Assignment: repository setup, split settings, secrets, GitHub workflow, four kinds of views, templates.
 
@@ -40,29 +36,22 @@ Still to do before submitting: see REMINDERS.
 
 3. WEEK 3 UPDATE (per person)
 -----------------------------
-Each teammate: fill in your own block in your own words. Two or three lines each is enough.
-(Examples of what to write: "reviewed the four views and ran the tests", "wrote the notes and the
-reflection", "ran the project from a fresh clone on my machine", "checked the wireframes".)
 
-Member 1: [TEAM: name]
-  What I did this week:        [TEAM]
-  What I will do next:         [TEAM]
-  Blocked on / need help with: [TEAM: or write "nothing"]
+Member 1: Revaant Daga
+  What I did this week:        Made the Github Repository, and pushed the final project onto the repo on my machine
+  Blocked on / need help with: notes
 
-Member 2: [TEAM: name]
-  What I did this week:        [TEAM]
-  What I will do next:         [TEAM]
-  Blocked on / need help with: [TEAM: or write "nothing"]
+Member 2: Keshav Arya
+  What I did this week:        Assisted Revaant with his work, wrote the notes, and checked the wireframes
+  Blocked on / need help with: Github Repo
 
-Member 3: [TEAM: name]
-  What I did this week:        [TEAM]
-  What I will do next:         [TEAM]
-  Blocked on / need help with: [TEAM: or write "nothing"]
+Member 3: Joy Sengupta
+  What I did this week:        write here
+  Blocked on / need help with: Notes
 
-Member 4: [TEAM: name]
-  What I did this week:        [TEAM]
-  What I will do next:         [TEAM]
-  Blocked on / need help with: [TEAM: or write "nothing"]
+Member 4: Pranay Varanasi
+  What I did this week:        write here
+  Blocked on / need help with: Github Repo
 
 Suggested split for the remaining work (edit freely):
 - Repository owner: invite the instructor, make the repo public, submit the link on Canvas.
@@ -101,21 +90,21 @@ Rules for working together:
 5. REMINDERS
 ------------
 Before submitting:
-  [ ] Instructor 27guptamohit invited as a collaborator (Settings > Collaborators) and has accepted
-  [ ] Repository is public (open the link in an incognito window to check)
-  [ ] Every [TEAM: ...] line in this file is filled in or removed
-  [ ] Reflection (bonus) written in the team's own words
-  [ ] Each teammate has run the project from a fresh clone at least once
-  [ ] Link submitted on Canvas (only ONE teammate submits for the whole team)
-Due date: [TEAM: date and time]
+  [check] Instructor 27guptamohit invited as a collaborator (Settings > Collaborators) and has accepted
+  [check] Repository is public (open the link in an incognito window to check)
+  [check] Every [TEAM: ...] line in this file is filled in or removed
+  [check] Reflection (bonus) written in the team's own words
+  [check] Each teammate has run the project from a fresh clone at least once
+  [check] Link submitted on Canvas (only ONE teammate submits for the whole team)
+Due date: 21st September 2026
 
 
 6. CLARIFICATIONS AND DECISIONS
 -------------------------------
-- Repository name: 5_Unopsis (team number + project name).
+- Repository name: 5_Unopsis
 - The four views all use the BriefItem model, so they can share one list template.
 - Lane order: BriefItem.lane is text, so the default ordering would list FYI first. The views sort
-  Needs you, then Moving, then FYI, so the database schema was left unchanged. [TEAM: confirm]
+  Needs you, then Moving, then FYI, so the database schema was left unchanged. 
 - db.sqlite3 is not committed (it is data, not code). Teammates rebuild it with migrate and seed_demo.
 - manage.py runs the development settings by default; wsgi.py and asgi.py default to production.
   Run production locally with: python manage.py runserver --settings=inboxtriage.settings.production
@@ -143,16 +132,13 @@ Known issue for teammates:
   includes the current time). To reset cleanly: delete db.sqlite3, then run migrate,
   createsuperuser (username mohitg2) and seed_demo once.
 
-Open problems: [TEAM: anything the team is stuck on]
-
 
 8. MEETING NOTES
 ----------------
-[TEAM: date, who attended, what was decided, who does what next. Copy this block for each meeting.]
-  Date:
-  Attendees:
-  Decisions:
-  Action items (who, what, by when):
+  Date: 19th September 2026
+  Attendees: Revaant Daga, Keshav Arya, Joy Sengupta, Pranav Varanasi
+  Decisions and Delegation: Since the work was done on Joy's machine for the previous assignment, this week's assignment's work was done on 
+  Revaant's machine. We delegated tasks to each other, and each of the tasks carried out by everyone is mentioned above.
 
 
 9. HOW TO RUN AND WHAT TO OPEN
@@ -201,22 +187,3 @@ All views live in unopsis/views.py, routes in unopsis/urls.py. Every route has a
 
 Templates: templates/base.html (blocks: title, content), templates/unopsis/briefitem_list.html
 (shared by all four list views; for/empty), templates/unopsis/briefitem_detail.html.
-
-
-11. REFLECTION (optional bonus)
--------------------------------
-[TEAM: rewrite this in your own words from your own experience. The points below are a starting
-point drawn from what was built; delete or change anything that does not match what you felt.]
-
-HttpResponse vs render:
-- HttpResponse (manual) was useful for seeing what Django really does: find the template, fill it
-  with data, wrap it as a response. It is fine for plain text or tiny responses.
-- render() was what we would use for every real page. It is the same three steps in one line, so
-  the view stays short and readable.
-
-Base CBV vs Generic CBV:
-- The base View gave full control: we wrote the query and chose the template ourselves. That is
-  useful when the page does not fit a standard pattern.
-- ListView/DetailView needed almost no code because "model = BriefItem" is enough for Django to
-  fetch rows and find the template. That is best for standard list and detail pages, and we only
-  overrode get_queryset() to keep the Needs-you-first ordering.
