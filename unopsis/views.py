@@ -4,6 +4,7 @@ four styles this assignment asks for.
 
     1. item_list_manual   function-based view, loads the template by hand + HttpResponse
     2. item_list_render   function-based view, render() shortcut
+    3. ItemListBaseView   class-based view, inherits from View and queries by hand
 
 All four list views send the SAME context to the SAME template
 (templates/unopsis/briefitem_list.html), so the template does not care how the data arrived.
@@ -13,6 +14,7 @@ from django.db.models import Case, IntegerField, Value, When
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.template import loader
+from django.views import View
 
 from .models import BriefItem
 
@@ -91,3 +93,17 @@ def item_list_render(request):
     """Same page as view 1 with render(request, template, context): load + fill + wrap."""
     context = list_context(request, "Function-based view: render() shortcut")
     return render(request, LIST_TEMPLATE, context)
+
+
+# --------------------------------------------------------------------------------------
+# 3. Class-based view, base: inherit from View and write get() yourself
+# --------------------------------------------------------------------------------------
+class ItemListBaseView(View):
+    """
+    The base View knows nothing about our model, so we query it ourselves inside get().
+    (`model = BriefItem` would do nothing here. That is what the generic view adds.)
+    """
+
+    def get(self, request):
+        context = list_context(request, "Class-based view: base View")
+        return render(request, LIST_TEMPLATE, context)
