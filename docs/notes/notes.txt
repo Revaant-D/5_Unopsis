@@ -50,7 +50,7 @@ Member 3: Joy Sengupta
   Blocked on / need help with: Notes
 
 Member 4: Pranay Varanasi
-  What I did this week:        write here
+  What I did this week: I helped test the four views and checked that each page worked correctly. I also reviewed the templates to see if the project was following each requirement.          
   Blocked on / need help with: Github Repo
 
 Suggested split for the remaining work (edit freely):
