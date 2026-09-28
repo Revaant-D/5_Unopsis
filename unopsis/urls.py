@@ -12,6 +12,7 @@ it in get_absolute_url(). The address can then change here without touching a si
     /items/cbv-base/         item-list-cbv-base
     /items/cbv-generic/      item-list-cbv-generic
     /items/<pk>/             item-detail           detail by primary key; BriefItem.get_absolute_url()
+    /insights/               insights              GET search + POST lookup + aggregations
 
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
@@ -39,5 +40,8 @@ urlpatterns = [
     # 4. Class-based views, generic (list + detail)
     path("items/cbv-generic/", views.ItemListView.as_view(), name="item-list-cbv-generic"),
     path("items/<int:pk>/", views.ItemDetailView.as_view(), name="item-detail"),
+
+    # ---- Sections 2 + 5: ORM search (GET), private lookup (POST), aggregations ----
+    path("insights/", views.InsightsView.as_view(), name="insights"),
 
 ]

@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% comment %}
+  The ORM page. Four things live here:
+
+    1. a GET search form  -- its result IS the link (?q=deadline&lane=needs_you), so it can be
+       bookmarked, shared and reloaded and always returns the same rows;
+    2. a POST lookup form -- the same kind of read, but by somebody's private handle, which
+       must never end up in the address bar, the history or a server log, so it is POSTed and
+       the URL stays /insights/;
+    3. the results list, with {% templatetag openblock %} for {% templatetag closeblock %} /
+       {% templatetag openblock %} empty {% templatetag closeblock %};
+    4. the aggregation summaries: one total, and several GROUP BY counts.
+{% endcomment %}
+
+{% block title %}Search &amp; insights{% endblock %}
+
+{% block content %}
+
+  <h2 class="h3 mb-1">Search &amp; insights</h2>
+  <p class="text-muted">
+    Every number and every row on this page is an ORM query against the same database the
+    briefs are built from.
+  </p>
+
+  <div class="row g-4 mb-4">
+    <!-- ============ 1. THE GET FORM ============ -->
+    <div class="col-lg-7">
+      <div class="panel h-100">
+        <h3 class="h6 mb-1">Search the brief items <span class="badge text-bg-secondary">GET</span></h3>
+        <p class="small text-muted">
+          The filters travel in the URL. Reload, bookmark or send this address to a teammate
+          and it opens exactly the same result &mdash; that is what GET is for.
+        </p>
+        <form method="get" action="{% url 'insights' %}">
+          <div class="row g-2">
+            <div class="col-12">
+              {{ search_form.q }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small mb-1" for="{{ search_form.lane.id_for_label }}">Lane</label>
+              {{ search_form.lane }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small mb-1" for="{{ search_form.state.id_for_label }}">State</label>
+              {{ search_form.state }}
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small mb-1" for="{{ search_form.space.id_for_label }}">Space</label>
+              {{ search_form.space }}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small mb-1" for="{{ search_form.author.id_for_label }}">Cites a person</label>
+              {{ search_form.author }}
+              <div class="form-text">item &rarr; messages &rarr; author (relationship spanning)</div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small mb-1" for="{{ search_form.max_rank.id_for_label }}">Top N</label>
+              {{ search_form.max_rank }}
+              <div class="form-text">rank__lte</div>
+            </div>
+            <div class="col-sm-3 d-flex align-items-center">
+              <div class="form-check mt-3">
+                {{ search_form.due_only }}
+                <label class="form-check-label small" for="{{ search_form.due_only.id_for_label }}">
+                  Has a deadline
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary btn-sm" type="submit">Search</button>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'insights' %}">Clear</a>
+          </div>
+        </form>
+        {% if active_filters %}
+          <p class="small text-muted mt-2 mb-0">
+            In the URL right now:
+            {% for name, value in active_filters.items %}<code>{{ name }}={{ value }}</code>{% if not forloop.last %} &middot; {% endif %}{% endfor %}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ============ 2. THE POST FORM ============ -->
+    <div class="col-lg-5">
+      <div class="panel panel--private h-100">
+        <h3 class="h6 mb-1">Private lookup <span class="badge text-bg-warning text-dark">POST</span></h3>
+        <p class="small text-muted">
+          Find a person by the handle they are reached on &mdash; a mobile number, a personal
+          address. This is still only a read, but the query itself is the sensitive part, so it
+          is sent in the request body. Look at the address bar after you submit: it is still
+          <code>/insights/</code>. Nothing here can be bookmarked, shared or read back out of a
+          server log.
+        </p>
+        <form method="post" action="{% url 'insights' %}" autocomplete="off">
+          {% csrf_token %}
+          {{ lookup_form.handle }}
+          {% for error in lookup_form.handle.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+          <div class="form-text">Try <code>+1-630-555-0188</code>, <code>@ramirez</code> or <code>lena</code>.</div>
+          <button class="btn btn-accent btn-sm mt-2" type="submit">Look up</button>
+        </form>
+
+        {% if lookup_ran %}
+          <hr>
+          {% if lookup_results %}
+            <p class="small mb-2">
+              Matches for <strong>{{ lookup_results.handle }}</strong>
+              (shown once, not linkable):
+            </p>
+            <ul class="list-unstyled small mb-2">
+              {% for person in lookup_results.people %}
+                <li class="mb-1">
+                  <strong>{{ person.display_name }}</strong>
+                  <span class="text-muted">
+                    &middot; {{ person.space.get_kind_display }}
+                    &middot; {{ person.message_count }} message{{ person.message_count|pluralize }}
+                    {% if person.is_vip %}&middot; VIP{% endif %}
+                  </span>
+                </li>
+              {% empty %}
+                <li class="text-muted">No person is reached on that handle.</li>
+              {% endfor %}
+            </ul>
+            {% if lookup_results.items %}
+              <p class="small mb-1">Brief items citing them:</p>
+              <ul class="small mb-0">
+                {% for item in lookup_results.items %}
+                  <li><a href="{{ item.get_absolute_url }}">{{ item.title }}</a></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          {% else %}
+            <p class="small text-danger mb-0">Enter a handle to look up.</p>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 3. THE RESULTS ============ -->
+  <h3 class="section-title">
+    Results
+    <span class="text-muted">&mdash; {{ items|length }} of {{ summaries.total_items }} item{{ summaries.total_items|pluralize }}</span>
+  </h3>
+
+  {% for item in items %}
+    <div class="card item-card lane-{{ item.lane }} mb-2">
+      <div class="card-body py-2">
+        <div class="d-flex flex-wrap justify-content-between gap-2">
+          <div>
+            <a class="fw-semibold" href="{{ item.get_absolute_url }}">{{ item.title }}</a>
+            <div class="small text-muted">{{ item.summary|truncatewords:22 }}</div>
+          </div>
+          <div class="text-nowrap">
+            <span class="badge {% if item.lane == 'needs_you' %}text-bg-danger{% elif item.lane == 'moving' %}text-bg-primary{% else %}text-bg-success{% endif %}">
+              {{ item.get_lane_display }} #{{ item.rank }}
+            </span>
+            <span class="badge text-bg-light border">{{ item.brief.space.get_kind_display }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="card text-center py-5">
+      <div class="card-body">
+        <h4 class="h5">No items match</h4>
+        {% if active_filters %}
+          <p class="text-muted mb-3">
+            Nothing matches
+            {% for name, value in active_filters.items %}<code>{{ name }}={{ value }}</code>{% if not forloop.last %} and {% endif %}{% endfor %}.
+            The search may be too narrow.
+          </p>
+          <a class="btn btn-primary btn-sm" href="{% url 'insights' %}">Clear the search</a>
+        {% else %}
+          <p class="text-muted mb-0">
+            There are no brief items yet. Run <code>python manage.py seed_demo</code>.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+
+  <!-- ============ 4. AGGREGATIONS ============ -->
+  <h3 class="section-title mt-4">Totals</h3>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.total_items }}</div>
+        <div class="stat-label">Brief items (.count())</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.total_messages }}</div>
+        <div class="stat-label">Messages ingested</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.total_noise }}</div>
+        <div class="stat-label">Suppressed as noise</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.avg_items_per_brief|floatformat:1 }}</div>
+        <div class="stat-label">Avg items per brief</div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="section-title">Grouped summaries (values + annotate = GROUP BY)</h3>
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <h4 class="h6">Items per lane</h4>
+      <table class="table table-sm table-tight">
+        <thead><tr><th>Lane</th><th class="text-end">Items</th></tr></thead>
+        <tbody>
+          {% for row in summaries.by_lane %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.total }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2" class="text-muted">No items to group.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="col-md-4">
+      <h4 class="h6">Items per space</h4>
+      <table class="table table-sm table-tight">
+        <thead><tr><th>Space</th><th class="text-end">Items</th></tr></thead>
+        <tbody>
+          {% for row in summaries.by_space %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.total }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2" class="text-muted">No items to group.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="col-md-4">
+      <h4 class="h6">Messages per provider</h4>
+      <table class="table table-sm table-tight">
+        <thead><tr><th>Provider</th><th class="text-end">Messages</th></tr></thead>
+        <tbody>
+          {% for row in summaries.by_provider %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.total }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2" class="text-muted">No messages yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col-md-7">
+      <h4 class="h6">Who sends the most, and how much of it is cited</h4>
+      <table class="table table-sm table-tight">
+        <thead>
+          <tr><th>Person</th><th>Space</th><th class="text-end">Sent</th><th class="text-end">Cited in a brief</th></tr>
+        </thead>
+        <tbody>
+          {% for row in summaries.by_person %}
+            <tr>
+              <td>{{ row.display_name }}</td>
+              <td>{{ row.label }}</td>
+              <td class="text-end">{{ row.sent }}</td>
+              <td class="text-end">{{ row.cited }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="text-muted">Nobody has sent anything yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="col-md-5">
+      <h4 class="h6">Each brief</h4>
+      <table class="table table-sm table-tight">
+        <thead><tr><th>Brief</th><th class="text-end">Items</th><th class="text-end">Receipts</th></tr></thead>
+        <tbody>
+          {% for brief in summaries.by_brief %}
+            <tr>
+              <td><a href="{{ brief.get_absolute_url }}">{{ brief.space.get_kind_display }}</a></td>
+              <td class="text-end">{{ brief.item_count }}</td>
+              <td class="text-end">{{ brief.receipt_count }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3" class="text-muted">No briefs yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endblock %}

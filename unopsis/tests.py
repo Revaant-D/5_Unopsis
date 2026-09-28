@@ -3,6 +3,8 @@ Tests for the whole project:
 
   * ItemViewTests           the four view kinds and the shared templates (previous assignment)
   * NavigationAndUrlTests   Section 1 -- the home page, named routes, get_absolute_url()
+  * OrmQueryTests           Section 2 -- search, relationship spanning, aggregation
+  * FormTests               Section 5 -- the GET form, the POST forms, CSRF
 
 Run with:  python manage.py test
 Django builds a throwaway database for these, so your local db.sqlite3 is untouched.
@@ -11,7 +13,7 @@ Django builds a throwaway database for these, so your local db.sqlite3 is untouc
 from datetime import timedelta
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -153,7 +155,7 @@ class NavigationAndUrlTests(TestCase):
 
     def test_navigation_links_to_at_least_three_named_routes(self):
         html = self.client.get(reverse("home")).content.decode()
-        for name in ("home", "brief-list", "item-list-cbv-generic"):
+        for name in ("home", "brief-list", "item-list-cbv-generic", "insights"):
             with self.subTest(route=name):
                 self.assertIn(f'href="{reverse(name)}"', html)
 
@@ -169,3 +171,92 @@ class NavigationAndUrlTests(TestCase):
         self.assertEqual(self.client.get(self.item.get_absolute_url()).status_code, 200)
         self.assertEqual(self.client.get(self.item.brief.get_absolute_url()).status_code, 200)
         self.assertEqual(self.client.get("/briefs/99999/").status_code, 404)
+
+
+class OrmQueryTests(TestCase):
+    """Section 2: search, relationship spanning and aggregation."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.item = _build_demo_rows()
+
+    def test_get_search_filters_and_keeps_the_query_in_the_url(self):
+        response = self.client.get(reverse("insights"), {"q": "act on this"})
+        self.assertContains(response, "Needs item")
+        self.assertNotContains(response, "FYI item")
+
+    def test_get_search_spans_relationships_to_the_message_author(self):
+        response = self.client.get(reverse("insights"), {"author": "Pat"})
+        self.assertContains(response, "Needs item")
+        self.assertNotContains(response, "FYI item")
+
+    def test_get_search_with_no_matches_shows_the_empty_state(self):
+        response = self.client.get(reverse("insights"), {"q": "nothing-matches-this"})
+        self.assertContains(response, "No items match")
+
+    def test_aggregations_are_on_the_page(self):
+        response = self.client.get(reverse("insights"))
+        summaries = response.context["summaries"]
+        self.assertEqual(summaries["total_items"], 2)
+        by_lane = {row["lane"]: row["total"] for row in summaries["by_lane"]}
+        self.assertEqual(by_lane, {"needs_you": 1, "fyi": 1})
+        self.assertEqual(
+            {row["brief__space__kind"]: row["total"] for row in summaries["by_space"]},
+            {"work": 2},
+        )
+        self.assertEqual(summaries["by_provider"][0]["total"], 1)
+
+
+class FormTests(TestCase):
+    """Section 5: the GET form, the POST forms and CSRF."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.item = _build_demo_rows()
+
+    def test_post_lookup_finds_a_person_without_putting_the_query_in_the_url(self):
+        response = self.client.post(reverse("insights"), {"handle": "pat@example.invalid"})
+        self.assertEqual(response.status_code, 200)          # rendered, not redirected
+        self.assertContains(response, "Pat")
+        self.assertTrue(response.context["lookup_ran"])
+
+    def test_post_updates_an_item_and_redirects(self):
+        response = self.client.post(
+            self.item.get_absolute_url(), {"state": "handled", "draft_body": "on it"}
+        )
+        self.assertRedirects(response, self.item.get_absolute_url())
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.state, BriefItem.State.HANDLED)
+        self.assertEqual(self.item.draft_body, "on it")
+        self.assertIsNotNone(self.item.handled_at)
+
+    def test_post_creates_an_item_on_a_brief(self):
+        brief = self.item.brief
+        before = brief.items.count()
+        response = self.client.post(
+            brief.get_absolute_url(),
+            {"title": "Brand new item", "lane": "fyi", "rank": "7", "summary": "created by a form"},
+        )
+        self.assertRedirects(response, brief.get_absolute_url())
+        self.assertEqual(brief.items.count(), before + 1)
+
+    def test_a_duplicate_slot_is_a_form_error_not_a_crash(self):
+        brief = self.item.brief
+        response = self.client.post(
+            brief.get_absolute_url(),
+            {"title": "Another item", "lane": self.item.lane, "rank": self.item.rank,
+             "summary": "collides with an existing slot"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "already has")
+
+    def test_post_forms_carry_a_csrf_token(self):
+        for url in (self.item.get_absolute_url(), self.item.brief.get_absolute_url(),
+                    reverse("insights")):
+            with self.subTest(url=url):
+                self.assertContains(self.client.get(url), "csrfmiddlewaretoken")
+
+    def test_post_without_a_csrf_token_is_rejected(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.post(self.item.get_absolute_url(), {"state": "handled"})
+        self.assertEqual(response.status_code, 403)

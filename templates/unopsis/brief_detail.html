@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 
 {% comment %}
-  One brief, found by the primary key in the URL (/briefs/<pk>/). Every item on it links to its
-  own detail page through {{ item.get_absolute_url }}.
+  One brief, found by the primary key in the URL (/briefs/<pk>/), plus the CREATE form.
+
+  The form is POST because it writes a row. That means:
+    * method="post" and {% csrf_token %}, or Django rejects it with a 403;
+    * the view redirects after a successful save, so refreshing the page cannot add the item
+      a second time.
 {% endcomment %}
 
 {% block title %}{{ brief.headline|default:"Brief" }}{% endblock %}
@@ -45,5 +49,53 @@
   {% empty %}
     <p class="text-muted">This brief has no items yet. Add the first one below.</p>
   {% endfor %}
+
+  <!-- ===== The POST form: create an item on this brief ===== -->
+  <h3 class="section-title mt-4">Add an item (POST)</h3>
+  <div class="panel">
+    <p class="small text-muted">
+      This form changes the database, so it uses <code>method="post"</code> and carries a CSRF
+      token. The brief it attaches to comes from the URL, not from a hidden field, so the
+      request cannot be retargeted at somebody else's brief.
+    </p>
+    <form method="post" action="{{ brief.get_absolute_url }}" novalidate>
+      {% csrf_token %}
+      {% if create_form.non_field_errors %}
+        <div class="alert alert-danger py-2">{{ create_form.non_field_errors }}</div>
+      {% endif %}
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label" for="{{ create_form.title.id_for_label }}">{{ create_form.title.label }}</label>
+          {{ create_form.title }}
+          {% for error in create_form.title.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label" for="{{ create_form.lane.id_for_label }}">{{ create_form.lane.label }}</label>
+          {{ create_form.lane }}
+          {% for error in create_form.lane.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-2">
+          <label class="form-label" for="{{ create_form.rank.id_for_label }}">{{ create_form.rank.label }}</label>
+          {{ create_form.rank }}
+          {% for error in create_form.rank.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label" for="{{ create_form.deadline_at.id_for_label }}">Deadline (optional)</label>
+          {{ create_form.deadline_at }}
+          {% for error in create_form.deadline_at.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="{{ create_form.summary.id_for_label }}">{{ create_form.summary.label }}</label>
+          {{ create_form.summary }}
+          {% for error in create_form.summary.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="{{ create_form.why.id_for_label }}">Why it surfaced (optional)</label>
+          {{ create_form.why }}
+        </div>
+      </div>
+      <button class="btn btn-primary mt-3" type="submit">Add item</button>
+    </form>
+  </div>
 
 {% endblock %}

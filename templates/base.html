@@ -46,9 +46,24 @@
         <a class="nav-link {% if current == 'item-list-cbv-generic' or current == 'item-detail' %}active{% endif %}"
            href="{% url 'item-list-cbv-generic' %}">Brief items</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link {% if current == 'insights' %}active{% endif %}"
+           href="{% url 'insights' %}">Search &amp; insights</a>
+      </li>
     </ul>
     {% endwith %}
   </nav>
+
+  {# Flash messages: what a POST says back to the user after it redirects. #}
+  {% if messages %}
+    <div class="container">
+      {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
   <!-- Main content: each page fills this block -->
   <main class="container mb-5">
