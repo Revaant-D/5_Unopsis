@@ -4,6 +4,7 @@ Tests for the whole project:
   * ItemViewTests           the four view kinds and the shared templates (previous assignment)
   * NavigationAndUrlTests   Section 1 -- the home page, named routes, get_absolute_url()
   * OrmQueryTests           Section 2 -- search, relationship spanning, aggregation
+  * StaticFilesTests        Section 3 -- the custom stylesheet is configured and linked
   * FormTests               Section 5 -- the GET form, the POST forms, CSRF
 
 Run with:  python manage.py test
@@ -13,6 +14,8 @@ Django builds a throwaway database for these, so your local db.sqlite3 is untouc
 from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.contrib.staticfiles import finders
+from django.templatetags.static import static
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -260,3 +263,16 @@ class FormTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         response = client.post(self.item.get_absolute_url(), {"state": "handled"})
         self.assertEqual(response.status_code, 403)
+
+
+class StaticFilesTests(TestCase):
+    """Section 3: the stylesheet is configured and actually linked."""
+
+    def test_the_custom_stylesheet_is_found_by_the_staticfiles_finders(self):
+        self.assertIsNotNone(finders.find("css/unopsis.css"))
+        self.assertIsNotNone(finders.find("img/unopsis-logo.svg"))
+
+    def test_every_page_links_the_stylesheet_through_the_static_tag(self):
+        html = self.client.get(reverse("home")).content.decode()
+        self.assertIn(f'href="{static("css/unopsis.css")}"', html)
+        self.assertIn(f'src="{static("img/unopsis-logo.svg")}"', html)

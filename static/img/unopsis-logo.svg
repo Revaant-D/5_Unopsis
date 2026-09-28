@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Unopsis mark: many inbound lines collapsing into one ranked read. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Unopsis logo">
+  <title>Unopsis</title>
+  <rect width="64" height="64" rx="14" fill="#f6f3ee"/>
+  <g stroke="#2f4858" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.55">
+    <path d="M10 16 H26"/>
+    <path d="M10 24 H26"/>
+    <path d="M10 32 H26"/>
+    <path d="M10 40 H26"/>
+    <path d="M10 48 H26"/>
+  </g>
+  <path d="M28 32 C34 32 34 20 40 20" stroke="#c44536" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M28 32 H40" stroke="#33658a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M28 32 C34 32 34 44 40 44" stroke="#758e4f" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="44" cy="20" r="4" fill="#c44536"/>
+  <circle cx="44" cy="32" r="4" fill="#33658a"/>
+  <circle cx="44" cy="44" r="4" fill="#758e4f"/>
+  <rect x="52" y="14" width="4" height="36" rx="2" fill="#d98324"/>
+</svg>

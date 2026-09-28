@@ -101,8 +101,27 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+#
+# Organisation: ONE project-level static/ folder rather than a static/ folder inside each app.
+# This project has a single app (unopsis) and a single look, so an app-level folder would add a
+# directory level without adding an owner. Files are namespaced by type inside it:
+#
+#     static/css/unopsis.css     the site stylesheet
+#     static/img/unopsis-logo.svg the header mark
+#
+# Templates always reference them through {% load static %} + {% static 'css/unopsis.css' %},
+# never as a hard-coded "/static/css/unopsis.css", so STATIC_URL can change (to a CDN, say)
+# without editing a template.
 
+# The public URL prefix the browser asks for.
 STATIC_URL = 'static/'
+
+# Where Django LOOKS for static files in development (in addition to each app's static/).
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Where `python manage.py collectstatic` COPIES them for a real web server to serve.
+# It is generated output, so it is git-ignored and never edited by hand.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

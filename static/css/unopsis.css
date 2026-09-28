@@ -1,0 +1,160 @@
+/* =======================================================================================
+   unopsis.css -- the project's own stylesheet.
+
+   Bootstrap is loaded first and does the grid and the components; this file is what makes
+   the pages look like Unopsis rather than like default Bootstrap. It is loaded in base.html
+   with {% load static %} + {% static 'css/unopsis.css' %}, so the address is resolved by
+   Django and picks up the hashed, cache-busted name in production automatically.
+
+   Everything here is layered ON TOP of Bootstrap: no Bootstrap file is edited, so the
+   framework can be upgraded without losing the theme.
+   ======================================================================================= */
+
+/* ---- 1. Tokens: the palette and the type scale, named once -------------------------- */
+:root {
+  --paper:      #f6f3ee;   /* page background: warm, not white */
+  --ink:        #1d2733;   /* body text */
+  --ink-soft:   #5d6b7a;   /* secondary text */
+  --slate:      #2f4858;   /* header, footer, primary actions */
+  --slate-deep: #22323d;
+  --amber:      #d98324;   /* the one accent; used sparingly on purpose */
+  --line:       #e3ddd3;   /* hairlines and card borders */
+  --needs-you:  #c44536;   /* lane colours, the same three everywhere in the product */
+  --moving:     #33658a;
+  --fyi:        #758e4f;
+  --radius:     14px;
+  --shadow:     0 1px 2px rgba(29, 39, 51, .06), 0 8px 24px rgba(29, 39, 51, .06);
+}
+
+/* ---- 2. Base typography and layout -------------------------------------------------- */
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, .brand-mark {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  letter-spacing: -0.01em;
+  color: var(--slate-deep);
+}
+
+a { color: var(--slate); }
+a:hover { color: var(--amber); }
+
+code { color: var(--slate); background: #ece7df; padding: .05em .35em; border-radius: 5px; }
+
+/* ---- 3. Header and the logo --------------------------------------------------------- */
+.site-header {
+  background: linear-gradient(120deg, var(--slate-deep) 0%, var(--slate) 55%, #3c5f70 100%);
+  color: #fff;
+  border-bottom: 3px solid var(--amber);
+}
+.site-header h1, .site-header .brand-mark { color: #fff; }
+.site-logo { width: 42px; height: 42px; flex: 0 0 auto; }
+.site-tagline { color: rgba(255, 255, 255, .72); }
+
+/* ---- 4. Navigation ------------------------------------------------------------------ */
+.site-nav { border-bottom: 1px solid var(--line); background: #fffdfa; }
+.site-nav .nav-link {
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: .95rem;
+  border-radius: 999px;
+  padding: .35rem .95rem;
+}
+.site-nav .nav-link:hover { background: #eee9e0; color: var(--slate-deep); }
+.site-nav .nav-link.active { background: var(--slate); color: #fff; }
+
+/* ---- 5. Cards and the lane accent --------------------------------------------------- */
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.item-card { border-left: 5px solid var(--line); transition: transform .12s ease; }
+.item-card:hover { transform: translateY(-2px); }
+.item-card.lane-needs_you { border-left-color: var(--needs-you); }
+.item-card.lane-moving    { border-left-color: var(--moving); }
+.item-card.lane-fyi       { border-left-color: var(--fyi); }
+.item-card .card-title a { text-decoration: none; }
+
+/* ---- 6. Small reusable pieces ------------------------------------------------------- */
+.stat-tile {
+  background: #fffdfa;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: .9rem 1.1rem;
+  height: 100%;
+}
+.stat-tile .stat-number {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--slate);
+}
+.stat-tile .stat-label {
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ink-soft);
+}
+
+.section-title {
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: .35rem;
+  margin-bottom: 1rem;
+}
+
+.panel {
+  background: #fffdfa;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.panel--private { border-color: #d9c3a0; background: #fdf8ef; }
+
+.chart-figure img {
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: .5rem;
+}
+.chart-figure figcaption { color: var(--ink-soft); font-size: .88rem; margin-top: .5rem; }
+
+.btn-primary {
+  background: var(--slate);
+  border-color: var(--slate);
+}
+.btn-primary:hover, .btn-primary:focus { background: var(--slate-deep); border-color: var(--slate-deep); }
+.btn-accent { background: var(--amber); border-color: var(--amber); color: #fff; }
+.btn-accent:hover { background: #bf7220; border-color: #bf7220; color: #fff; }
+
+.table-tight th {
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+/* ---- 7. Footer ---------------------------------------------------------------------- */
+.site-footer {
+  background: var(--slate-deep);
+  color: rgba(255, 255, 255, .6);
+  border-top: 3px solid var(--amber);
+}
+
+/* ---- 8. Small screens ---------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+  .stat-tile .stat-number { font-size: 1.5rem; }
+  .site-nav .nav-link { padding: .3rem .7rem; font-size: .88rem; }
+}
