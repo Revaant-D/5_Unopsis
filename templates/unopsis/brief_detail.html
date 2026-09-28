@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% comment %}
+  One brief, found by the primary key in the URL (/briefs/<pk>/), plus the CREATE form.
+
+  The form is POST because it writes a row. That means:
+    * method="post" and {% csrf_token %}, or Django rejects it with a 403;
+    * the view redirects after a successful save, so refreshing the page cannot add the item
+      a second time.
+{% endcomment %}
+
+{% block title %}{{ brief.headline|default:"Brief" }}{% endblock %}
+
+{% block content %}
+
+  <p class="mb-2"><a href="{% url 'brief-list' %}">&larr; All briefs</a></p>
+
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <span class="badge text-bg-light border">{{ brief.space.get_kind_display }}</span>
+    <span class="badge text-bg-light border">{{ brief.get_trigger_display }}</span>
+    <span class="badge {% if brief.status == 'ready' %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+      {{ brief.get_status_display }}
+    </span>
+  </div>
+
+  <h2 class="h3">{{ brief.headline|default:"Untitled brief" }}</h2>
+  <p class="text-muted">
+    {{ brief.window_start|date:"M j, g:i A" }} &rarr; {{ brief.window_end|date:"M j, g:i A" }}
+    &middot; {{ brief.message_count }} messages became {{ brief.topic_count }} topics
+    &middot; about {{ brief.read_seconds }}s to read
+    {% if brief.model_version %}&middot; {{ brief.model_version }}{% endif %}
+  </p>
+
+  <h3 class="section-title mt-4">Items on this brief</h3>
+  {% for item in items %}
+    <div class="card item-card lane-{{ item.lane }} mb-3">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <span class="badge {% if item.lane == 'needs_you' %}text-bg-danger{% elif item.lane == 'moving' %}text-bg-primary{% else %}text-bg-success{% endif %}">
+            {{ item.get_lane_display }} #{{ item.rank }}
+          </span>
+          <span class="badge text-bg-light border">{{ item.get_state_display }}</span>
+          <span class="badge text-bg-light border">{{ item.receipt_count }} receipt{{ item.receipt_count|pluralize }}</span>
+        </div>
+        <h4 class="h6 mb-1"><a href="{{ item.get_absolute_url }}">{{ item.title }}</a></h4>
+        <p class="small text-muted mb-0">{{ item.summary|truncatewords:28 }}</p>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-muted">This brief has no items yet. Add the first one below.</p>
+  {% endfor %}
+
+  <!-- ===== The POST form: create an item on this brief ===== -->
+  <h3 class="section-title mt-4">Add an item (POST)</h3>
+  <div class="panel">
+    <p class="small text-muted">
+      This form changes the database, so it uses <code>method="post"</code> and carries a CSRF
+      token. The brief it attaches to comes from the URL, not from a hidden field, so the
+      request cannot be retargeted at somebody else's brief.
+    </p>
+    <form method="post" action="{{ brief.get_absolute_url }}" novalidate>
+      {% csrf_token %}
+      {% if create_form.non_field_errors %}
+        <div class="alert alert-danger py-2">{{ create_form.non_field_errors }}</div>
+      {% endif %}
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label" for="{{ create_form.title.id_for_label }}">{{ create_form.title.label }}</label>
+          {{ create_form.title }}
+          {% for error in create_form.title.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label" for="{{ create_form.lane.id_for_label }}">{{ create_form.lane.label }}</label>
+          {{ create_form.lane }}
+          {% for error in create_form.lane.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-2">
+          <label class="form-label" for="{{ create_form.rank.id_for_label }}">{{ create_form.rank.label }}</label>
+          {{ create_form.rank }}
+          {% for error in create_form.rank.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label" for="{{ create_form.deadline_at.id_for_label }}">Deadline (optional)</label>
+          {{ create_form.deadline_at }}
+          {% for error in create_form.deadline_at.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="{{ create_form.summary.id_for_label }}">{{ create_form.summary.label }}</label>
+          {{ create_form.summary }}
+          {% for error in create_form.summary.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="{{ create_form.why.id_for_label }}">Why it surfaced (optional)</label>
+          {{ create_form.why }}
+        </div>
+      </div>
+      <button class="btn btn-primary mt-3" type="submit">Add item</button>
+    </form>
+  </div>
+
+{% endblock %}

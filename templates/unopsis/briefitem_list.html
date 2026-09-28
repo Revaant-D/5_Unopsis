@@ -10,6 +10,28 @@
 
 {% block content %}
 
+  {% comment %}
+    The same list rendered four ways. This sub-navigation moved here from base.html when
+    base.html gained the site-wide navigation; every href is still looked up by route name
+    with the url tag, never hard-coded.
+  {% endcomment %}
+  <ul class="nav nav-pills nav-sm flex-wrap gap-1 mb-3">
+    {% with current=request.resolver_match.url_name %}
+    <li class="nav-item">
+      <a class="nav-link py-1 px-2 small {% if current == 'item-list-manual' %}active{% endif %}"
+         href="{% url 'item-list-manual' %}">1. HttpResponse (FBV)</a></li>
+    <li class="nav-item">
+      <a class="nav-link py-1 px-2 small {% if current == 'item-list-render' %}active{% endif %}"
+         href="{% url 'item-list-render' %}">2. render() (FBV)</a></li>
+    <li class="nav-item">
+      <a class="nav-link py-1 px-2 small {% if current == 'item-list-cbv-base' %}active{% endif %}"
+         href="{% url 'item-list-cbv-base' %}">3. Base View (CBV)</a></li>
+    <li class="nav-item">
+      <a class="nav-link py-1 px-2 small {% if current == 'item-list-cbv-generic' %}active{% endif %}"
+         href="{% url 'item-list-cbv-generic' %}">4. Generic ListView (CBV)</a></li>
+    {% endwith %}
+  </ul>
+
   <div class="d-flex flex-wrap justify-content-between align-items-end mb-3 gap-2">
     <div>
       <h2 class="h3 mb-1">Brief items</h2>
@@ -40,7 +62,11 @@
         </div>
 
         <h3 class="h5 card-title">
-          <a class="text-decoration-none" href="{% url 'item-detail' item.pk %}">{{ item.title }}</a>
+          {% comment %}
+            The model builds its own address: BriefItem.get_absolute_url() reverses the
+            "item-detail" route, so this template never has to know the URL shape.
+          {% endcomment %}
+          <a class="text-decoration-none" href="{{ item.get_absolute_url }}">{{ item.title }}</a>
         </h3>
         <p class="card-text text-muted mb-0">{{ item.summary|truncatewords:32 }}</p>
       </div>

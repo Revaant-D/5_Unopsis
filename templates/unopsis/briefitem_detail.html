@@ -9,7 +9,10 @@
 
 {% block content %}
 
-  <p class="mb-2"><a href="{% url 'item-list-cbv-generic' %}">&larr; Back to all items</a></p>
+  <p class="mb-2">
+    <a href="{% url 'item-list-cbv-generic' %}">&larr; Back to all items</a>
+    &middot; <a href="{{ item.brief.get_absolute_url }}">the brief this came from</a>
+  </p>
 
   <div class="d-flex flex-wrap gap-2 mb-2">
     <span class="badge {% if item.lane == 'needs_you' %}text-bg-danger{% elif item.lane == 'moving' %}text-bg-secondary{% else %}text-bg-info{% endif %}">
@@ -40,12 +43,36 @@
     </div>
   {% endif %}
 
-  {% if item.draft_body %}
-    <div class="card mb-4">
-      <div class="card-header small text-muted">Draft reply (not sent)</div>
-      <div class="card-body"><p class="mb-0">{{ item.draft_body }}</p></div>
-    </div>
-  {% endif %}
+  {% comment %}
+    ===== The POST form: the only two things a reader is allowed to change =====
+    State and draft reply are written to the database, so this is POST, it carries a CSRF
+    token, and the view redirects afterwards (Post/Redirect/Get) so a refresh cannot save
+    the same change twice. The action posts back to this item's own address, which the model
+    supplies through get_absolute_url().
+  {% endcomment %}
+  <div class="panel mb-4">
+    <h3 class="h6 mb-1">Update this item <span class="badge text-bg-secondary">POST</span></h3>
+    <p class="small text-muted">
+      Changing data always goes through POST. A link (GET) that modified a row would be
+      followed by every crawler, prefetcher and browser "back" button.
+    </p>
+    <form method="post" action="{{ item.get_absolute_url }}">
+      {% csrf_token %}
+      <div class="row g-2">
+        <div class="col-sm-4">
+          <label class="form-label small mb-1" for="{{ form.state.id_for_label }}">State</label>
+          {{ form.state }}
+          {% for error in form.state.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-8">
+          <label class="form-label small mb-1" for="{{ form.draft_body.id_for_label }}">Draft reply (never sent)</label>
+          {{ form.draft_body }}
+          {% for error in form.draft_body.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm mt-3" type="submit">Save</button>
+    </form>
+  </div>
 
   <h3 class="h5 mt-4">Receipts <span class="text-muted fw-normal">({{ item.messages.count }} messages)</span></h3>
   <ul class="list-group mb-4">
