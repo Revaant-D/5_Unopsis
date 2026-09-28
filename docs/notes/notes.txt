@@ -145,14 +145,30 @@ Known issue for teammates:
 ------------------------------
   python manage.py runserver                     (development, DEBUG=True)
   python manage.py runserver --settings=inboxtriage.settings.production   (production, DEBUG=False)
-  python manage.py test                          (7 tests for the views and templates)
+  python manage.py test                          (32 tests across all six sections)
+  python manage.py collectstatic --settings=inboxtriage.settings.production   (hashed static files)
 
-  /items/manual/         view 1
-  /items/render/         view 2
-  /items/cbv-base/       view 3
-  /items/cbv-generic/    view 4 (list)
-  /items/<id>/           view 4 (detail), e.g. /items/1/
+  Start at /  -- the home page. Everything else is in the navigation bar.
+
+  /                        home page
+  /briefs/                 all briefs
+  /briefs/<id>/            one brief by primary key + the POST form that adds an item
+  /items/manual/           the four view kinds from the previous assignment
+  /items/render/
+  /items/cbv-base/
+  /items/cbv-generic/
+  /items/<id>/             one item by primary key + the POST form that updates it
+  /insights/               GET search, POST private lookup, aggregations, both charts
+  /insights/lanes.png      matplotlib bar chart (image/png straight off the URL)
+  /insights/providers.png  matplotlib pie chart
+  /api/items/              JSON API (function-based), filter with ?lane= ?state= ?space= ?q= ?limit=
+  /api/items/cbv/          the same API as a class-based view
+  /api/insights/           the aggregations as JSON, ?space=work narrows them
+  /api/items.txt           the same data through HttpResponse (text/plain)
+  /api/items.csv           the same data through HttpResponse (text/csv)
+
   Empty state: add ?state=snoozed to any list URL, e.g. /items/cbv-generic/?state=snoozed
+               or search for something that does not exist on /insights/
 
 
 10. VIEW INVENTORY (name, type, URL, purpose)
@@ -187,3 +203,218 @@ All views live in unopsis/views.py, routes in unopsis/urls.py. Every route has a
 
 Templates: templates/base.html (blocks: title, content), templates/unopsis/briefitem_list.html
 (shared by all four list views; for/empty), templates/unopsis/briefitem_detail.html.
+
+
+===========================================================================================
+11. WEEK 4 UPDATE (this assignment: URLs, ORM, static files, charts, forms, API)
+===========================================================================================
+
+Section 1 -- URL linking and navigation
+  - / is now a real page (views.home + templates/unopsis/home.html). No more "page not found"
+    at the root.
+  - base.html has a five-item navigation bar: Home, Briefs, Brief items, Search & insights,
+    JSON API. Every href is {% url 'route-name' %}; not one path is typed out by hand.
+  - Two kinds of detail page, both found by primary key: /items/<pk>/ (already existed) and
+    /briefs/<pk>/ (new). Every list item links to its detail page.
+  - get_absolute_url() implemented on BriefItem and on Brief. Templates use
+    {{ item.get_absolute_url }} instead of {% url 'item-detail' item.pk %}. See section 12.
+  - End-to-end flow, all on the home page: models.py -> urls.py -> views.py -> templates/.
+
+Section 2 -- ORM queries and data presentation
+  - /insights/ lists every BriefItem and carries two search forms:
+      GET  ?q= ?lane= ?state= ?space= ?author= ?max_rank= ?due_only=   (filters live in the URL)
+      POST private lookup by a person's handle                        (query stays out of the URL)
+    Why the split is on this page: the item search is something you want to send to a teammate,
+    so the link has to carry it. Looking somebody up by their mobile number is something that
+    must not survive the request at all, so it goes in the body. Both are only reads; the
+    difference is who else can see the question afterwards.
+  - Field lookups used: __icontains, __exact, __lte, __isnull, __in, and Q() for OR.
+  - Relationship spanning: brief__space__kind (item -> brief -> space) and
+    messages__author__display_name (item -> messages -> author, a many-to-many then a FK,
+    which is why that branch ends in .distinct()).
+  - Aggregations: totals with .count() and .aggregate(Avg(...)); grouped summaries with
+    .values(...).annotate(Count(...)) for items per lane, items per space, messages per
+    provider, messages per person (sent vs cited), and items and receipts per brief.
+  - Templates use {% for %} with {% empty %} on every list and table, and the empty state says
+    which filter produced it.
+
+Section 3 -- static files and UI styling
+  - static/css/unopsis.css and static/img/unopsis-logo.svg, loaded with {% load static %}.
+  - Visible changes: warm paper background, Fraunces + Source Sans 3 from Google Fonts, a
+    slate-to-blue header with the logo and an amber rule, pill navigation, stat tiles, softer
+    cards, and the three lane colours used consistently. See section 13 for the choices.
+
+Section 4 -- data visualization
+  - /insights/lanes.png      grouped bar chart: items per lane, split work vs personal.
+  - /insights/providers.png  pie chart: raw messages per provider.
+  - Both are ordinary Django views: the ORM computes the counts, matplotlib draws the figure on
+    the headless Agg backend, savefig() writes into a BytesIO buffer, and HttpResponse returns
+    the bytes with content_type="image/png". Nothing touches the disk.
+  - Memory: the PNG lives in RAM for the length of the request (tens of KB here). That is fine
+    for a small live chart and would be wrong for anything large or slow -- those should be
+    generated once and served as a static file. Every figure is closed with plt.close(), because
+    matplotlib keeps a global registry of open figures and a view that forgets leaks memory one
+    request at a time.
+  - The insights page embeds both with a heading, a caption and real alt text.
+
+Section 5 -- forms and user input
+  - GET form:  the item search on /insights/.
+  - POST forms: the private lookup on /insights/, the item update on /items/<pk>/ (state +
+    draft reply), and the create form on /briefs/<pk>/ (adds an item to that brief).
+  - Every POST form has {% csrf_token %}. A POST without one is rejected with 403, and there is
+    a test that asserts exactly that.
+  - The two writing forms redirect after a successful save (Post/Redirect/Get) so a refresh
+    cannot submit the same change twice.
+  - CBVs adapted to handle input: InsightsView (ListView + post()), ItemDetailView and
+    BriefDetailView (DetailView + post()).
+  - The create form checks the model's uniqueness constraints in clean(), so a duplicate slot is
+    a red message next to the field instead of an IntegrityError page.
+
+Section 6 -- the API
+  - /api/items/ (function-based) and /api/items/cbv/ (class-based) return JsonResponse.
+  - /api/insights/ returns the aggregations; ?space=work narrows every figure, and an unknown
+    space is a 400 with the allowed values.
+  - /api/items.txt and /api/items.csv return the same rows through HttpResponse, so the MIME
+    difference can be seen rather than just described. See section 14.
+
+Tests: 32 (python manage.py test), covering all six sections.
+Screenshots: docs/screenshots/07 to 16 for this assignment; 01 to 06 re-shot with the new styling.
+New dependency: matplotlib (added to requirements.txt). Re-run pip install -r requirements.txt.
+
+WEEK 4, PER PERSON  [TEAM: each person fills in their own two lines before we submit]
+  Member 1: Revaant Daga
+    What I did this week:
+    Blocked on / need help with:
+  Member 2: Keshav Arya
+    What I did this week:
+    Blocked on / need help with:
+  Member 3: Joy Sengupta
+    What I did this week:
+    Blocked on / need help with:
+  Member 4: Pranay Varanasi
+    What I did this week:
+    Blocked on / need help with:
+
+BEFORE SUBMITTING THIS ONE
+  [ ] pip install -r requirements.txt again (matplotlib is new) and python manage.py test -> 32 OK
+  [ ] Open / and click every link in the navigation bar
+  [ ] Run a GET search, copy the URL, paste it in a new tab, confirm the same rows come back
+  [ ] Run the POST private lookup and confirm the address bar still says /insights/
+  [ ] Add an item from /briefs/1/ and update one from /items/1/
+  [ ] Open /api/items/?lane=needs_you and /api/insights/
+  [ ] Every [TEAM: ...] line above is filled in or removed
+  [ ] Repository still public, instructor still a collaborator, link submitted on Canvas
+
+
+12. SECTION 1 NOTE -- WHERE get_absolute_url() IS USEFUL
+--------------------------------------------------------
+Implemented on BriefItem (and on Brief, which needed the same thing).
+
+The feature it is useful for is the BRIEF ITEM DETAIL PAGE, because a brief item is linked from
+more places than any other row in this project:
+
+  - all four list views (FBV manual, FBV render(), base CBV, generic ListView),
+  - the home page ("Needs you first"),
+  - the brief detail page,
+  - the search results on /insights/,
+  - the private lookup results on /insights/,
+  - the JSON API, where each result carries a "url" field,
+  - and the redirect after the POST form on the item page itself.
+
+Before, each of those wrote {% url 'item-detail' item.pk %} and had to know both the route name
+and that the route takes a pk. Now the model answers "where do I live?" once:
+
+    def get_absolute_url(self):
+        return reverse("item-detail", args=[self.pk])
+
+and everything else writes {{ item.get_absolute_url }}. Three things fall out of that:
+  1. changing the address in unopsis/urls.py changes every link in the project at once;
+  2. Django's admin gets a working "View on site" button for free;
+  3. redirect(item) after a save needs no success_url, because the object knows its own address.
+
+Why reverse() and not an f-string: reverse() fails loudly at the moment the route name is wrong,
+whereas f"/items/{self.pk}/" would keep producing plausible-looking dead links.
+
+
+13. SECTION 3 NOTE -- STATIC FILE ORGANIZATION AND CACHE BUSTING
+----------------------------------------------------------------
+Organization choice: ONE project-level static/ folder, not an app-level one.
+
+    static/css/unopsis.css        the site stylesheet
+    static/img/unopsis-logo.svg   the header mark
+    STATICFILES_DIRS = [BASE_DIR / 'static']    where Django looks in development
+    STATIC_ROOT = BASE_DIR / 'staticfiles'      where collectstatic copies them (git-ignored)
+
+Why: this project has a single app (unopsis) and a single visual identity. An app-level
+unopsis/static/unopsis/ folder is the right answer when an app is meant to be reusable in
+another project and has to carry its own assets without colliding with anybody else's. Neither
+is true here, so the app-level folder would add a directory level and a namespace prefix without
+adding an owner. If the project ever grows a second app with its own look, the shared frame
+(base.html's stylesheet and logo) stays in the project folder and the new app brings its own.
+
+Templates never write "/static/css/unopsis.css". They write {% load static %} once at the top and
+then {% static 'css/unopsis.css' %}, so the address is computed from STATIC_URL and can move to a
+CDN without editing a single template.
+
+Cache busting (implemented, production settings):
+  The problem. A static file is served with a long cache lifetime -- that is the point of it. Ship
+  a new stylesheet at the same address and returning visitors keep the old one until their cache
+  expires, so the site looks broken for exactly the people who use it most. Telling them to
+  hard-refresh is not a fix.
+
+  The fix. Change the address whenever the bytes change. ManifestStaticFilesStorage (set in
+  inboxtriage/settings/production.py) hashes each file's contents during collectstatic and writes
+  a copy with the hash in the name:
+
+      static/css/unopsis.css   ->   staticfiles/css/unopsis.33e154d07268.css
+
+  It records the mapping in staticfiles.json, and {% static 'css/unopsis.css' %} then renders the
+  hashed name. A new release produces a different hash, which is a different URL, which no browser
+  has ever cached, so the update is picked up on the next request -- while every hashed URL stays
+  safely cacheable forever. Nothing in any template changes; the tag does the lookup.
+
+  Development is deliberately left on the plain storage, so a CSS edit shows up on refresh without
+  re-running collectstatic.
+
+  Verify it with:
+      python manage.py collectstatic --settings=inboxtriage.settings.production
+      ls staticfiles/css/          -> unopsis.css and unopsis.<hash>.css
+
+
+14. SECTION 6 NOTE -- THE API PLAN AND WHAT IT SERVES
+------------------------------------------------------
+How we are creating the API for this project:
+
+  - Plain Django for now: views that return JsonResponse, one function-based (/api/items/) and
+    one class-based (/api/items/cbv/), with the queryset and the filtering factored into
+    api_item_queryset() so both share it. No Django REST Framework yet -- it earns its weight
+    when there are serializers, authentication and write endpoints to manage, and right now
+    there are none of those.
+  - Read-only. Every write in this project goes through a POST form with CSRF protection; the
+    API is a way to READ a brief, not a second door into changing one.
+  - Filtering by query parameter (?lane= ?state= ?space= ?brief= ?q= ?due_before= ?limit=),
+    unknown parameters ignored so a client can add one without the endpoint breaking.
+  - Shaped by hand in serialize_item() rather than dumped from the model, so what leaves the
+    server is a deliberate decision and not whatever happens to be on the row.
+  - Responses are objects, not bare lists ({"count": .., "filters": .., "results": [..]}), which
+    leaves room to add paging later without breaking existing clients.
+
+What kind of data we are planning to serve:
+
+  SERVED -- the ranked, public-facing read of a brief:
+    brief items       id, title, lane, lane label, rank, state, summary, space, brief id,
+                      deadline, number of receipts, and the item's own URL
+    aggregations      totals and the grouped counts behind the charts (items per lane,
+                      messages per provider), so a client can plot them itself
+
+  NOT SERVED, on purpose -- this is the whole point of the product's promise:
+    message bodies    the raw text of somebody's Gmail, Slack and WhatsApp
+    Message.raw       the provider's original payload
+    draft replies     something written but not sent is not anybody else's business
+    token_ref         the pointer to stored credentials
+    handles           people's phone numbers and personal addresses
+  A brief is a summary the user was shown. The messages underneath it are private, and an API
+  that returned them would undo every access decision the rest of the system makes.
+
+  Planned next: an ?updated_since= parameter so a client can poll cheaply, and a per-user API key
+  once briefs are no longer all owned by the demo user.
