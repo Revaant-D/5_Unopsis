@@ -289,8 +289,15 @@ WEEK 4, PER PERSON  [TEAM: each person fills in their own two lines before we su
     What I did this week:
     Blocked on / need help with:
   Member 3: Joy Sengupta
-    What I did this week:
-    Blocked on / need help with:
+    What I did this week: This week's work was done on my machine. I built out all six sections:
+      the home page at / with the navigation bar and get_absolute_url() on BriefItem and Brief;
+      the /insights/ page with the GET search, the POST private lookup and the aggregations;
+      the static/ folder with our own stylesheet and logo, plus cache busting with
+      ManifestStaticFilesStorage; the two matplotlib chart endpoints; the three POST forms with
+      CSRF; and the JSON API. I also wrote the tests (32 now, all passing), took the screenshots,
+      updated the README and this file, and pushed everything to main.
+    Blocked on / need help with: Nothing blocking. Everyone please re-run
+      pip install -r requirements.txt, since matplotlib is a new dependency.
   Member 4: Pranay Varanasi
     What I did this week:
     Blocked on / need help with:
