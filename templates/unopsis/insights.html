@@ -10,7 +10,8 @@
        the URL stays /insights/;
     3. the results list, with {% templatetag openblock %} for {% templatetag closeblock %} /
        {% templatetag openblock %} empty {% templatetag closeblock %};
-    4. the aggregation summaries: one total, and several GROUP BY counts.
+    4. the aggregation summaries: one total, and several GROUP BY counts, with the two
+       matplotlib charts drawn from the same numbers.
 {% endcomment %}
 
 {% block title %}Search &amp; insights{% endblock %}
@@ -183,7 +184,7 @@
     </div>
   {% endfor %}
 
-  <!-- ============ 4. AGGREGATIONS ============ -->
+  <!-- ============ 4. AGGREGATIONS AND CHARTS ============ -->
   <h3 class="section-title mt-4">Totals</h3>
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
@@ -290,6 +291,33 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <h3 class="section-title">Charts (matplotlib, drawn from those same queries)</h3>
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <figure class="chart-figure">
+        <img src="{% url 'chart-lanes' %}"
+             alt="Grouped bar chart. For each lane (Needs you, Moving without you, FYI) it shows how many brief items belong to the work space and how many to the personal space.">
+        <figcaption>
+          <strong>Items by lane and space.</strong> Served as a live PNG from
+          <code>{% url 'chart-lanes' %}</code>: the view runs the GROUP BY, draws the figure with
+          matplotlib, writes it into a <code>BytesIO</code> buffer and returns it as
+          <code>HttpResponse(..., content_type="image/png")</code>.
+        </figcaption>
+      </figure>
+    </div>
+    <div class="col-lg-5">
+      <figure class="chart-figure">
+        <img src="{% url 'chart-providers' %}"
+             alt="Pie chart of the share of raw messages that arrived from each connected provider, with the message count for each provider in the legend.">
+        <figcaption>
+          <strong>Raw messages by provider.</strong> The same technique at
+          <code>{% url 'chart-providers' %}</code>, spanning Message &rarr; Connection &rarr;
+          provider.
+        </figcaption>
+      </figure>
     </div>
   </div>
 

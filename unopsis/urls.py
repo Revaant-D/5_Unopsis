@@ -13,6 +13,8 @@ it in get_absolute_url(). The address can then change here without touching a si
     /items/cbv-generic/      item-list-cbv-generic
     /items/<pk>/             item-detail           detail by primary key; BriefItem.get_absolute_url()
     /insights/               insights              GET search + POST lookup + aggregations
+    /insights/lanes.png      chart-lanes           matplotlib bar chart, served as image/png
+    /insights/providers.png  chart-providers       matplotlib pie chart, served as image/png
 
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
@@ -43,5 +45,9 @@ urlpatterns = [
 
     # ---- Sections 2 + 5: ORM search (GET), private lookup (POST), aggregations ----
     path("insights/", views.InsightsView.as_view(), name="insights"),
+
+    # ---- Section 4: charts served straight off a URL, like /sections/enrollment.png ----
+    path("insights/lanes.png", views.lane_chart_png, name="chart-lanes"),
+    path("insights/providers.png", views.provider_chart_png, name="chart-providers"),
 
 ]

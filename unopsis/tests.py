@@ -5,6 +5,7 @@ Tests for the whole project:
   * NavigationAndUrlTests   Section 1 -- the home page, named routes, get_absolute_url()
   * OrmQueryTests           Section 2 -- search, relationship spanning, aggregation
   * StaticFilesTests        Section 3 -- the custom stylesheet is configured and linked
+  * ChartTests              Section 4 -- the matplotlib PNG endpoints
   * FormTests               Section 5 -- the GET form, the POST forms, CSRF
 
 Run with:  python manage.py test
@@ -263,6 +264,30 @@ class FormTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         response = client.post(self.item.get_absolute_url(), {"state": "handled"})
         self.assertEqual(response.status_code, 403)
+
+
+class ChartTests(TestCase):
+    """Section 4: the matplotlib endpoints."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.item = _build_demo_rows()
+
+    def test_chart_urls_return_a_real_png(self):
+        for name in ("chart-lanes", "chart-providers"):
+            with self.subTest(chart=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Type"], "image/png")
+                # The first eight bytes of every PNG file.
+                self.assertTrue(response.content.startswith(b"\x89PNG\r\n\x1a\n"))
+                self.assertGreater(len(response.content), 1000)
+
+    def test_the_page_embeds_the_charts_with_alt_text(self):
+        html = self.client.get(reverse("insights")).content.decode()
+        self.assertIn(f'src="{reverse("chart-lanes")}"', html)
+        self.assertIn(f'src="{reverse("chart-providers")}"', html)
+        self.assertIn("alt=\"Grouped bar chart", html)
 
 
 class StaticFilesTests(TestCase):

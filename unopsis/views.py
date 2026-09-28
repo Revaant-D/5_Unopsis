@@ -21,9 +21,21 @@ Part B -- this assignment:
     InsightsView      (/insights/)            ORM search: a GET form (shareable) and a POST
                                               form (deliberately not shareable), plus the
                                               aggregations
+    lane_chart_png    (/insights/lanes.png)   matplotlib bar chart served as image/png
+    provider_chart_png(/insights/providers.png) matplotlib pie chart served as image/png
 
 ItemDetailView also gained a post() so one item's state and draft reply can be changed.
 """
+
+import io
+
+import matplotlib
+
+# Agg is the non-interactive backend: it draws into a memory buffer instead of opening a
+# window. A web server has no display, so this line must run BEFORE pyplot is imported.
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402  (must follow matplotlib.use)
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 from django.contrib import messages as flash
 from django.db.models import Avg, Case, Count, IntegerField, Q, TextField, Value, When
@@ -541,3 +553,109 @@ class InsightsView(ListView):
             lookup_form=form, lookup_results=results, lookup_ran=True
         )
         return self.render_to_response(context)
+
+
+# ======================================================================================
+# PART B -- SECTION 4: matplotlib charts served straight off a URL
+# ======================================================================================
+def _png_response(figure):
+    """
+    Turn a matplotlib figure into an image/png HttpResponse without ever touching the disk.
+
+    BytesIO is an in-memory file. savefig() writes the PNG into that buffer, .getvalue()
+    hands the bytes to HttpResponse, and close(figure) releases the figure.
+
+    Memory note: the whole image lives in RAM for the length of the request, so this is fine
+    for a chart of a few dozen kilobytes and would be the wrong shape for anything large or
+    slow. Those belong in a file or a cache, generated once and served as a static file --
+    here the chart has to be live because the numbers come from the database on every request.
+    Every figure is closed explicitly; matplotlib keeps a global registry of open figures, and
+    a view that forgets to close them leaks memory one request at a time.
+    """
+    buffer = io.BytesIO()
+    figure.savefig(buffer, format="png", dpi=110, bbox_inches="tight")
+    plt.close(figure)
+    png = buffer.getvalue()
+    buffer.close()
+    response = HttpResponse(png, content_type="image/png")
+    response["Content-Length"] = str(len(png))
+    # The data changes whenever a brief does, so the browser must not keep an old chart.
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+def lane_chart_png(request):
+    """
+    Bar chart: how many brief items sit in each lane, split by work and personal space.
+
+    Served directly on a URL (/insights/lanes.png) so a template can point an <img> at it,
+    exactly like illinois.edu/sections/enrollment.png in the brief.
+    """
+    rows = (
+        BriefItem.objects.values("lane", "brief__space__kind")
+        .annotate(total=Count("id"))
+        .order_by("lane")
+    )
+    lanes = [BriefItem.Lane.NEEDS_YOU, BriefItem.Lane.MOVING, BriefItem.Lane.FYI]
+    kinds = [Space.Kind.WORK, Space.Kind.PERSONAL]
+    counts = {(row["lane"], row["brief__space__kind"]): row["total"] for row in rows}
+
+    figure, axes = plt.subplots(figsize=(7, 4))
+    width = 0.38
+    positions = range(len(lanes))
+    for offset, kind in zip((-width / 2, width / 2), kinds):
+        bars = axes.bar(
+            [p + offset for p in positions],
+            [counts.get((lane, kind), 0) for lane in lanes],
+            width=width,
+            label=SPACE_LABELS[kind],
+            color="#2f4858" if kind == Space.Kind.WORK else "#d98324",
+        )
+        axes.bar_label(bars, fmt="%d", padding=2, fontsize=9, color="#5d6b7a")
+    # Counts are whole numbers, so the y axis must not offer 0.5 of an item.
+    axes.yaxis.set_major_locator(MaxNLocator(integer=True))
+    axes.set_title("Brief items by lane and space")
+    axes.set_xlabel("Lane")
+    axes.set_ylabel("Number of items")
+    axes.set_xticks(list(positions), [LANE_LABELS[lane] for lane in lanes])
+    axes.legend(title="Space")
+    axes.spines[["top", "right"]].set_visible(False)
+    axes.grid(axis="y", linestyle=":", alpha=0.4)
+    axes.set_axisbelow(True)
+    if not counts:
+        axes.text(0.5, 0.5, "No items yet -- run seed_demo", ha="center",
+                  transform=axes.transAxes, color="#888")
+    return _png_response(figure)
+
+
+def provider_chart_png(request):
+    """Pie chart: where the raw messages actually came from (Message -> Connection -> provider)."""
+    rows = (
+        Message.objects.values("connection__provider")
+        .annotate(total=Count("id"))
+        .order_by("-total")
+    )
+    labels = [PROVIDER_LABELS.get(r["connection__provider"], r["connection__provider"])
+              for r in rows]
+    sizes = [r["total"] for r in rows]
+
+    figure, axes = plt.subplots(figsize=(5.5, 4.5))
+    if sizes:
+        wedges, _texts, autotexts = axes.pie(
+            sizes,
+            autopct=lambda pct: f"{pct:.0f}%",
+            startangle=110,
+            colors=["#2f4858", "#33658a", "#86bbd8", "#d98324", "#c44536", "#758e4f"],
+            wedgeprops={"edgecolor": "white", "linewidth": 1.5},
+        )
+        for text in autotexts:
+            text.set_color("white")
+            text.set_fontsize(9)
+        axes.legend(wedges, [f"{label} ({size})" for label, size in zip(labels, sizes)],
+                    title="Provider", loc="center left", bbox_to_anchor=(1, 0.5))
+    else:
+        axes.text(0.5, 0.5, "No messages yet -- run seed_demo", ha="center",
+                  transform=axes.transAxes, color="#888")
+        axes.set_axis_off()
+    axes.set_title("Raw messages by provider")
+    return _png_response(figure)
