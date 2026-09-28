@@ -179,6 +179,11 @@ raw provider payloads, the private message bodies, draft replies or credential r
 Filtering is by query parameter: `?lane=`, `?state=`, `?space=`, `?brief=`, `?q=`, `?due_before=`,
 `?limit=`. Unknown parameters are ignored, so a client can add one without breaking.
 
+> **Scope.** This is a single-user demo: there is no login, so the pages, the API and the POST
+> forms are all open, and every queryset covers every space. Section 15 of
+> [`docs/notes/notes.txt`](docs/notes/notes.txt) records what scoping to the signed-in user would
+> take.
+
 ```bash
 curl -s "http://127.0.0.1:8000/api/items/?lane=needs_you&limit=2"
 curl -s "http://127.0.0.1:8000/api/insights/?space=personal"

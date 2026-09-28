@@ -418,3 +418,33 @@ What kind of data we are planning to serve:
 
   Planned next: an ?updated_since= parameter so a client can poll cheaply, and a per-user API key
   once briefs are no longer all owned by the demo user.
+
+
+15. KNOWN LIMITATION -- THERE IS NO LOGIN YET
+----------------------------------------------
+Worth writing down because it is a real property of the code, not an oversight we forgot about.
+
+The project has no authentication layer at all: no login page, and no view checks request.user.
+Space.user exists on the model, so every brief already belongs to somebody, but nothing enforces
+it at the view layer. That means, as the code stands:
+
+  - the list views, the detail pages and the search show every space's items, not just yours;
+  - /api/items/ and /api/insights/ are public, which is what the assignment asks a public JSON
+    API to be;
+  - the POST forms (update an item, add an item to a brief) can be submitted by anyone who can
+    open the page.
+
+This is fine for what it is -- a single-user demo seeded by seed_demo, run on localhost, graded
+by opening the pages -- and adding @login_required would put a login wall in front of exactly the
+forms and endpoints the assignment asks to be clickable.
+
+What it would take to be correct for real users, when we get there:
+  - scope every queryset to the signed-in user, e.g.
+      BriefItem.objects.filter(brief__space__user=request.user)
+  - LoginRequiredMixin (or @login_required) on both POST views, plus a 404 rather than a 403 when
+    somebody asks for a row that is not theirs, so the API does not confirm that it exists;
+  - an API key or token for /api/items/, and a decision about which fields stay public.
+
+The private lookup on /insights/ is the sharpest case: it already keeps the query out of the URL,
+but until the queryset is scoped it can find people in any space, not only yours. The POST is the
+right half of that fix; the ownership filter is the missing half.
