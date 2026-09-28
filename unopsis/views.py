@@ -1,6 +1,8 @@
 """
-Views for Unopsis: the same domain model (BriefItem, one ranked card on a brief) shown in the
-four styles this assignment asks for.
+Views for Unopsis.
+
+Part A -- the four view kinds (previous assignment). The same domain model (BriefItem, one
+ranked card on a brief) shown four ways:
 
     1. item_list_manual   function-based view, loads the template by hand + HttpResponse
     2. item_list_render   function-based view, render() shortcut
@@ -9,16 +11,34 @@ four styles this assignment asks for.
 
 All four list views send the SAME context to the SAME template
 (templates/unopsis/briefitem_list.html), so the template does not care how the data arrived.
+
+Part B -- this assignment:
+
+    home              (/)                     the home page, so the root URL is not a 404
+    BriefListView     (/briefs/)              list of briefs, each linking to its detail page
+    BriefDetailView   (/briefs/<pk>/)         one brief by primary key
+    InsightsView      (/insights/)            ORM search: a GET form (shareable) and a POST
+                                              form (deliberately not shareable), plus the
+                                              aggregations
+    lane_chart_png    (/insights/lanes.png)   matplotlib bar chart served as image/png
+    provider_chart_png(/insights/providers.png) matplotlib pie chart served as image/png
+    api_items         (/api/items/)           JSON API, function-based, filtered by ?params
+    ItemsApiView      (/api/items/cbv/)       the same API as a class-based view
+    api_insights      (/api/insights/)        JSON aggregations
+    api_items_text    (/api/items.txt)        the SAME data through HttpResponse instead of
+                                              JsonResponse, to show the MIME difference
+
+ItemDetailView also gained a post() so one item's state and draft reply can be changed.
 """
 
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.template import loader
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from .models import BriefItem
+from .models import Brief, BriefItem, Connection, Message, Person, Space
 
 LIST_TEMPLATE = "unopsis/briefitem_list.html"
 
@@ -148,3 +168,97 @@ class ItemDetailView(DetailView):
         return BriefItem.objects.select_related(
             "brief__space", "primary_message"
         ).prefetch_related("messages__author", "messages__connection")
+
+
+# ======================================================================================
+# PART B -- SECTION 1: the home page and the brief pages (URL linking and navigation)
+# ======================================================================================
+def home(request):
+    """
+    The home page, wired to "" in unopsis/urls.py so the root address is a real page instead
+    of Django's "page not found" list.
+
+    It is also the shortest end-to-end demonstration of the flow the assignment asks for:
+
+        models.py    Brief / BriefItem / Message define the data and get_absolute_url()
+        urls.py      path("", views.home, name="home") gives that view an address and a name
+        views.py     this function queries the models and builds a context dict
+        templates/   unopsis/home.html renders the context and links onward with {% url %}
+                     and {{ item.get_absolute_url }}
+    """
+    briefs = (
+        Brief.objects.select_related("space", "space__user")
+        .annotate(item_count=Count("items", distinct=True))
+        .order_by("-window_end")
+    )
+    context = {
+        "briefs": briefs[:4],
+        # Needs-you items only, best rank first: the three things the product exists to say.
+        "urgent_items": (
+            BriefItem.objects.filter(lane=BriefItem.Lane.NEEDS_YOU)
+            .exclude(state=BriefItem.State.DISMISSED)
+            .select_related("brief__space")
+            .order_by("rank")[:3]
+        ),
+        # A LIST of (label, number) pairs rather than a dict: in a template, {{ totals.items }}
+        # would look up the dict KEY "items" before it ever reached dict.items().
+        "totals": [
+            ("Spaces", Space.objects.count()),
+            ("Connections", Connection.objects.count()),
+            ("People", Person.objects.count()),
+            ("Messages", Message.objects.count()),
+            ("Briefs", Brief.objects.count()),
+            ("Brief items", BriefItem.objects.count()),
+        ],
+    }
+    return render(request, "unopsis/home.html", context)
+
+
+class BriefListView(ListView):
+    """
+    Every brief, newest first, with the number of items on it computed in the database rather
+    than by calling .items.count() once per row in the template.
+    """
+
+    model = Brief
+    context_object_name = "briefs"
+    template_name = "unopsis/brief_list.html"
+
+    def get_queryset(self):
+        return (
+            Brief.objects.select_related("space", "space__user")
+            .annotate(
+                item_count=Count("items", distinct=True),
+                needs_you_count=Count(
+                    "items", filter=Q(items__lane=BriefItem.Lane.NEEDS_YOU), distinct=True
+                ),
+            )
+            .order_by("-window_end")
+        )
+
+
+class BriefDetailView(DetailView):
+    """
+    One brief by primary key: /briefs/<int:pk>/.
+
+    The pk in the URL is the whole point of the section -- DetailView reads it from the URL
+    kwargs, fetches that row (404 if it does not exist), and the template links back out with
+    {{ brief.get_absolute_url }} and {{ item.get_absolute_url }}.
+
+    """
+
+    model = Brief
+    context_object_name = "brief"
+    template_name = "unopsis/brief_detail.html"
+
+    def get_queryset(self):
+        return Brief.objects.select_related("space", "space__user").prefetch_related("items")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["items"] = (
+            self.object.items.annotate(lane_priority=LANE_PRIORITY)
+            .annotate(receipt_count=Count("messages"))
+            .order_by("lane_priority", "rank")
+        )
+        return context

@@ -29,6 +29,7 @@ rather than render-time logic:
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
 
 class Provider(models.TextChoices):
@@ -310,6 +311,10 @@ class Brief(models.Model):
     def __str__(self):
         return f"{self.space} brief to {self.window_end:%b %d %H:%M}"
 
+    def get_absolute_url(self):
+        """The canonical page for this brief: /briefs/<pk>/ (route name "brief-detail")."""
+        return reverse("brief-detail", args=[self.pk])
+
 
 class BriefItem(models.Model):
     """
@@ -389,3 +394,21 @@ class BriefItem(models.Model):
 
     def __str__(self):
         return f"[{self.get_lane_display()} #{self.rank}] {self.title}"
+
+    def get_absolute_url(self):
+        """
+        The canonical address of this item: /items/<pk>/ (route name "item-detail").
+
+        The model answers "where do I live?" once, by reversing the *name* of the route
+        rather than by building a string, so:
+
+        * templates write {{ item.get_absolute_url }} instead of {% url 'item-detail' item.pk %},
+          and the same link works from any page, any loop, any include;
+        * changing the address in unopsis/urls.py changes every link in the project;
+        * the admin gets a working "View on site" button for free, and CreateView/UpdateView
+          know where to redirect after a successful save without a success_url.
+
+        This is the useful case for a BriefItem in particular, because an item is linked from
+        four different list views, the brief page, the search results and the JSON API.
+        """
+        return reverse("item-detail", args=[self.pk])

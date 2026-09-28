@@ -24,30 +24,27 @@
   <!-- Header -->
   <header class="bg-dark text-white py-3 mb-3">
     <div class="container">
-      <h1 class="h4 mb-0 brand-mark">Unopsis</h1>
+      <h1 class="h4 mb-0 brand-mark"><a class="text-white text-decoration-none" href="{% url 'home' %}">Unopsis</a></h1>
       <p class="mb-0 small text-white-50">One view of everything that needs you. Team 5, INFO 490.</p>
     </div>
   </header>
 
-  {# Navigation: one link per view kind. The url tag looks each address up by its name= in urls.py #}
-  <nav class="container mb-4" aria-label="Views">
+  {# Navigation. Every href is looked up by the route's name= in unopsis/urls.py, so the
+     address can change there without touching a single link here. #}
+  <nav class="container mb-4" aria-label="Main">
     {% with current=request.resolver_match.url_name %}
     <ul class="nav nav-pills flex-wrap gap-1">
       <li class="nav-item">
-        <a class="nav-link {% if current == 'item-list-manual' %}active{% endif %}"
-           href="{% url 'item-list-manual' %}">1. HttpResponse (FBV)</a>
+        <a class="nav-link {% if current == 'home' %}active{% endif %}"
+           href="{% url 'home' %}">Home</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {% if current == 'item-list-render' %}active{% endif %}"
-           href="{% url 'item-list-render' %}">2. render() (FBV)</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link {% if current == 'item-list-cbv-base' %}active{% endif %}"
-           href="{% url 'item-list-cbv-base' %}">3. Base View (CBV)</a>
+        <a class="nav-link {% if current == 'brief-list' or current == 'brief-detail' %}active{% endif %}"
+           href="{% url 'brief-list' %}">Briefs</a>
       </li>
       <li class="nav-item">
         <a class="nav-link {% if current == 'item-list-cbv-generic' or current == 'item-detail' %}active{% endif %}"
-           href="{% url 'item-list-cbv-generic' %}">4. Generic ListView (CBV)</a>
+           href="{% url 'item-list-cbv-generic' %}">Brief items</a>
       </li>
     </ul>
     {% endwith %}

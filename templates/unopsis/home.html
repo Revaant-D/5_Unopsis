@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% comment %}
+  The home page, served at "/" by views.home.
+
+  End-to-end flow, all of it visible on this one page:
+    models.py  ->  Brief / BriefItem, and BriefItem.get_absolute_url()
+    urls.py    ->  path("", views.home, name="home") and the named routes linked below
+    views.py   ->  home() queries the models and hands over a context dict
+    this file  ->  renders that context and links onward with {% templatetag openblock %} url {% templatetag closeblock %}
+                   and {{ item.get_absolute_url }}
+{% endcomment %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+  <div class="panel mb-4">
+    <h2 class="h3 mb-2">Everything that needs you, in one read.</h2>
+    <p class="text-muted mb-3">
+      Unopsis collects messages from every place they arrive, groups them into topics, ranks
+      them into three lanes, and cites the real messages behind every line it writes.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="{% url 'brief-list' %}">Open the briefs</a>
+      <a class="btn btn-outline-secondary" href="{% url 'item-list-cbv-generic' %}">All brief items</a>
+    </div>
+  </div>
+
+  <!-- Totals straight off the ORM (one .count() each) -->
+  <h3 class="section-title">What is in the database right now</h3>
+  <div class="row g-3 mb-4">
+    {% for label, number in totals %}
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="stat-tile">
+          <div class="stat-number">{{ number }}</div>
+          <div class="stat-label">{{ label }}</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="row g-4">
+    <!-- Latest briefs, each linking to its own detail page by primary key -->
+    <div class="col-lg-6">
+      <h3 class="section-title">Latest briefs</h3>
+      {% for brief in briefs %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <h4 class="h6 mb-1">
+                {# get_absolute_url() again: the model knows its own address. #}
+                <a href="{{ brief.get_absolute_url }}">{{ brief.headline|default:"Untitled brief" }}</a>
+              </h4>
+              <span class="badge text-bg-light border">{{ brief.space.get_kind_display }}</span>
+            </div>
+            <p class="small text-muted mb-0">
+              {{ brief.item_count }} item{{ brief.item_count|pluralize }} &middot;
+              {{ brief.message_count }} messages read &middot;
+              window ended {{ brief.window_end|date:"M j, g:i A" }}
+            </p>
+          </div>
+        </div>
+      {% empty %}
+        <div class="card"><div class="card-body text-muted">
+          No briefs yet. Run <code>python manage.py seed_demo</code> to load the demo data.
+        </div></div>
+      {% endfor %}
+    </div>
+
+    <!-- The three things that actually need the user -->
+    <div class="col-lg-6">
+      <h3 class="section-title">Needs you first</h3>
+      {% for item in urgent_items %}
+        <div class="card item-card lane-{{ item.lane }} mb-3">
+          <div class="card-body">
+            <h4 class="h6 mb-1">
+              <a href="{{ item.get_absolute_url }}">{{ item.title }}</a>
+            </h4>
+            <p class="small text-muted mb-0">
+              {{ item.brief.space.get_kind_display }} &middot; rank #{{ item.rank }}
+              {% if item.deadline_at %}&middot; due {{ item.deadline_at|date:"D g:i A" }}{% endif %}
+            </p>
+          </div>
+        </div>
+      {% empty %}
+        <div class="card"><div class="card-body text-muted">
+          Nothing is waiting on you. Either the briefs are clear or the demo data has not been
+          loaded yet.
+        </div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- The four view kinds from the previous assignment, still reachable -->
+  <h3 class="section-title mt-4">The same list, four ways (previous assignment)</h3>
+  <ul class="list-inline small">
+    <li class="list-inline-item"><a href="{% url 'item-list-manual' %}">1. FBV + HttpResponse</a></li>
+    <li class="list-inline-item">&middot;</li>
+    <li class="list-inline-item"><a href="{% url 'item-list-render' %}">2. FBV + render()</a></li>
+    <li class="list-inline-item">&middot;</li>
+    <li class="list-inline-item"><a href="{% url 'item-list-cbv-base' %}">3. Base CBV</a></li>
+    <li class="list-inline-item">&middot;</li>
+    <li class="list-inline-item"><a href="{% url 'item-list-cbv-generic' %}">4. Generic ListView</a></li>
+  </ul>
+
+{% endblock %}

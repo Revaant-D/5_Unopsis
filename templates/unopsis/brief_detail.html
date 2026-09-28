@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% comment %}
+  One brief, found by the primary key in the URL (/briefs/<pk>/). Every item on it links to its
+  own detail page through {{ item.get_absolute_url }}.
+{% endcomment %}
+
+{% block title %}{{ brief.headline|default:"Brief" }}{% endblock %}
+
+{% block content %}
+
+  <p class="mb-2"><a href="{% url 'brief-list' %}">&larr; All briefs</a></p>
+
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    <span class="badge text-bg-light border">{{ brief.space.get_kind_display }}</span>
+    <span class="badge text-bg-light border">{{ brief.get_trigger_display }}</span>
+    <span class="badge {% if brief.status == 'ready' %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+      {{ brief.get_status_display }}
+    </span>
+  </div>
+
+  <h2 class="h3">{{ brief.headline|default:"Untitled brief" }}</h2>
+  <p class="text-muted">
+    {{ brief.window_start|date:"M j, g:i A" }} &rarr; {{ brief.window_end|date:"M j, g:i A" }}
+    &middot; {{ brief.message_count }} messages became {{ brief.topic_count }} topics
+    &middot; about {{ brief.read_seconds }}s to read
+    {% if brief.model_version %}&middot; {{ brief.model_version }}{% endif %}
+  </p>
+
+  <h3 class="section-title mt-4">Items on this brief</h3>
+  {% for item in items %}
+    <div class="card item-card lane-{{ item.lane }} mb-3">
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <span class="badge {% if item.lane == 'needs_you' %}text-bg-danger{% elif item.lane == 'moving' %}text-bg-primary{% else %}text-bg-success{% endif %}">
+            {{ item.get_lane_display }} #{{ item.rank }}
+          </span>
+          <span class="badge text-bg-light border">{{ item.get_state_display }}</span>
+          <span class="badge text-bg-light border">{{ item.receipt_count }} receipt{{ item.receipt_count|pluralize }}</span>
+        </div>
+        <h4 class="h6 mb-1"><a href="{{ item.get_absolute_url }}">{{ item.title }}</a></h4>
+        <p class="small text-muted mb-0">{{ item.summary|truncatewords:28 }}</p>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-muted">This brief has no items yet. Add the first one below.</p>
+  {% endfor %}
+
+{% endblock %}
