@@ -67,6 +67,10 @@
           <a class="nav-link {% if current == 'insights' %}active{% endif %}"
              href="{% url 'insights' %}">Search &amp; insights</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
+             href="{% url 'api-items' %}">JSON API</a>
+        </li>
       </ul>
       {% endwith %}
     </div>
@@ -94,7 +98,8 @@
   <footer class="site-footer py-3">
     <div class="container small text-center">
       5_Unopsis &middot; INFO 490 &middot; Team 5 &middot;
-      <a class="link-light" href="{% url 'insights' %}">Insights</a>
+      <a class="link-light" href="{% url 'insights' %}">Insights</a> &middot;
+      <a class="link-light" href="{% url 'api-items' %}">API</a>
     </div>
   </footer>
 

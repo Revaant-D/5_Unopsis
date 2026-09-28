@@ -7,11 +7,13 @@ Tests for the whole project:
   * StaticFilesTests        Section 3 -- the custom stylesheet is configured and linked
   * ChartTests              Section 4 -- the matplotlib PNG endpoints
   * FormTests               Section 5 -- the GET form, the POST forms, CSRF
+  * ApiTests                Section 6 -- the JSON API, filtering, and JsonResponse vs HttpResponse
 
 Run with:  python manage.py test
 Django builds a throwaway database for these, so your local db.sqlite3 is untouched.
 """
 
+import json
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -159,7 +161,7 @@ class NavigationAndUrlTests(TestCase):
 
     def test_navigation_links_to_at_least_three_named_routes(self):
         html = self.client.get(reverse("home")).content.decode()
-        for name in ("home", "brief-list", "item-list-cbv-generic", "insights"):
+        for name in ("home", "brief-list", "item-list-cbv-generic", "insights", "api-items"):
             with self.subTest(route=name):
                 self.assertIn(f'href="{reverse(name)}"', html)
 
@@ -288,6 +290,61 @@ class ChartTests(TestCase):
         self.assertIn(f'src="{reverse("chart-lanes")}"', html)
         self.assertIn(f'src="{reverse("chart-providers")}"', html)
         self.assertIn("alt=\"Grouped bar chart", html)
+
+
+class ApiTests(TestCase):
+    """Section 6: the JSON API, its filtering, and the MIME types."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.item = _build_demo_rows()
+
+    def test_json_api_returns_json(self):
+        response = self.client.get(reverse("api-items"))
+        self.assertEqual(response["Content-Type"], "application/json")
+        payload = response.json()
+        self.assertEqual(payload["count"], 2)
+        titles = [row["title"] for row in payload["results"]]
+        self.assertEqual(titles, ["Needs item", "FYI item"])   # needs-you first
+        self.assertEqual(payload["results"][0]["url"], self.item.get_absolute_url())
+
+    def test_api_filters_on_query_parameters(self):
+        payload = self.client.get(reverse("api-items"), {"lane": "fyi"}).json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["results"][0]["title"], "FYI item")
+        self.assertEqual(self.client.get(reverse("api-items"), {"q": "act on"}).json()["count"], 1)
+        self.assertEqual(
+            self.client.get(reverse("api-items"), {"space": "personal"}).json()["count"], 0
+        )
+
+    def test_the_class_based_api_returns_the_same_rows(self):
+        fbv = self.client.get(reverse("api-items")).json()["results"]
+        cbv = self.client.get(reverse("api-items-cbv")).json()["results"]
+        self.assertEqual([r["id"] for r in fbv], [r["id"] for r in cbv])
+
+    def test_insights_api_aggregates_and_validates_its_parameter(self):
+        payload = self.client.get(reverse("api-insights")).json()
+        self.assertEqual(payload["totals"]["items"], 2)
+        self.assertEqual(
+            {row["lane"]: row["total"] for row in payload["items_by_lane"]},
+            {"needs_you": 1, "fyi": 1},
+        )
+        bad = self.client.get(reverse("api-insights"), {"space": "nope"})
+        self.assertEqual(bad.status_code, 400)
+
+    def test_httpresponse_and_jsonresponse_differ_only_in_content_type(self):
+        as_json = self.client.get(reverse("api-items"))
+        as_text = self.client.get(reverse("api-items-text"))
+        as_csv = self.client.get(reverse("api-items-csv"))
+        self.assertEqual(as_json["Content-Type"], "application/json")
+        self.assertEqual(as_text["Content-Type"], "text/plain; charset=utf-8")
+        self.assertEqual(as_csv["Content-Type"], "text/csv")
+        # Same rows underneath the three different MIME types.
+        self.assertEqual(
+            json.loads(as_text.content)["results"][0]["title"],
+            as_json.json()["results"][0]["title"],
+        )
+        self.assertIn("Needs item", as_csv.content.decode())
 
 
 class StaticFilesTests(TestCase):

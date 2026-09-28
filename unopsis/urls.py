@@ -15,6 +15,11 @@ it in get_absolute_url(). The address can then change here without touching a si
     /insights/               insights              GET search + POST lookup + aggregations
     /insights/lanes.png      chart-lanes           matplotlib bar chart, served as image/png
     /insights/providers.png  chart-providers       matplotlib pie chart, served as image/png
+    /api/items/              api-items             JSON, function-based view
+    /api/items/cbv/          api-items-cbv         JSON, class-based view
+    /api/insights/           api-insights          JSON aggregations
+    /api/items.txt           api-items-text        the same data via HttpResponse (text/plain)
+    /api/items.csv           api-items-csv         the same data via HttpResponse (text/csv)
 
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
@@ -50,4 +55,11 @@ urlpatterns = [
     path("insights/lanes.png", views.lane_chart_png, name="chart-lanes"),
     path("insights/providers.png", views.provider_chart_png, name="chart-providers"),
 
+    # ---- Section 6: the JSON API ----
+    path("api/items/", views.api_items, name="api-items"),
+    path("api/items/cbv/", views.ItemsApiView.as_view(), name="api-items-cbv"),
+    path("api/insights/", views.api_insights, name="api-insights"),
+    # Same data, different Content-Type, to show what JsonResponse is actually doing.
+    path("api/items.txt", views.api_items_text, name="api-items-text"),
+    path("api/items.csv", views.api_items_csv, name="api-items-csv"),
 ]

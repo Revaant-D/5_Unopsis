@@ -23,11 +23,18 @@ Part B -- this assignment:
                                               aggregations
     lane_chart_png    (/insights/lanes.png)   matplotlib bar chart served as image/png
     provider_chart_png(/insights/providers.png) matplotlib pie chart served as image/png
+    api_items         (/api/items/)           JSON API, function-based, filtered by ?params
+    ItemsApiView      (/api/items/cbv/)       the same API as a class-based view
+    api_insights      (/api/insights/)        JSON aggregations
+    api_items_text    (/api/items.txt)        the SAME data through HttpResponse instead of
+                                              JsonResponse, to show the MIME difference
 
 ItemDetailView also gained a post() so one item's state and draft reply can be changed.
 """
 
+import csv
 import io
+import json
 
 import matplotlib
 
@@ -40,7 +47,7 @@ from matplotlib.ticker import MaxNLocator  # noqa: E402
 from django.contrib import messages as flash
 from django.db.models import Avg, Case, Count, IntegerField, Q, TextField, Value, When
 from django.db.models.functions import Cast
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.template import loader
 from django.utils import timezone
@@ -659,3 +666,199 @@ def provider_chart_png(request):
         axes.set_axis_off()
     axes.set_title("Raw messages by provider")
     return _png_response(figure)
+
+
+# ======================================================================================
+# PART B -- SECTION 6: the JSON API
+# ======================================================================================
+def serialize_item(item):
+    """
+    One BriefItem as plain JSON-safe data.
+
+    Written by hand rather than dumped from the model, because an API is a promise about a
+    shape: `raw` provider payloads, draft replies and token references are deliberately not in
+    it. What leaves the server is the ranked, public-facing read of a brief -- never the
+    private message bodies behind it.
+    """
+    return {
+        "id": item.pk,
+        "title": item.title,
+        "lane": item.lane,
+        "lane_label": item.get_lane_display(),
+        "rank": item.rank,
+        "state": item.state,
+        "summary": item.summary,
+        "space": item.brief.space.kind,
+        "brief_id": item.brief_id,
+        "deadline_at": item.deadline_at.isoformat() if item.deadline_at else None,
+        "receipt_count": getattr(item, "receipt_count", None),
+        "url": item.get_absolute_url(),
+    }
+
+
+def api_item_queryset(params):
+    """
+    The API's filtering, driven entirely by query parameters:
+
+        /api/items/?lane=needs_you
+        /api/items/?space=personal&state=open
+        /api/items/?q=deadline&limit=3
+
+    Unknown parameters are ignored rather than rejected, so a client can add one without the
+    endpoint breaking.
+    """
+    items = (
+        BriefItem.objects.select_related("brief__space")
+        .annotate(receipt_count=Count("messages"))
+        .annotate(lane_priority=LANE_PRIORITY)
+        .order_by("lane_priority", "rank")
+    )
+    if params.get("lane"):
+        items = items.filter(lane__exact=params["lane"])
+    if params.get("state"):
+        items = items.filter(state__exact=params["state"])
+    if params.get("space"):
+        items = items.filter(brief__space__kind__exact=params["space"])
+    if params.get("brief"):
+        items = items.filter(brief_id=params["brief"])
+    if params.get("q"):
+        items = items.filter(
+            Q(title__icontains=params["q"]) | Q(summary__icontains=params["q"])
+        )
+    if params.get("due_before"):
+        items = items.filter(deadline_at__lte=params["due_before"])
+    return items
+
+
+def api_items(request):
+    """
+    FUNCTION-BASED JSON API.
+
+    JsonResponse serializes the dict and, crucially, sets Content-Type: application/json, so
+    a browser or `fetch()` treats the body as data rather than as a document to display.
+    A list is wrapped in an object ({"count": .., "results": [..]}) rather than returned bare,
+    which leaves room to add paging later without breaking existing clients.
+    """
+    items = api_item_queryset(request.GET)
+    try:
+        limit = min(int(request.GET.get("limit", 50)), 200)
+    except ValueError:
+        return JsonResponse({"error": "limit must be a whole number"}, status=400)
+
+    payload = {
+        "count": items.count(),
+        "filters": {k: v for k, v in request.GET.items() if v},
+        "results": [serialize_item(item) for item in items[:limit]],
+    }
+    # indent=2 only changes the whitespace; it makes the response readable when somebody
+    # opens the endpoint in a browser, which is how most people first meet an API.
+    return JsonResponse(payload, json_dumps_params={"indent": 2})
+
+
+class ItemsApiView(View):
+    """
+    CLASS-BASED version of the same endpoint, so the project shows both styles.
+
+    Identical output; the difference is that a CBV can grow per-method behaviour (a post()
+    for writes, a dispatch() for auth) without the function turning into a chain of ifs.
+    """
+
+    def get(self, request, *args, **kwargs):
+        items = api_item_queryset(request.GET)
+        return JsonResponse(
+            {
+                "count": items.count(),
+                "style": "class-based view (django.views.View)",
+                "results": [serialize_item(item) for item in items[:50]],
+            },
+            json_dumps_params={"indent": 2},
+        )
+
+
+def api_insights(request):
+    """
+    The aggregations as JSON: the same numbers the charts are drawn from, so a client can plot
+    them itself. Optional ?space=work narrows every figure to one space.
+    """
+    items = BriefItem.objects.all()
+    space = request.GET.get("space")
+    if space:
+        if space not in SPACE_LABELS:
+            return JsonResponse(
+                {"error": f"unknown space {space!r}",
+                 "allowed": list(SPACE_LABELS)}, status=400
+            )
+        items = items.filter(brief__space__kind__exact=space)
+
+    by_lane = items.values("lane").annotate(total=Count("id")).order_by("-total")
+    by_provider = (
+        Message.objects.values("connection__provider")
+        .annotate(total=Count("id"))
+        .order_by("-total")
+    )
+    return JsonResponse(
+        {
+            "space": space or "all",
+            "totals": {
+                "items": items.count(),
+                "messages": Message.objects.count(),
+                "briefs": Brief.objects.count(),
+                "people": Person.objects.count(),
+            },
+            "items_by_lane": [
+                {"lane": row["lane"], "label": LANE_LABELS.get(row["lane"], row["lane"]),
+                 "total": row["total"]}
+                for row in by_lane
+            ],
+            "messages_by_provider": [
+                {"provider": row["connection__provider"],
+                 "label": PROVIDER_LABELS.get(row["connection__provider"], ""),
+                 "total": row["total"]}
+                for row in by_provider
+            ],
+        },
+        json_dumps_params={"indent": 2},
+    )
+
+
+def api_items_text(request):
+    """
+    The SAME data as /api/items/, returned with HttpResponse instead of JsonResponse, so the
+    difference can actually be observed rather than just described:
+
+        /api/items/      JsonResponse   -> Content-Type: application/json
+                                           browsers and fetch() parse it as data; Django
+                                           serializes the dict for you and refuses non-dicts
+                                           unless safe=False.
+
+        /api/items.txt   HttpResponse   -> Content-Type: text/plain (what we pass), and with
+                                           no content_type at all it would be text/html, i.e.
+                                           the browser would try to render JSON as a document.
+                                           HttpResponse never serializes anything: the body
+                                           has to be a string or bytes we built ourselves.
+
+        /api/items.csv   HttpResponse   -> Content-Type: text/csv, which is what makes a
+                                           browser offer to download the file instead of
+                                           showing it. Same rows, third MIME type.
+
+    Check it with:  curl -sI http://127.0.0.1:8000/api/items/ | grep -i content-type
+    """
+    items = api_item_queryset(request.GET)[:50]
+    body = json.dumps(
+        {"count": len(items), "results": [serialize_item(i) for i in items]}, indent=2
+    )
+    return HttpResponse(body, content_type="text/plain; charset=utf-8")
+
+
+def api_items_csv(request):
+    """The same rows again as CSV, the third MIME type. See api_items_text for the comparison."""
+    items = api_item_queryset(request.GET)[:200]
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["id", "title", "lane", "rank", "state", "space", "url"])
+    for item in items:
+        writer.writerow([item.pk, item.title, item.lane, item.rank, item.state,
+                         item.brief.space.kind, item.get_absolute_url()])
+    response = HttpResponse(buffer.getvalue(), content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="unopsis-items.csv"'
+    return response
