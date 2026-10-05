@@ -321,4 +321,90 @@
     </div>
   </div>
 
+  <!-- ============ 5. VEGA-LITE CHARTS, DRAWN CLIENT-SIDE FROM THE JSON API ============ -->
+  <h3 class="section-title mt-4">Charts (Vega-Lite, drawn live from the JSON API)</h3>
+  <p class="text-muted small">
+    The matplotlib charts above are drawn on the server and shipped down as a finished PNG.
+    These two are the opposite: the server sends only numbers &mdash;
+    <code>{% url 'api-insights' %}</code> &mdash; and the browser draws the chart itself with
+    <a href="https://vega.github.io/vega-lite/" target="_blank" rel="noopener">Vega-Lite</a>.
+  </p>
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <figure class="chart-figure">
+        {% comment %}
+          vega-embed's own stylesheet makes this div display:inline-block, which has no
+          intrinsic width -- "width": "container" in the spec below needs an explicit width
+          to measure against, so it is set inline here rather than left to shrink to 0.
+        {% endcomment %}
+        <div id="vega-items-by-lane" role="img" style="width: 100%;"
+             aria-label="Bar chart of brief items grouped by lane."></div>
+        <figcaption>
+          <strong>Items by lane.</strong> A bar mark over the <code>items_by_lane</code> array
+          already in the <code>/api/insights/</code> response &mdash; the same GROUP BY the
+          matplotlib bar chart above is drawn from, read by <code>fetch()</code> instead of by
+          the server.
+        </figcaption>
+      </figure>
+    </div>
+    <div class="col-lg-6">
+      <figure class="chart-figure">
+        <div id="vega-messages-by-day" role="img" style="width: 100%;"
+             aria-label="Line chart of messages received per day over time."></div>
+        <figcaption>
+          <strong>Messages per day.</strong> A line mark (with a point per day) over the
+          <code>messages_by_day</code> array: <code>Message</code> rows grouped by
+          <code>TruncDate(sent_at)</code>, one more field on the same JSON response.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block extra_js %}
+  {# Vega-Lite only loads on this page -- every other page pays nothing for it. #}
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <script>
+    // One fetch of the internal JSON API feeds both charts below -- the same promise is
+    // reused rather than issuing the request twice.
+    fetch("{% url 'api-insights' %}")
+      .then(function (response) { return response.json(); })
+      .then(function (data) {
+        vegaEmbed("#vega-items-by-lane", {
+          "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+          "description": "Brief items grouped by lane.",
+          "data": {"values": data.items_by_lane},
+          "mark": "bar",
+          "encoding": {
+            "x": {"field": "label", "type": "nominal", "title": "Lane", "sort": null},
+            "y": {"field": "total", "type": "quantitative", "title": "Items"},
+            "color": {"field": "label", "type": "nominal", "legend": null}
+          },
+          "width": "container",
+          "height": 260
+        }, {"actions": false});
+
+        vegaEmbed("#vega-messages-by-day", {
+          "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+          "description": "Messages received per day.",
+          "data": {"values": data.messages_by_day},
+          "mark": {"type": "line", "point": true},
+          "encoding": {
+            "x": {"field": "date", "type": "temporal", "title": "Day"},
+            "y": {"field": "total", "type": "quantitative", "title": "Messages"}
+          },
+          "width": "container",
+          "height": 260
+        }, {"actions": false});
+      })
+      .catch(function (error) {
+        // A chart that fails to load should say so, not leave an empty box with no explanation.
+        ["#vega-items-by-lane", "#vega-messages-by-day"].forEach(function (id) {
+          document.querySelector(id).textContent = "Chart failed to load: " + error;
+        });
+      });
+  </script>
 {% endblock %}
