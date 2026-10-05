@@ -20,6 +20,8 @@ it in get_absolute_url(). The address can then change here without touching a si
     /api/insights/           api-insights          JSON aggregations
     /api/items.txt           api-items-text        the same data via HttpResponse (text/plain)
     /api/items.csv           api-items-csv         the same data via HttpResponse (text/csv)
+    /api/deadlines/holidays/ api-deadline-holidays external API: Nager.Date public holidays,
+                                                    triangulated against BriefItem.deadline_at
 
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
@@ -62,4 +64,7 @@ urlpatterns = [
     # Same data, different Content-Type, to show what JsonResponse is actually doing.
     path("api/items.txt", views.api_items_text, name="api-items-text"),
     path("api/items.csv", views.api_items_csv, name="api-items-csv"),
+
+    # ---- external API integration: a public holiday calendar, called live, never stored ----
+    path("api/deadlines/holidays/", views.deadline_holidays, name="api-deadline-holidays"),
 ]
