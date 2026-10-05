@@ -103,5 +103,8 @@
     </div>
   </footer>
 
+  {# A page-specific script hook, filled in by e.g. insights.html for its Vega-Lite charts; kept empty here so every other page pays nothing for it. #}
+  {% block extra_js %}{% endblock %}
+
 </body>
 </html>

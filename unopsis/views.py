@@ -46,7 +46,7 @@ from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 from django.contrib import messages as flash
 from django.db.models import Avg, Case, Count, IntegerField, Q, TextField, Value, When
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.template import loader
@@ -796,6 +796,16 @@ def api_insights(request):
         .annotate(total=Count("id"))
         .order_by("-total")
     )
+    # Same shape, over time instead of over a category: one row per calendar day a message
+    # arrived. TruncDate collapses the datetime column to its date so two messages on the same
+    # day land in the same GROUP BY bucket regardless of time-of-day. Unfiltered by ?space=,
+    # same as messages_by_provider above -- Message has no direct space column to filter on.
+    by_day = (
+        Message.objects.annotate(day=TruncDate("sent_at"))
+        .values("day")
+        .annotate(total=Count("id"))
+        .order_by("day")
+    )
     return JsonResponse(
         {
             "space": space or "all",
@@ -815,6 +825,12 @@ def api_insights(request):
                  "label": PROVIDER_LABELS.get(row["connection__provider"], ""),
                  "total": row["total"]}
                 for row in by_provider
+            ],
+            # The Vega-Lite line chart on /insights/ is drawn straight from this list: one
+            # {date, total} point per day, already sorted so the chart does not have to sort it.
+            "messages_by_day": [
+                {"date": row["day"].isoformat(), "total": row["total"]}
+                for row in by_day
             ],
         },
         json_dumps_params={"indent": 2},
