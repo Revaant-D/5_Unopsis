@@ -20,6 +20,9 @@ it in get_absolute_url(). The address can then change here without touching a si
     /api/insights/           api-insights          JSON aggregations
     /api/items.txt           api-items-text        the same data via HttpResponse (text/plain)
     /api/items.csv           api-items-csv         the same data via HttpResponse (text/csv)
+    /reports/                reports               grouped summaries + the two download buttons
+    /export/brief-items.csv  export-items-csv      every BriefItem, downloadable CSV
+    /export/brief-items.json export-items-json     every BriefItem, downloadable pretty JSON
 
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
@@ -56,10 +59,21 @@ urlpatterns = [
     path("insights/providers.png", views.provider_chart_png, name="chart-providers"),
 
     # ---- Section 6: the JSON API ----
+    # Every /api/... route lives in this one block, in one order, so "what does the API
+    # expose?" is answered by reading five adjacent lines rather than scanning the file.
     path("api/items/", views.api_items, name="api-items"),
     path("api/items/cbv/", views.ItemsApiView.as_view(), name="api-items-cbv"),
     path("api/insights/", views.api_insights, name="api-insights"),
     # Same data, different Content-Type, to show what JsonResponse is actually doing.
     path("api/items.txt", views.api_items_text, name="api-items-text"),
     path("api/items.csv", views.api_items_csv, name="api-items-csv"),
+
+    # ---- Assignment 4, Part 3: the reports page and the two file exports ----
+    # The exports live under /export/ rather than /api/ on purpose: /api/ answers machines
+    # and returns a filtered feed, /export/ answers a person clicking a button and returns a
+    # whole, timestamped snapshot that lands in their Downloads folder. The .csv and .json
+    # endings are part of the address so the link looks like the file it produces.
+    path("reports/", views.reports, name="reports"),
+    path("export/brief-items.csv", views.export_items_csv, name="export-items-csv"),
+    path("export/brief-items.json", views.export_items_json, name="export-items-json"),
 ]

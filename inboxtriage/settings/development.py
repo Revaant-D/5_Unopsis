@@ -14,7 +14,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# Local SQLite file in the project root (git-ignored; rebuild with migrate + seed_demo).
+# Local SQLite file in the project root. Unusually, this file IS committed to the repository
+# (Assignment 4 asks for it, and .gitignore says why), so a fresh clone already has the demo
+# data and needs no `migrate` + `seed_demo` before the pages show anything.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',

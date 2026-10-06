@@ -31,7 +31,25 @@ copy .env.example .env            # Windows
 #    then open .env and replace SECRET_KEY with a fresh value:
 python -c "import secrets; print(secrets.token_urlsafe(50))"
 
-# 4. Create the database and demo data
+# 4. The database is ALREADY in the repo -- `db.sqlite3` is committed on purpose (see
+#    .gitignore for why), so the demo data is there the moment you clone. Just apply any
+#    migrations that landed after it was last committed:
+python manage.py migrate
+
+# 5. Run it
+python manage.py runserver
+```
+
+> **Why is a database file in version control?** Normally it should not be: a database is data,
+> not code. Assignment 4 asks for this one specifically, so that the graded site has its demo
+> content without anyone having to seed it first. `.gitignore` carries the same note, so nobody
+> "tidies it up" by re-ignoring the file.
+
+If you ever need to rebuild the data from nothing — which replaces a tracked file, so tell the
+team first:
+
+```bash
+rm db.sqlite3
 python manage.py migrate
 python manage.py createsuperuser  # use username: mohitg2  (the demo data is owned by this user)
 python manage.py seed_demo
@@ -50,8 +68,23 @@ Once the server is running, open **http://127.0.0.1:8000/** &mdash; the root add
 page, and every other page is reachable from the navigation bar. http://127.0.0.1:8000/admin/ is
 the admin. All routes are listed under **URL map** below.
 
-> With `DEBUG=False` Django's development server does not serve static files, so the admin
-> looks unstyled in production mode. That is expected. For a quick local look add `--insecure`.
+**Before running production mode, run `collectstatic` once.** This is a required step, not a
+polish step:
+
+```bash
+python manage.py collectstatic --settings=inboxtriage.settings.production
+```
+
+Production hashes every static file's name for cache busting (see **Static files and the UI**),
+and the table of hashes is written by `collectstatic`. Until it exists, `{% static %}` has
+nothing to look names up in.
+
+> With `DEBUG=False` Django's development server does not serve static files itself, so pages
+> look unstyled in production mode unless you add `--insecure`. That part is expected. What is
+> *not* expected is a crash, so `inboxtriage/staticfiles_storage.py` makes a missing hash table
+> fall back to the plain filename instead of raising `ValueError` mid-render — without it, a
+> fresh clone started in production mode returns **HTTP 500 on every HTML page**. Run
+> `collectstatic` anyway; the fallback is a safety net, not the plan.
 
 `wsgi.py` / `asgi.py` (used by real web servers) default to the production settings.
 
@@ -88,6 +121,9 @@ address in `get_absolute_url()`. Nothing in this project hard-codes a path.
 | `/api/insights/` | `api-insights` | `api_insights` (FBV) | The aggregations as JSON |
 | `/api/items.txt` | `api-items-text` | `api_items_text` | Same data through `HttpResponse` (`text/plain`) |
 | `/api/items.csv` | `api-items-csv` | `api_items_csv` | Same data through `HttpResponse` (`text/csv`) |
+| `/reports/` | `reports` | `reports` (FBV) | Grouped summaries in tables, plus the two download buttons |
+| `/export/brief-items.csv` | `export-items-csv` | `export_items_csv` | Every item as a timestamped CSV download |
+| `/export/brief-items.json` | `export-items-json` | `export_items_json` | The same rows, same order, as a JSON download |
 
 **`get_absolute_url()`** is implemented on `BriefItem` and on `Brief` (`unopsis/models.py`). It
 reverses the named route, so templates write `{{ item.get_absolute_url }}` instead of
@@ -123,7 +159,7 @@ after a POST needs no `success_url`.
 | Layout | one project-level `static/` folder (`static/css/unopsis.css`, `static/img/unopsis-logo.svg`) |
 | Settings | `STATICFILES_DIRS` and `STATIC_ROOT` in `inboxtriage/settings/base.py` |
 | Templates | `{% load static %}` at the top of `base.html`, then `{% static 'css/unopsis.css' %}` |
-| Cache busting | `ManifestStaticFilesStorage` in `inboxtriage/settings/production.py` |
+| Cache busting | `ManifestStaticFilesStorage`, subclassed in `inboxtriage/staticfiles_storage.py`, wired up in `inboxtriage/settings/production.py` |
 
 The stylesheet is layered on top of Bootstrap rather than replacing it: a warm paper background,
 a serif display face (Fraunces) against a humanist sans (Source Sans 3), a slate/amber header
@@ -199,17 +235,49 @@ treats the body as data. `HttpResponse` serializes nothing and defaults to `text
 why the text and CSV versions have to pass `content_type` explicitly &mdash; and why the CSV one
 downloads instead of rendering.
 
+## Reports and exports
+
+`/reports/` is a read-only snapshot of the database: four grouped summaries, a totals strip and a
+totals line, and the two download buttons.
+
+| Export | URL | Content-Type | Filename |
+|---|---|---|---|
+| CSV | `/export/brief-items.csv` | `text/csv` | `brief_items_YYYY-MM-DD_HH-MM.csv` |
+| JSON | `/export/brief-items.json` | `application/json` | `brief_items_YYYY-MM-DD_HH-MM.json` |
+
+Both files hold the same rows in the same order. The filename carries the minute it was produced,
+so today's export never silently overwrites yesterday's. The JSON one is indented and wraps the
+records in metadata &mdash; `generated_at` (ISO) and `record_count` &mdash; so the file can
+describe itself once it has left the site.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`, on a clean Ubuntu
+machine with no `.env` and no virtualenv:
+
+1. install from `requirements.txt`
+2. fail if `db.sqlite3` is **not** committed (this assignment requires it in the repo)
+3. fail if `.env` **was** committed
+4. `manage.py check` under development **and** production settings
+5. the full test suite
+6. `collectstatic` under production settings
+
+The two hygiene gates ask git what is *tracked* rather than looking at the filesystem, because by
+the time the later steps run a `.env` exists on disk. The team's branch-to-deploy process is
+written up in [`docs/sdlc/README.md`](docs/sdlc/README.md).
+
 ## Tests
 
 ```bash
 python manage.py test
 ```
 
-32 tests: the named routes and `get_absolute_url()`, the four list views and their shared
+45 tests: the named routes and `get_absolute_url()`, the four list views and their shared
 templates, ordering, both empty states, the GET search and its relationship-spanning filters, the
 aggregations, the static files, the PNG chart endpoints, all three POST forms (including a CSRF
-rejection), and the JSON API with its filtering and MIME types. Django uses a temporary database,
-so `db.sqlite3` is untouched.
+rejection), the JSON API with its filtering and MIME types, and the reports page and both file
+exports (including their behaviour against an empty database). Django builds a temporary database
+for the run, so the committed `db.sqlite3` is never read or written by the tests.
 
 ## Screenshots
 
@@ -217,6 +285,7 @@ so `db.sqlite3` is untouched.
 
 | | |
 |---|---|
+| **Reports & exports** (`/reports/`) | ![Reports page](docs/screenshots/17_reports_and_exports.png) |
 | **Home page** (`/`) | ![Home page](docs/screenshots/07_home_page.png) |
 | **Navigation** working (Briefs) | ![Briefs](docs/screenshots/08_navigation_briefs.png) |
 | **Detail page** reached from a link | ![Detail page](docs/screenshots/09_detail_page_via_link.png) |

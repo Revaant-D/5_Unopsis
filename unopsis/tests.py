@@ -8,13 +8,16 @@ Tests for the whole project:
   * ChartTests              Section 4 -- the matplotlib PNG endpoints
   * FormTests               Section 5 -- the GET form, the POST forms, CSRF
   * ApiTests                Section 6 -- the JSON API, filtering, and JsonResponse vs HttpResponse
+  * ExportAndReportTests    A4 Part 3 -- the CSV/JSON exports and the reports page
 
 Run with:  python manage.py test
 Django builds a throwaway database for these, so your local db.sqlite3 is untouched.
 """
 
+import csv
+import io
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
@@ -358,3 +361,141 @@ class StaticFilesTests(TestCase):
         html = self.client.get(reverse("home")).content.decode()
         self.assertIn(f'href="{static("css/unopsis.css")}"', html)
         self.assertIn(f'src="{static("img/unopsis-logo.svg")}"', html)
+
+
+class ExportAndReportTests(TestCase):
+    """
+    Assignment 4, Part 3: the CSV export, the JSON export and the reports page.
+
+    A new class rather than additions to ApiTests, because these are not the API: ApiTests
+    pins the Assignment-3 endpoints, whose headers must not move. What is asserted here is
+    everything a marker would click on -- the two Content-Types, both timestamped
+    Content-Disposition filenames, the CSV header row, the JSON metadata keys, and that the
+    reports page actually renders the summaries, a totals line and both buttons.
+    """
+
+    # "brief_items_2026-10-05_14-30.csv": the shape the rubric asks for, as a regex rather
+    # than a fixed string, because the stamp is the current clock and cannot be hard-coded.
+    FILENAME_PATTERN = r'^attachment; filename="brief_items_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.%s"$'
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.item = _build_demo_rows()
+
+    # ---- CSV export ------------------------------------------------------------------
+    def test_csv_export_is_served_as_a_downloadable_csv_file(self):
+        response = self.client.get(reverse("export-items-csv"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertRegex(response["Content-Disposition"], self.FILENAME_PATTERN % "csv")
+
+    def test_csv_export_starts_with_a_header_row_then_the_rows_in_order(self):
+        rows = list(csv.reader(io.StringIO(
+            self.client.get(reverse("export-items-csv")).content.decode()
+        )))
+        self.assertEqual(rows[0][:5], ["id", "title", "lane", "lane_label", "rank"])
+        self.assertEqual(rows[0][-1], "url")
+        # Two items in the fixture, Needs-you before FYI: the defined order, not insertion order.
+        self.assertEqual(len(rows), 3)
+        self.assertEqual([row[1] for row in rows[1:]], ["Needs item", "FYI item"])
+        # Every data row is exactly as wide as the header, or a spreadsheet would misalign.
+        for row in rows[1:]:
+            self.assertEqual(len(row), len(rows[0]))
+
+    # ---- JSON export -----------------------------------------------------------------
+    def test_json_export_is_served_as_a_downloadable_json_file(self):
+        response = self.client.get(reverse("export-items-json"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/json")
+        self.assertRegex(response["Content-Disposition"], self.FILENAME_PATTERN % "json")
+
+    def test_json_export_carries_its_metadata_and_the_records(self):
+        payload = self.client.get(reverse("export-items-json")).json()
+        self.assertEqual(
+            set(payload), {"generated_at", "record_count", "brief_items"}
+        )
+        # generated_at must be a real ISO timestamp, not a prettified string.
+        self.assertIsNotNone(datetime.fromisoformat(payload["generated_at"]))
+        self.assertEqual(payload["record_count"], 2)
+        self.assertEqual(payload["record_count"], len(payload["brief_items"]))
+        self.assertEqual(payload["brief_items"][0]["title"], "Needs item")
+        self.assertEqual(payload["brief_items"][0]["url"], self.item.get_absolute_url())
+
+    def test_json_export_is_pretty_printed(self):
+        body = self.client.get(reverse("export-items-json")).content.decode()
+        self.assertIn('\n  "record_count"', body)   # indent=2, not one dense line
+
+    def test_both_exports_describe_the_same_rows_in_the_same_order(self):
+        csv_rows = list(csv.reader(io.StringIO(
+            self.client.get(reverse("export-items-csv")).content.decode()
+        )))[1:]
+        json_rows = self.client.get(reverse("export-items-json")).json()["brief_items"]
+        self.assertEqual([row[0] for row in csv_rows], [str(r["id"]) for r in json_rows])
+
+    def test_the_exports_are_a_whole_snapshot_not_the_filtered_api_feed(self):
+        # /api/items.csv honours ?lane=; the export deliberately does not, because a file
+        # called "brief_items_<stamp>.csv" has to mean every brief item.
+        filtered = self.client.get(reverse("api-items-csv"), {"lane": "fyi"})
+        exported = self.client.get(reverse("export-items-csv"), {"lane": "fyi"})
+        self.assertNotIn("Needs item", filtered.content.decode())
+        self.assertIn("Needs item", exported.content.decode())
+
+    # ---- the reports page ------------------------------------------------------------
+    def test_reports_page_renders_through_the_base_template(self):
+        response = self.client.get(reverse("reports"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "unopsis/reports.html")
+        self.assertTemplateUsed(response, "base.html")
+
+    def test_reports_page_shows_the_grouped_summaries_and_a_totals_line(self):
+        response = self.client.get(reverse("reports"))
+        summaries = response.context["summaries"]
+        self.assertEqual(summaries["total_items"], 2)
+        self.assertEqual(
+            {row["lane"]: row["total"] for row in summaries["by_lane"]},
+            {"needs_you": 1, "fyi": 1},
+        )
+        html = response.content.decode()
+        self.assertIn("Items per lane", html)
+        self.assertIn("Messages per provider", html)   # at least two grouped summaries
+        self.assertIn("Totals", html)
+        self.assertIn("Needs you", html)               # a labelled group actually printed
+
+    def test_reports_page_carries_both_download_buttons(self):
+        html = self.client.get(reverse("reports")).content.decode()
+        for name, label in (("export-items-csv", "Download CSV"),
+                            ("export-items-json", "Download JSON")):
+            with self.subTest(button=label):
+                self.assertIn(f'href="{reverse(name)}"', html)
+                self.assertIn(label, html)
+        self.assertIn("btn", html)   # they are buttons, not bare links
+
+    def test_reports_page_is_reachable_from_the_site_navigation(self):
+        html = self.client.get(reverse("home")).content.decode()
+        self.assertIn(f'href="{reverse("reports")}"', html)
+
+
+class EmptyReportTests(TestCase):
+    """
+    The same page against an EMPTY database.
+
+    Worth its own class with no setUpTestData: a report that renders a bare table on a fresh
+    install looks broken, so every {% empty %} branch has to say something. This is also the
+    only way to prove those branches exist -- with fixture rows loaded they never run.
+    """
+
+    def test_reports_page_still_renders_and_explains_the_emptiness(self):
+        response = self.client.get(reverse("reports"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No items to group yet.")
+        self.assertContains(response, "No messages have arrived yet.")
+        self.assertContains(response, "No briefs have been assembled yet.")
+
+    def test_exports_of_an_empty_table_are_still_valid_files(self):
+        csv_rows = list(csv.reader(io.StringIO(
+            self.client.get(reverse("export-items-csv")).content.decode()
+        )))
+        self.assertEqual(len(csv_rows), 1)          # the header row alone, not an empty file
+        payload = self.client.get(reverse("export-items-json")).json()
+        self.assertEqual(payload["record_count"], 0)
+        self.assertEqual(payload["brief_items"], [])

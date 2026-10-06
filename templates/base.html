@@ -68,6 +68,11 @@
              href="{% url 'insights' %}">Search &amp; insights</a>
         </li>
         <li class="nav-item">
+          {# "reports" plus the two export-* routes: the page and the files it hands out. #}
+          <a class="nav-link {% if current == 'reports' or current|slice:':7' == 'export-' %}active{% endif %}"
+             href="{% url 'reports' %}">Reports &amp; exports</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
              href="{% url 'api-items' %}">JSON API</a>
         </li>
