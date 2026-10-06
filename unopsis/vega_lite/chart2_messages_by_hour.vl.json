@@ -1,0 +1,17 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "title": "Messages received per hour",
+  "description": "Line chart: messages ingested in each hour, with empty hours shown as zero.",
+  "data": {"url": "/api/insights/messages-by-hour/"},
+  "mark": {"type": "line", "point": true},
+  "encoding": {
+    "x": {"field": "hour", "timeUnit": "utcyearmonthdatehours", "type": "temporal", "title": "Hour (UTC)", "axis": {"format": "%b %d %H:00"}},
+    "y": {"field": "total", "type": "quantitative", "title": "Messages", "axis": {"tickMinStep": 1}},
+    "tooltip": [
+      {"field": "hour", "timeUnit": "utcyearmonthdatehours", "type": "temporal", "title": "Hour (UTC)", "format": "%b %d, %H:00"},
+      {"field": "total", "type": "quantitative", "title": "Messages"}
+    ]
+  },
+  "width": 480,
+  "height": 260
+}

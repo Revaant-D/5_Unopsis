@@ -9,6 +9,9 @@ Tests for the whole project:
   * FormTests               Section 5 -- the GET form, the POST forms, CSRF
   * ApiTests                Section 6 -- the JSON API, filtering, and JsonResponse vs HttpResponse
   * ExportAndReportTests    A4 Part 3 -- the CSV/JSON exports and the reports page
+  * VegaLiteTests           A4 Part 1 -- chart feeds, spec files, chart pages / specs / PNGs
+  * ExternalApiTests        A4 Part 2 -- Nager.Date triangulation (network mocked, never called)
+  * CorsTests               the /api/ and /vega-lite/ endpoints are readable cross-origin
 
 Run with:  python manage.py test
 Django builds a throwaway database for these, so your local db.sqlite3 is untouched.
@@ -17,7 +20,10 @@ Django builds a throwaway database for these, so your local db.sqlite3 is untouc
 import csv
 import io
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from unittest import mock
+
+import requests
 
 from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
@@ -27,7 +33,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import Brief, BriefItem, Connection, Message, Person, Space
-from .views import csv_safe
+from .views import VEGA_CHARTS, VEGA_LITE_DIR, csv_safe
 
 LIST_ROUTES = [
     "item-list-manual",        # 1. FBV, HttpResponse
@@ -552,3 +558,218 @@ class CsvInjectionTests(TestCase):
         ]
         self.assertEqual(payload_rows[0]["title"], payload)
 
+
+class VegaLiteTests(TestCase):
+    """
+    Assignment 4, Part 1: the chart-ready feeds, the spec files, and each chart's three outputs.
+
+    The rule the assignment is strictest about is pinned here: every spec loads its data with
+    "data": {"url": ...} and none carries inline "values".
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.item = _build_demo_rows()
+
+    def test_items_by_lane_feed_is_a_flat_array_with_every_lane(self):
+        response = self.client.get(reverse("api-items-by-lane"))
+        self.assertEqual(response["Content-Type"], "application/json")
+        rows = response.json()
+        self.assertIsInstance(rows, list)
+        self.assertEqual([row["lane"] for row in rows], ["needs_you", "moving", "fyi"])
+        self.assertEqual({row["lane"]: row["total"] for row in rows},
+                         {"needs_you": 1, "moving": 0, "fyi": 1})
+
+    def test_messages_by_hour_feed_fills_quiet_hours_with_zero(self):
+        connection = Connection.objects.get()
+        person = Person.objects.get()
+        first = Message.objects.get().sent_at
+        Message.objects.create(connection=connection, author=person, external_id="m-2",
+                               sent_at=first + timedelta(hours=3), body="later")
+        rows = self.client.get(reverse("api-messages-by-hour")).json()
+        self.assertEqual([row["total"] for row in rows], [1, 0, 0, 1])
+        hours = [datetime.fromisoformat(row["hour"]) for row in rows]
+        self.assertEqual(hours[1] - hours[0], timedelta(hours=1))
+
+    def test_every_spec_file_loads_its_data_by_url_and_never_inline(self):
+        for chart, config in VEGA_CHARTS.items():
+            with self.subTest(chart=chart):
+                spec = json.loads((VEGA_LITE_DIR / config["spec_file"]).read_text("utf-8"))
+                self.assertIn("url", spec["data"])
+                self.assertNotIn("values", spec["data"])
+                # The path in the file is a real route of ours, not a typo that 404s.
+                self.assertEqual(self.client.get(spec["data"]["url"]).status_code, 200)
+
+    def test_one_bar_chart_and_one_line_chart(self):
+        marks = set()
+        for config in VEGA_CHARTS.values():
+            spec = json.loads((VEGA_LITE_DIR / config["spec_file"]).read_text("utf-8"))
+            marks.add(spec["mark"]["type"] if isinstance(spec["mark"], dict) else spec["mark"])
+        self.assertEqual(marks, {"bar", "line"})
+
+    def test_served_spec_has_an_absolute_data_url_for_the_vega_lite_editor(self):
+        spec = self.client.get(reverse("vega-chart-spec", args=["chart1"])).json()
+        self.assertEqual(spec["data"]["url"],
+                         "http://testserver" + reverse("api-items-by-lane"))
+
+    def test_each_chart_has_its_own_page_that_embeds_the_spec(self):
+        for chart in VEGA_CHARTS:
+            with self.subTest(chart=chart):
+                response = self.client.get(reverse("vega-chart-page", args=[chart]))
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "base.html")
+                self.assertContains(
+                    response, f'data-vega-spec="{reverse("vega-chart-spec", args=[chart])}"'
+                )
+
+    def test_each_chart_is_rendered_to_a_real_png(self):
+        for chart in VEGA_CHARTS:
+            with self.subTest(chart=chart):
+                response = self.client.get(reverse("vega-chart-png", args=[chart]))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Type"], "image/png")
+                self.assertTrue(response.content.startswith(b"\x89PNG\r\n\x1a\n"))
+
+    def test_an_unknown_chart_is_a_404_on_every_endpoint(self):
+        for name in ("vega-chart-page", "vega-chart-spec", "vega-chart-png"):
+            with self.subTest(route=name):
+                self.assertEqual(self.client.get(reverse(name, args=["chart9"])).status_code, 404)
+
+    def test_insights_page_embeds_both_charts_without_inline_data(self):
+        html = self.client.get(reverse("insights")).content.decode()
+        for chart in VEGA_CHARTS:
+            self.assertIn(f'data-vega-spec="{reverse("vega-chart-spec", args=[chart])}"', html)
+        self.assertNotIn('"values"', html)
+
+
+def _fake_nager(url, params=None, timeout=None):
+    """
+    Stand-in for requests.get() against Nager.Date: a fixed 2026 US calendar.
+
+    Thanksgiving (Thursday 26 Nov) with Friday 27 Nov as a bridge day makes a four-day weekend,
+    and New Year's Day is there so "nearest holiday" has more than one candidate.
+    """
+    response = mock.Mock()
+    response.status_code = 200
+    response.raise_for_status.return_value = None
+    if "/ZZ" in url:
+        response.status_code = 404
+    elif "PublicHolidays" in url:
+        response.json.return_value = [
+            {"date": "2026-01-01", "localName": "New Year's Day"},
+            {"date": "2026-11-26", "localName": "Thanksgiving Day"},
+        ]
+    else:
+        response.json.return_value = [
+            {"startDate": "2026-11-26", "endDate": "2026-11-29", "dayCount": 4,
+             "needBridgeDay": True, "bridgeDays": ["2026-11-27"]},
+        ]
+    return response
+
+
+def _midnight(day):
+    return timezone.make_aware(datetime.combine(day, datetime.min.time()))
+
+
+@mock.patch("unopsis.views.timezone.localdate", return_value=date(2026, 10, 5))
+@mock.patch("unopsis.views.requests.get", side_effect=_fake_nager)
+class ExternalApiTests(TestCase):
+    """
+    Assignment 4, Part 2: deadlines triangulated against Nager.Date.
+
+    requests.get is replaced for the whole class, so the suite never touches the network (CI
+    and offline laptops pass) and the calendar is fixed, which makes the analysis checkable.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        needs = _build_demo_rows()
+        needs.deadline_at = _midnight(date(2026, 11, 26))    # Thanksgiving, a Thursday
+        needs.save()
+        fyi = BriefItem.objects.get(title="FYI item")
+        fyi.deadline_at = _midnight(date(2026, 10, 14))      # an ordinary Wednesday
+        fyi.save()
+
+    def test_requests_get_is_called_with_params_and_a_timeout(self, get, _today):
+        self.client.get(reverse("api-deadline-holidays"), {"country": "us", "bridge_days": "2"})
+        for call in get.call_args_list:
+            self.assertEqual(call.kwargs["timeout"], 5)
+            self.assertIn("params", call.kwargs)
+        long_weekend_call = next(c for c in get.call_args_list if "LongWeekend" in c.args[0])
+        self.assertEqual(long_weekend_call.kwargs["params"], {"availableBridgeDays": 2})
+        self.assertTrue(long_weekend_call.args[0].endswith("/LongWeekend/2026/US"))
+
+    def test_a_deadline_on_a_holiday_is_flagged_with_the_next_working_day(self, _get, _today):
+        payload = self.client.get(reverse("api-deadline-holidays")).json()
+        row = next(r for r in payload["results"] if r["title"] == "Needs item")
+        self.assertTrue(row["is_holiday"])
+        self.assertEqual(row["holiday_name"], "Thanksgiving Day")
+        self.assertTrue(row["in_long_weekend"])
+        self.assertEqual(row["long_weekend"]["day_count"], 4)
+        self.assertTrue(row["at_risk"])
+        # Thursday is the holiday; Friday is a weekday and not a holiday, so it is the next
+        # working day, even though people bridging the long weekend may well be away.
+        self.assertEqual(row["next_working_day"], "2026-11-27")
+        self.assertEqual(row["working_days_lost"], 1)
+        self.assertEqual(row["days_until_deadline"], 52)
+
+    def test_an_ordinary_deadline_is_not_at_risk(self, _get, _today):
+        payload = self.client.get(reverse("api-deadline-holidays")).json()
+        row = next(r for r in payload["results"] if r["title"] == "FYI item")
+        self.assertFalse(row["at_risk"])
+        self.assertEqual(row["weekday"], "Wednesday")
+        self.assertEqual(row["next_working_day"], "2026-10-14")
+        self.assertEqual(row["nearest_holiday"]["name"], "Thanksgiving Day")
+        self.assertEqual(row["nearest_holiday"]["days_from_deadline"], 43)
+
+    def test_the_summary_aggregates_across_deadlines(self, _get, _today):
+        summary = self.client.get(reverse("api-deadline-holidays")).json()["summary"]
+        self.assertEqual(summary["deadlines_checked"], 2)
+        self.assertEqual(summary["on_public_holiday"], 1)
+        self.assertEqual(summary["at_risk"], 1)
+        self.assertEqual(summary["share_at_risk"], 0.5)
+        self.assertEqual(
+            summary["next_holiday"],
+            {"date": "2026-11-26", "name": "Thanksgiving Day", "days_from_today": 52},
+        )
+
+    def test_nothing_from_the_external_api_is_stored(self, _get, _today):
+        before = {model: model.objects.count() for model in (BriefItem, Message, Brief, Person)}
+        self.client.get(reverse("api-deadline-holidays"))
+        self.assertEqual(before, {model: model.objects.count() for model in before})
+
+    def test_bad_input_is_a_400_before_any_external_call(self, get, _today):
+        for params in ({"country": "USA"}, {"country": "1"}, {"bridge_days": "x"},
+                       {"bridge_days": "9"}):
+            with self.subTest(params=params):
+                response = self.client.get(reverse("api-deadline-holidays"), params)
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("error", response.json())
+        get.assert_not_called()
+
+    def test_an_unknown_country_is_a_400(self, _get, _today):
+        response = self.client.get(reverse("api-deadline-holidays"), {"country": "ZZ"})
+        self.assertEqual(response.status_code, 400)
+
+    def test_a_network_failure_is_a_502_not_a_crash(self, get, _today):
+        get.side_effect = requests.exceptions.ConnectTimeout("timed out")
+        response = self.client.get(reverse("api-deadline-holidays"))
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("could not reach", response.json()["error"])
+
+    def test_the_endpoint_is_linked_from_the_insights_page(self, _get, _today):
+        html = self.client.get(reverse("insights")).content.decode()
+        self.assertIn(f'action="{reverse("api-deadline-holidays")}"', html)
+
+
+class CorsTests(TestCase):
+    """The public endpoints can be read from another site (the Vega-Lite editor); pages cannot."""
+
+    def test_api_and_chart_endpoints_allow_any_origin(self):
+        for url in (reverse("api-items-by-lane"), reverse("api-insights"),
+                    reverse("vega-chart-spec", args=["chart2"])):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url)["Access-Control-Allow-Origin"], "*")
+
+    def test_html_pages_do_not(self):
+        self.assertNotIn("Access-Control-Allow-Origin", self.client.get(reverse("home")))

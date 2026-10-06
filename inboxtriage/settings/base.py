@@ -44,6 +44,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Lets other sites (the Vega-Lite editor, classmates' pages) read /api/ and /vega-lite/.
+    'unopsis.middleware.PublicApiCorsMiddleware',
 ]
 
 ROOT_URLCONF = 'inboxtriage.urls'
@@ -108,6 +110,7 @@ USE_TZ = True
 #
 #     static/css/unopsis.css     the site stylesheet
 #     static/img/unopsis-logo.svg the header mark
+#     static/js/vega-charts.js   embeds the Vega-Lite charts from their spec URLs
 #
 # Templates always reference them through {% load static %} + {% static 'css/unopsis.css' %},
 # never as a hard-coded "/static/css/unopsis.css", so STATIC_URL can change (to a CDN, say)

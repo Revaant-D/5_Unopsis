@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% comment %}
+  vega_chart.html: one Vega-Lite chart on a page of its own (Assignment 4, Part 1).
+
+  Rendered by vega_chart_page() for /vega-lite/chart1/ and /vega-lite/chart2/. The chart is drawn
+  in the browser from the spec at /vega-lite/<chart>.json, which loads its numbers from the
+  internal API through "data": {"url": ...}. The same spec rendered on the server is the PNG
+  linked below.
+{% endcomment %}
+
+{% block title %}{{ config.title }}{% endblock %}
+
+{% block content %}
+
+  <h2 class="h3 mb-1">{{ config.title }}</h2>
+  <p class="text-muted">{{ config.kind }} &middot; Vega-Lite &middot; {{ config.caption }}</p>
+
+  <div class="panel mb-4">
+    <figure class="chart-figure mb-0">
+      {# vega-embed makes this div inline-block; width:100% gives "container" something to measure. #}
+      <div data-vega-spec="{% url 'vega-chart-spec' chart %}" role="img" style="width: 100%;"
+           aria-label="{{ config.kind }}: {{ config.title }}."></div>
+    </figure>
+  </div>
+
+  <h3 class="section-title">This chart, every way it is served</h3>
+  <table class="table table-sm table-tight">
+    <thead><tr><th scope="col">What</th><th scope="col">Address</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Vega-Lite spec (paste into the <a href="https://vega.github.io/editor/" target="_blank" rel="noopener">Vega-Lite editor</a>)</td>
+        <td><a href="{% url 'vega-chart-spec' chart %}"><code>{% url 'vega-chart-spec' chart %}</code></a></td>
+      </tr>
+      <tr>
+        <td>Rendered on the server as an image</td>
+        <td><a href="{% url 'vega-chart-png' chart %}"><code>{% url 'vega-chart-png' chart %}</code></a></td>
+      </tr>
+      <tr>
+        <td>The data the spec loads (<code>data.url</code>)</td>
+        <td>
+          {% if chart == "chart1" %}
+            <a href="{% url 'api-items-by-lane' %}"><code>{% url 'api-items-by-lane' %}</code></a>
+          {% else %}
+            <a href="{% url 'api-messages-by-hour' %}"><code>{% url 'api-messages-by-hour' %}</code></a>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>Spec file in the repository</td>
+        <td><code>{{ spec_file }}</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small text-muted">
+    Other charts:
+    {% for name, other in charts.items %}
+      {% if name != chart %}<a href="{% url 'vega-chart-page' name %}">{{ other.title }}</a>{% endif %}
+    {% endfor %}
+    &middot; <a href="{% url 'insights' %}">all charts on Search &amp; insights</a>
+  </p>
+
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <script src="{% static 'js/vega-charts.js' %}"></script>
+{% endblock %}

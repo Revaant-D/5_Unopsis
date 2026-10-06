@@ -35,6 +35,8 @@ ItemDetailView also gained a post() so one item's state and draft reply can be c
 import csv
 import io
 import json
+from datetime import date, timedelta
+from pathlib import Path
 
 import matplotlib
 
@@ -45,11 +47,12 @@ import matplotlib.pyplot as plt  # noqa: E402  (must follow matplotlib.use)
 from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 import requests
+import vl_convert
 
 from django.contrib import messages as flash
 from django.db.models import Avg, Case, Count, IntegerField, Q, TextField, Value, When
-from django.db.models.functions import Cast, TruncDate
-from django.http import HttpResponse, JsonResponse
+from django.db.models.functions import Cast, TruncDate, TruncHour
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.template import loader
 from django.utils import timezone
@@ -828,8 +831,9 @@ def api_insights(request):
                  "total": row["total"]}
                 for row in by_provider
             ],
-            # The Vega-Lite line chart on /insights/ is drawn straight from this list: one
-            # {date, total} point per day, already sorted so the chart does not have to sort it.
+            # One {date, total} point per day, already sorted. The Vega-Lite charts read the
+            # flat, chart-ready feeds further down (/api/insights/items-by-lane/ and
+            # /api/insights/messages-by-hour/) rather than digging into this nested object.
             "messages_by_day": [
                 {"date": row["day"].isoformat(), "total": row["total"]}
                 for row in by_day
@@ -883,98 +887,373 @@ def api_items_csv(request):
 
 
 # ======================================================================================
-# PART C -- EXTERNAL API INTEGRATION: do any open deadlines land on a public holiday?
+# ASSIGNMENT 4, PART 1 -- VEGA-LITE: chart-ready feeds, the specs, one endpoint per chart
 # ======================================================================================
-NAGER_DATE_URL = "https://date.nager.at/api/v3/PublicHolidays/{year}/{country}"
+# The two feeds below are the "internal API for charts": GET-only, database-backed, and
+# returned as a BARE JSON ARRAY of flat records -- the shape Vega-Lite reads with nothing but
+# {"data": {"url": ...}}. /api/insights/ already carries the same numbers, but nested inside an
+# object, which would make every chart (and every classmate pasting the URL into the Vega-Lite
+# editor) add a "format": {"property": ...} clause to dig them out.
+#
+# The specs themselves are files, unopsis/vega_lite/*.vl.json, so they can be submitted, opened
+# in the Vega-Lite editor and reviewed in a diff. Every chart output is built from those files:
+#
+#     /vega-lite/chart1/       the chart embedded in its own HTML page (vega-embed, in the browser)
+#     /vega-lite/chart1.json   the spec, with data.url made absolute so it works pasted elsewhere
+#     /vega-lite/chart1.png    the same spec rendered to a PNG on the server (vl-convert)
+
+VEGA_LITE_DIR = Path(__file__).resolve().parent / "vega_lite"
+
+
+def items_by_lane_rows():
+    """
+    Chart 1's data: one {lane, label, total} record per lane, in the product's lane order.
+
+    Every lane is listed even when it is empty, so the bar chart always shows the same three
+    bars and an empty lane reads as a zero rather than disappearing.
+    """
+    counts = {
+        row["lane"]: row["total"]
+        for row in BriefItem.objects.values("lane").annotate(total=Count("id"))
+    }
+    return [
+        {"lane": lane, "label": label, "total": counts.get(lane, 0)}
+        for lane, label in BriefItem.Lane.choices
+    ]
+
+
+def messages_by_hour_rows():
+    """
+    Chart 2's data: one {hour, total} record per hour from the first message to the last.
+
+    TruncHour is the GROUP BY bucket. Hours with no messages are filled in as zero here,
+    because a line drawn only through the busy hours would join them with a straight segment
+    and imply traffic in between that never happened.
+    """
+    counts = {
+        row["hour"]: row["total"]
+        for row in Message.objects.annotate(hour=TruncHour("sent_at"))
+        .values("hour")
+        .annotate(total=Count("id"))
+    }
+    if not counts:
+        return []
+    rows = []
+    hour, last = min(counts), max(counts)
+    while hour <= last:
+        rows.append({"hour": hour.isoformat(), "total": counts.get(hour, 0)})
+        hour += timedelta(hours=1)
+    return rows
+
+
+def api_items_by_lane(request):
+    """GET /api/insights/items-by-lane/ -- chart 1's feed, a bare array (hence safe=False)."""
+    return JsonResponse(items_by_lane_rows(), safe=False, json_dumps_params={"indent": 2})
+
+
+def api_messages_by_hour(request):
+    """GET /api/insights/messages-by-hour/ -- chart 2's feed, a bare array (hence safe=False)."""
+    return JsonResponse(messages_by_hour_rows(), safe=False, json_dumps_params={"indent": 2})
+
+
+# One entry per chart. `rows` is the same function its data URL serves, so the server-rendered
+# PNG and the browser-rendered chart can never be drawn from different numbers.
+VEGA_CHARTS = {
+    "chart1": {
+        "spec_file": "chart1_items_by_lane.vl.json",
+        "rows": items_by_lane_rows,
+        "kind": "Bar chart",
+        "title": "Brief items by lane",
+        "caption": "One bar per lane, from a GROUP BY lane over BriefItem.",
+    },
+    "chart2": {
+        "spec_file": "chart2_messages_by_hour.vl.json",
+        "rows": messages_by_hour_rows,
+        "kind": "Line chart",
+        "title": "Messages received per hour",
+        "caption": "Message rows bucketed with TruncHour(sent_at), empty hours drawn as zero.",
+    },
+}
+
+
+def _vega_chart(chart):
+    """The registry entry for `chart`, or a 404 for a name that is not one of ours."""
+    try:
+        return VEGA_CHARTS[chart]
+    except KeyError:
+        raise Http404(f"No Vega-Lite chart called {chart!r}")
+
+
+def _load_spec(chart):
+    """Read the chart's .vl.json file fresh on every call, so an edited spec needs no restart."""
+    path = VEGA_LITE_DIR / _vega_chart(chart)["spec_file"]
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def vega_chart_spec(request, chart):
+    """
+    GET /vega-lite/<chart>.json -- the spec, ready to paste into the Vega-Lite editor.
+
+    The file stores data.url as a path ("/api/insights/items-by-lane/") so it works on any
+    host. Here it is made absolute against the host that served it, because a spec opened in
+    the editor at vega.github.io would otherwise resolve that path against vega.github.io.
+    """
+    spec = _load_spec(chart)
+    spec["data"]["url"] = request.build_absolute_uri(spec["data"]["url"])
+    return JsonResponse(spec, json_dumps_params={"indent": 2})
+
+
+def vega_chart_page(request, chart):
+    """GET /vega-lite/<chart>/ -- one chart, embedded on a page of its own."""
+    config = _vega_chart(chart)
+    return render(
+        request,
+        "unopsis/vega_chart.html",
+        {
+            "chart": chart,
+            "config": config,
+            "spec_file": f"unopsis/vega_lite/{config['spec_file']}",
+            "charts": VEGA_CHARTS,
+        },
+    )
+
+
+def vega_chart_png(request, chart):
+    """
+    GET /vega-lite/<chart>.png -- the Vega-Lite spec rendered to an image on the server.
+
+    vl-convert runs the real Vega-Lite compiler and renderer in-process, so this is the same
+    chart the browser draws, not a matplotlib look-alike. The one change made before rendering
+    is to hand it the rows directly instead of the URL: the renderer runs inside this request
+    and cannot fetch a relative path, and calling our own site over HTTP from inside a request
+    would be slow and, on a free PythonAnywhere account, blocked. The rows come from the same
+    function the data URL serves, so the numbers are identical.
+    """
+    config = _vega_chart(chart)
+    spec = _load_spec(chart)
+    spec["data"] = {"values": config["rows"]()}
+    png = vl_convert.vegalite_to_png(spec, scale=2)
+    response = HttpResponse(png, content_type="image/png")
+    response["Content-Length"] = str(len(png))
+    # Live data, like the matplotlib PNGs: the browser must not keep an old chart.
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+# ======================================================================================
+# ASSIGNMENT 4, PART 2 -- EXTERNAL API: will any open deadline land on a day off?
+# ======================================================================================
+# The external service is Nager.Date (https://date.nager.at): keyless, no signup, and -- the
+# reason it was picked over the alternatives -- on PythonAnywhere's allow-list, which is the
+# only set of sites a free PythonAnywhere account can call out to.
+#
+# Triangulation: our own deadlines (BriefItem.deadline_at) are checked against two of its
+# endpoints -- the public holidays and the long weekends -- and the analysis is computed per
+# request. Nothing Nager.Date returns is ever written to a model.
+
+NAGER_DATE_BASE_URL = "https://date.nager.at/api/v3"
+
+# How many bridge days (a working day you would take off to join a holiday to a weekend) the
+# long-weekend lookup may assume, when ?bridge_days= is not given, and the most it accepts.
+DEFAULT_BRIDGE_DAYS = 1
+MAX_BRIDGE_DAYS = 5
+
+
+def _nager_get(path, params=None):
+    """
+    The one place this project calls Nager.Date.
+
+    requests.get() is given the query string as params= (requests encodes it, so nothing is
+    glued into the URL by hand) and timeout=5, so a slow service costs a visitor five seconds
+    at most instead of hanging the worker. Two kinds of failure come out:
+
+      * ValueError for a 404, which is Nager.Date's answer to a country code it does not know;
+      * requests.exceptions.RequestException for everything network-shaped -- DNS failure,
+        refused connection, timeout, and (via raise_for_status) any other 4xx/5xx status.
+    """
+    response = requests.get(f"{NAGER_DATE_BASE_URL}/{path}", params=params, timeout=5)
+    if response.status_code == 404:
+        raise ValueError("Nager.Date has no data for that country code")
+    response.raise_for_status()
+    return response.json()
 
 
 def _fetch_holidays(year, country):
-    """
-    One year of a country's public holidays from Nager.Date -- keyless, no signup, no token.
+    """{date: holiday name} for one year of one country's public holidays."""
+    rows = _nager_get(f"PublicHolidays/{year}/{country}")
+    return {date.fromisoformat(row["date"]): row["localName"] for row in rows}
 
-    Returns a dict of {"YYYY-MM-DD": "Holiday name"} for that year/country, built fresh on
-    every call and handed back to the caller to use and discard. Nothing this function
-    returns is ever written to a model, so a deadline's "is this a holiday" status is always
-    as current as the external service, never a stale copy sitting in our own database.
 
-    Raises requests.exceptions.RequestException on anything network-shaped (DNS failure,
-    connection refused, timeout) and ValueError on an HTTP error status, so the caller has
-    exactly two except clauses to handle rather than guessing which exceptions are possible.
+def _fetch_long_weekends(year, country, bridge_days):
     """
-    response = requests.get(NAGER_DATE_URL.format(year=year, country=country), timeout=5)
-    if response.status_code == 404:
-        # Nager.Date's own way of saying "that is not a country code it knows."
-        raise ValueError(f"no holiday data for country code {country!r}")
-    response.raise_for_status()
-    return {row["date"]: row["localName"] for row in response.json()}
+    One year of long weekends, as [{"start", "end", "day_count", "bridge_days"}].
+
+    availableBridgeDays is a real query parameter on this endpoint, so it goes through
+    params=: with 1, a Thursday holiday plus a Friday off counts as a four-day weekend.
+    """
+    rows = _nager_get(
+        f"LongWeekend/{year}/{country}", params={"availableBridgeDays": bridge_days}
+    )
+    return [
+        {
+            "start": date.fromisoformat(row["startDate"]),
+            "end": date.fromisoformat(row["endDate"]),
+            "day_count": row["dayCount"],
+            "bridge_days": [date.fromisoformat(day) for day in row.get("bridgeDays") or []],
+        }
+        for row in rows
+    ]
+
+
+def _is_working_day(day, holidays):
+    """Monday-to-Friday and not a public holiday. (A Saturday/Sunday weekend is assumed.)"""
+    return day.weekday() < 5 and day not in holidays
+
+
+def _next_working_day(day, holidays):
+    """The deadline day itself if it is a working day, else the first working day after it."""
+    while not _is_working_day(day, holidays):
+        day += timedelta(days=1)
+    return day
+
+
+def analyse_deadline(deadline_day, today, holidays, long_weekends):
+    """
+    Everything the external calendar says about one deadline, as a JSON-ready dict.
+
+    `at_risk` is the headline: a deadline that falls on a weekend, a public holiday or inside
+    a long weekend is one the people involved are likely to be away for, so it should be
+    raised before it arrives rather than discovered on the day.
+    """
+    holiday_name = holidays.get(deadline_day)
+    long_weekend = next(
+        (lw for lw in long_weekends if lw["start"] <= deadline_day <= lw["end"]), None
+    )
+    is_weekend = deadline_day.weekday() >= 5
+    nearest = (
+        min(holidays, key=lambda day: (abs((day - deadline_day).days), day)) if holidays else None
+    )
+    next_working = _next_working_day(deadline_day, holidays)
+    return {
+        "deadline_date": deadline_day.isoformat(),
+        "weekday": deadline_day.strftime("%A"),
+        "days_until_deadline": (deadline_day - today).days,
+        "is_weekend": is_weekend,
+        "is_holiday": holiday_name is not None,
+        "holiday_name": holiday_name,
+        "in_long_weekend": long_weekend is not None,
+        "long_weekend": (
+            {"start": long_weekend["start"].isoformat(),
+             "end": long_weekend["end"].isoformat(),
+             "day_count": long_weekend["day_count"]}
+            if long_weekend else None
+        ),
+        "is_bridge_day": bool(long_weekend) and deadline_day in long_weekend["bridge_days"],
+        "nearest_holiday": (
+            {"date": nearest.isoformat(), "name": holidays[nearest],
+             "days_from_deadline": (nearest - deadline_day).days}
+            if nearest else None
+        ),
+        "next_working_day": next_working.isoformat(),
+        "working_days_lost": (next_working - deadline_day).days,
+        "at_risk": is_weekend or holiday_name is not None or long_weekend is not None,
+    }
 
 
 def deadline_holidays(request):
     """
-    Triangulation: take the deadlines already sitting in our own database (BriefItem.deadline_at)
-    and, for each one, ask a public holiday calendar whether that date is a holiday in the
-    requested country. Nothing the external API returns is saved anywhere -- the holiday
-    lookup table built below lives only for the duration of this one request.
+    GET /api/deadlines/holidays/?country=US&bridge_days=1
 
-    Query parameter:
-        ?country=US   two-letter country code Nager.Date understands (default "US").
+    Takes the open deadlines in our database, fetches the matching years of public holidays and
+    long weekends from Nager.Date, and returns, for each deadline, whether it lands on a day
+    off, the nearest holiday, and the next working day -- plus a summary across all of them.
 
-    This is deliberately the same shape as the internal JSON API in Section 6: a filtered
-    queryset, a JsonResponse with an "error" key on bad input, and a predictable envelope.
+    Query parameters:
+        country       two-letter country code (default US)
+        bridge_days   0-5 bridge days allowed when finding long weekends (default 1)
+
+    Errors come back as JSON with an "error" key: 400 for bad input or an unknown country,
+    502 when Nager.Date cannot be reached or answers with an error.
     """
     country = request.GET.get("country", "US").strip().upper()
     if not country.isalpha() or len(country) != 2:
         return JsonResponse(
             {"error": f"country must be a two-letter code, got {country!r}"}, status=400
         )
+    try:
+        bridge_days = int(request.GET.get("bridge_days", DEFAULT_BRIDGE_DAYS))
+    except ValueError:
+        bridge_days = -1
+    if not 0 <= bridge_days <= MAX_BRIDGE_DAYS:
+        return JsonResponse(
+            {"error": f"bridge_days must be a whole number from 0 to {MAX_BRIDGE_DAYS}"},
+            status=400,
+        )
 
-    items = (
+    items = list(
         BriefItem.objects.filter(state=BriefItem.State.OPEN, deadline_at__isnull=False)
         .select_related("brief__space")
         .order_by("deadline_at")
     )
-    years = sorted({item.deadline_at.year for item in items})
-    if not years:
+    today = timezone.localdate()
+    envelope = {"country": country, "bridge_days": bridge_days}
+    if not items:
+        # Nothing to check, so nothing is fetched: no external call for an empty answer.
         return JsonResponse(
-            {"country": country, "years_checked": [], "count": 0, "results": []},
+            {**envelope, "years_checked": [], "count": 0,
+             "summary": {"deadlines_checked": 0, "at_risk": 0}, "results": []},
             json_dumps_params={"indent": 2},
         )
 
-    # One holiday calendar per year actually in use, not one per item -- a dozen deadlines in
-    # the same year share a single external call.
-    holidays_by_date = {}
-    for year in years:
-        try:
-            holidays_by_date.update(_fetch_holidays(year, country))
-        except requests.exceptions.RequestException as exc:
-            return JsonResponse(
-                {"error": "could not reach the public holiday service", "detail": str(exc)},
-                status=502,
-            )
-        except ValueError as exc:
-            return JsonResponse({"error": str(exc)}, status=400)
+    # One calendar per year actually in use (plus this year, for "next holiday"), not one
+    # per deadline: a dozen deadlines in the same year share the same two external calls.
+    deadline_days = {item.pk: timezone.localtime(item.deadline_at).date() for item in items}
+    years = sorted({day.year for day in deadline_days.values()} | {today.year})
+    holidays, long_weekends = {}, []
+    try:
+        for year in years:
+            holidays.update(_fetch_holidays(year, country))
+            long_weekends.extend(_fetch_long_weekends(year, country, bridge_days))
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc), "country": country}, status=400)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse(
+            {"error": "could not reach the public holiday service", "detail": str(exc)},
+            status=502,
+        )
 
     results = []
     for item in items:
-        deadline_date = item.deadline_at.date().isoformat()
-        holiday_name = holidays_by_date.get(deadline_date)
         results.append({
             "id": item.pk,
             "title": item.title,
             "space": item.brief.space.kind,
             "deadline_at": item.deadline_at.isoformat(),
-            "is_holiday": holiday_name is not None,
-            "holiday_name": holiday_name,
+            **analyse_deadline(deadline_days[item.pk], today, holidays, long_weekends),
             "url": item.get_absolute_url(),
         })
 
+    upcoming = sorted(day for day in holidays if day >= today)
+    at_risk = [row for row in results if row["at_risk"]]
+    summary = {
+        "deadlines_checked": len(results),
+        "on_public_holiday": sum(row["is_holiday"] for row in results),
+        "on_weekend": sum(row["is_weekend"] for row in results),
+        "in_long_weekend": sum(row["in_long_weekend"] for row in results),
+        "at_risk": len(at_risk),
+        "share_at_risk": round(len(at_risk) / len(results), 2),
+        "overdue": sum(row["days_until_deadline"] < 0 for row in results),
+        "next_holiday": (
+            {"date": upcoming[0].isoformat(), "name": holidays[upcoming[0]],
+             "days_from_today": (upcoming[0] - today).days}
+            if upcoming else None
+        ),
+        "holidays_in_checked_years": len(holidays),
+        "long_weekends_in_checked_years": len(long_weekends),
+    }
     return JsonResponse(
-        {
-            "country": country,
-            "years_checked": years,
-            "count": len(results),
-            "results": results,
-        },
+        {**envelope, "years_checked": years, "count": len(results),
+         "summary": summary, "results": results},
         json_dumps_params={"indent": 2},
     )
 

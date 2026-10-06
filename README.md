@@ -8,7 +8,8 @@
 - Django app: `unopsis` (models, admin, views, templates)
 - Design docs, wireframes, branching strategy and weekly notes live in [`docs/`](docs/)
 - The site is navigable from the home page at `/`: briefs, brief items, a search-and-insights
-  page with live matplotlib charts, and a public JSON API.
+  page with live matplotlib and Vega-Lite charts, a reports page with CSV/JSON exports, and a
+  public JSON API that also checks deadlines against a live public-holiday calendar.
 
 ---
 
@@ -121,6 +122,12 @@ address in `get_absolute_url()`. Nothing in this project hard-codes a path.
 | `/api/insights/` | `api-insights` | `api_insights` (FBV) | The aggregations as JSON |
 | `/api/items.txt` | `api-items-text` | `api_items_text` | Same data through `HttpResponse` (`text/plain`) |
 | `/api/items.csv` | `api-items-csv` | `api_items_csv` | Same data through `HttpResponse` (`text/csv`) |
+| `/api/insights/items-by-lane/` | `api-items-by-lane` | `api_items_by_lane` | Chart 1's data: a flat JSON array, one record per lane |
+| `/api/insights/messages-by-hour/` | `api-messages-by-hour` | `api_messages_by_hour` | Chart 2's data: a flat JSON array, one record per hour |
+| `/api/deadlines/holidays/` | `api-deadline-holidays` | `deadline_holidays` | External API: open deadlines checked against Nager.Date (`?country=US&bridge_days=1`) |
+| `/vega-lite/chart1/`, `/vega-lite/chart2/` | `vega-chart-page` | `vega_chart_page` | Each Vega-Lite chart on its own page |
+| `/vega-lite/chart1.json`, `/vega-lite/chart2.json` | `vega-chart-spec` | `vega_chart_spec` | The chart's Vega-Lite spec, `data.url` made absolute |
+| `/vega-lite/chart1.png`, `/vega-lite/chart2.png` | `vega-chart-png` | `vega_chart_png` | The same spec rendered to PNG on the server |
 | `/reports/` | `reports` | `reports` (FBV) | Grouped summaries in tables, plus the two download buttons |
 | `/export/brief-items.csv` | `export-items-csv` | `export_items_csv` | Every item as a timestamped CSV download |
 | `/export/brief-items.json` | `export-items-json` | `export_items_json` | The same rows, same order, as a JSON download |
@@ -156,7 +163,7 @@ after a POST needs no `success_url`.
 
 | | |
 |---|---|
-| Layout | one project-level `static/` folder (`static/css/unopsis.css`, `static/img/unopsis-logo.svg`) |
+| Layout | one project-level `static/` folder (`static/css/unopsis.css`, `static/img/unopsis-logo.svg`, `static/js/vega-charts.js`) |
 | Settings | `STATICFILES_DIRS` and `STATIC_ROOT` in `inboxtriage/settings/base.py` |
 | Templates | `{% load static %}` at the top of `base.html`, then `{% static 'css/unopsis.css' %}` |
 | Cache busting | `ManifestStaticFilesStorage`, subclassed in `inboxtriage/staticfiles_storage.py`, wired up in `inboxtriage/settings/production.py` |
@@ -183,6 +190,39 @@ the ORM computes the counts, matplotlib (with the headless `Agg` backend) draws 
 `HttpResponse(png, content_type="image/png")`. No file is ever written to disk, and every figure
 is closed so matplotlib's global figure registry does not grow one request at a time. The
 insights page embeds both with a heading, a caption and descriptive `alt` text.
+
+## Vega-Lite charts (A4 Part 1)
+
+Two charts are built in Vega-Lite from the project's own internal API. Each spec loads its numbers
+with `"data": {"url": ...}`; no data is ever written inline into a spec or a page.
+
+| | Bar chart | Line chart |
+|---|---|---|
+| Spec file (submitted) | [`unopsis/vega_lite/chart1_items_by_lane.vl.json`](unopsis/vega_lite/chart1_items_by_lane.vl.json) | [`unopsis/vega_lite/chart2_messages_by_hour.vl.json`](unopsis/vega_lite/chart2_messages_by_hour.vl.json) |
+| Data (`data.url`) | `/api/insights/items-by-lane/` | `/api/insights/messages-by-hour/` |
+| What it shows | Brief items per lane (`GROUP BY lane`) | Messages per hour (`TruncHour(sent_at)`), quiet hours as 0 |
+| Chart page | `/vega-lite/chart1/` | `/vega-lite/chart2/` |
+| Spec for the editor | `/vega-lite/chart1.json` | `/vega-lite/chart2.json` |
+| Server-rendered image | `/vega-lite/chart1.png` | `/vega-lite/chart2.png` |
+
+Both charts are also embedded on `/insights/`. How the pieces fit:
+
+- **The data feeds** return a *bare JSON array of flat records*, the shape Vega-Lite reads with
+  nothing but a URL. `/api/insights/` has the same numbers, but nested inside an object.
+- **The spec files** store `data.url` as a path, so they work on any host. The `.json` endpoint
+  rewrites it to an absolute URL for the host that served it. That way, a spec copied from
+  `https://<you>.pythonanywhere.com/vega-lite/chart1.json` and pasted into the
+  [Vega-Lite editor](https://vega.github.io/editor/) loads live data from the deployed site.
+- **Cross-origin reads are allowed.** The editor runs on another site, so `/api/` and
+  `/vega-lite/` responses carry `Access-Control-Allow-Origin: *` (`unopsis/middleware.py`).
+  These endpoints are public, GET-only and cookie-free, so nothing new is exposed. HTML pages do
+  not get the header.
+- **Embedding.** `static/js/vega-charts.js` fetches each spec by URL and hands it to
+  `vega-embed`. It changes only the width (`"container"`), so the chart fills its column.
+- **The PNG endpoints** render the same spec on the server with
+  [`vl-convert-python`](https://pypi.org/project/vl-convert-python/), which runs the real
+  Vega-Lite compiler, so they are not look-alikes. The renderer cannot fetch a relative URL from
+  inside the request, so the view passes it the rows from the same function the data URL serves.
 
 ## Forms: GET and POST
 
@@ -235,6 +275,43 @@ treats the body as data. `HttpResponse` serializes nothing and defaults to `text
 why the text and CSV versions have to pass `content_type` explicitly &mdash; and why the CSV one
 downloads instead of rendering.
 
+## External API: deadlines vs. public holidays (A4 Part 2)
+
+`/api/deadlines/holidays/?country=US&bridge_days=1` checks every open deadline in the database
+against [Nager.Date](https://date.nager.at), a keyless public-holiday API. The form is under
+**Deadlines vs. public holidays** on `/insights/`.
+
+Why Nager.Date: it needs no key, and it is on PythonAnywhere's allow-list. A free PythonAnywhere
+account can only call sites on that list, so most other APIs would fail once deployed.
+
+**What the view does:**
+
+1. **Validates the query.** `country` must be a two-letter code and `bridge_days` a number from
+   0 to 5. Bad input is a JSON `400`, returned before any external call is made.
+2. **Calls two Nager.Date endpoints** for each year that has a deadline: *public holidays*, and
+   *long weekends*. The long-weekend call passes `availableBridgeDays` as a query parameter.
+   Every call goes through `requests.get(url, params=..., timeout=5)` and then
+   `.raise_for_status()`.
+3. **Triangulates each deadline** (`BriefItem.deadline_at`) against that calendar. For each one
+   it reports:
+   - the weekday, and days until (or since) the deadline;
+   - whether it falls on a weekend, a public holiday, a bridge day, or inside a long weekend;
+   - the nearest holiday;
+   - the next working day, and how many days the deadline would slip to reach it;
+   - an `at_risk` flag.
+4. **Summarizes across all deadlines:**
+   - how many are at risk, and what share;
+   - how many fall on a holiday, a weekend, or a long weekend;
+   - how many are overdue;
+   - the next upcoming holiday.
+5. **Stores nothing.** The calendar lives only for the length of the request; no model is written.
+
+**Errors:**
+- An unknown country (Nager.Date answers `404`) is a `400`.
+- A timeout, connection failure or error status from the service is a `502` with an `error` key.
+
+The tests (`ExternalApiTests`) mock `requests.get`, so the suite never touches the network.
+
 ## Reports and exports
 
 `/reports/` is a read-only snapshot of the database: four grouped summaries, a totals strip and a
@@ -285,6 +362,10 @@ for the run, so the committed `db.sqlite3` is never read or written by the tests
 
 | | |
 |---|---|
+| **Vega-Lite bar chart** (`/vega-lite/chart1/`) | ![Vega-Lite bar chart](docs/screenshots/18_vega_lite_chart1_bar.png) |
+| **Vega-Lite line chart** (`/vega-lite/chart2/`) | ![Vega-Lite line chart](docs/screenshots/19_vega_lite_chart2_line.png) |
+| **Both Vega-Lite charts + the holiday check** on `/insights/` | ![Insights Vega-Lite](docs/screenshots/20_insights_vega_lite_and_holiday_check.png) |
+| **External API** (`/api/deadlines/holidays/?country=US`) | ![Holiday check](docs/screenshots/21_external_api_deadline_holidays.png) |
 | **Reports & exports** (`/reports/`) | ![Reports page](docs/screenshots/17_reports_and_exports.png) |
 | **Home page** (`/`) | ![Home page](docs/screenshots/07_home_page.png) |
 | **Navigation** working (Briefs) | ![Briefs](docs/screenshots/08_navigation_briefs.png) |
@@ -319,4 +400,5 @@ The home, briefs and detail screenshots also show the custom CSS, the logo and t
 | `docs/notes/notes.txt` | Weekly progress, view inventory, reminders and challenges |
 | `docs/screenshots/` | Browser screenshots of every page, the charts and the JSON output |
 | `docs/design/` | Data-model design decisions (`DESIGN.md`), the ER diagram workbook, and the Part 4 README |
-| `static/` | The project's own stylesheet and logo (see **Static files and the UI**) |
+| `static/` | The project's own stylesheet, logo and Vega-Lite embed script (see **Static files and the UI**) |
+| `unopsis/vega_lite/` | The two Vega-Lite specs (see **Vega-Lite charts**) |

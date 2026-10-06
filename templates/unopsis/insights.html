@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% comment %}
-  The ORM page. Four things live here:
+  The ORM page. Six things live here:
 
     1. a GET search form  -- its result IS the link (?q=deadline&lane=needs_you), so it can be
        bookmarked, shared and reloaded and always returns the same rows;
@@ -11,7 +12,9 @@
     3. the results list, with {% templatetag openblock %} for {% templatetag closeblock %} /
        {% templatetag openblock %} empty {% templatetag closeblock %};
     4. the aggregation summaries: one total, and several GROUP BY counts, with the two
-       matplotlib charts drawn from the same numbers.
+       matplotlib charts drawn from the same numbers;
+    5. the two Vega-Lite charts (A4 Part 1), loaded from their specs, which load their data by URL;
+    6. the external-API form (A4 Part 2): deadlines checked against a public holiday calendar.
 {% endcomment %}
 
 {% block title %}Search &amp; insights{% endblock %}
@@ -321,90 +324,88 @@
     </div>
   </div>
 
-  <!-- ============ 5. VEGA-LITE CHARTS, DRAWN CLIENT-SIDE FROM THE JSON API ============ -->
-  <h3 class="section-title mt-4">Charts (Vega-Lite, drawn live from the JSON API)</h3>
+  <!-- ============ 5. VEGA-LITE CHARTS, DRAWN CLIENT-SIDE FROM THE INTERNAL API ============ -->
+  <h3 class="section-title mt-4">Charts (Vega-Lite, drawn live from the internal API)</h3>
   <p class="text-muted small">
     The matplotlib charts above are drawn on the server and shipped down as a finished PNG.
-    These two are the opposite: the server sends only numbers &mdash;
-    <code>{% url 'api-insights' %}</code> &mdash; and the browser draws the chart itself with
+    These two are the opposite: each spec names its data with <code>"data": {"url": ...}</code>
+    and the browser fetches the numbers and draws the chart itself with
     <a href="https://vega.github.io/vega-lite/" target="_blank" rel="noopener">Vega-Lite</a>.
+    Each chart also has a page of its own, its spec as JSON, and a server-rendered PNG.
   </p>
   <div class="row g-4">
     <div class="col-lg-6">
       <figure class="chart-figure">
         {% comment %}
           vega-embed's own stylesheet makes this div display:inline-block, which has no
-          intrinsic width -- "width": "container" in the spec below needs an explicit width
-          to measure against, so it is set inline here rather than left to shrink to 0.
+          intrinsic width -- width "container" (set by static/js/vega-charts.js) needs an
+          explicit width to measure against, so it is set inline here.
         {% endcomment %}
-        <div id="vega-items-by-lane" role="img" style="width: 100%;"
+        <div data-vega-spec="{% url 'vega-chart-spec' 'chart1' %}" role="img" style="width: 100%;"
              aria-label="Bar chart of brief items grouped by lane."></div>
         <figcaption>
-          <strong>Items by lane.</strong> A bar mark over the <code>items_by_lane</code> array
-          already in the <code>/api/insights/</code> response &mdash; the same GROUP BY the
-          matplotlib bar chart above is drawn from, read by <code>fetch()</code> instead of by
-          the server.
+          <strong>Items by lane.</strong> A bar mark over
+          <a href="{% url 'api-items-by-lane' %}"><code>{% url 'api-items-by-lane' %}</code></a>,
+          the same GROUP BY the matplotlib bar chart above is drawn from.
+          <a href="{% url 'vega-chart-page' 'chart1' %}">Chart page</a> &middot;
+          <a href="{% url 'vega-chart-spec' 'chart1' %}">spec</a> &middot;
+          <a href="{% url 'vega-chart-png' 'chart1' %}">PNG</a>
         </figcaption>
       </figure>
     </div>
     <div class="col-lg-6">
       <figure class="chart-figure">
-        <div id="vega-messages-by-day" role="img" style="width: 100%;"
-             aria-label="Line chart of messages received per day over time."></div>
+        <div data-vega-spec="{% url 'vega-chart-spec' 'chart2' %}" role="img" style="width: 100%;"
+             aria-label="Line chart of messages received per hour over time."></div>
         <figcaption>
-          <strong>Messages per day.</strong> A line mark (with a point per day) over the
-          <code>messages_by_day</code> array: <code>Message</code> rows grouped by
-          <code>TruncDate(sent_at)</code>, one more field on the same JSON response.
+          <strong>Messages per hour.</strong> A line mark over
+          <a href="{% url 'api-messages-by-hour' %}"><code>{% url 'api-messages-by-hour' %}</code></a>:
+          <code>Message</code> rows grouped by <code>TruncHour(sent_at)</code>, quiet hours as zero.
+          <a href="{% url 'vega-chart-page' 'chart2' %}">Chart page</a> &middot;
+          <a href="{% url 'vega-chart-spec' 'chart2' %}">spec</a> &middot;
+          <a href="{% url 'vega-chart-png' 'chart2' %}">PNG</a>
         </figcaption>
       </figure>
     </div>
   </div>
 
+  <!-- ============ 6. EXTERNAL API: DEADLINES AGAINST A PUBLIC HOLIDAY CALENDAR ============ -->
+  <h3 class="section-title mt-4">Deadlines vs. public holidays (external API)</h3>
+  <div class="panel">
+    <p class="small text-muted">
+      Checks every open deadline in the database against
+      <a href="https://date.nager.at" target="_blank" rel="noopener">Nager.Date</a>'s public
+      holidays and long weekends for a country, live, and flags the ones that land on a day off
+      &mdash; with the nearest holiday and the next working day. Nothing from the holiday service
+      is stored; the answer is computed on each request and returned as JSON.
+    </p>
+    <form method="get" action="{% url 'api-deadline-holidays' %}" class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label small" for="holiday-country">Country code</label>
+        <input class="form-control form-control-sm" id="holiday-country" name="country"
+               value="US" maxlength="2" size="4" pattern="[A-Za-z]{2}" required>
+      </div>
+      <div class="col-auto">
+        <label class="form-label small" for="holiday-bridge">Bridge days allowed</label>
+        <input class="form-control form-control-sm" id="holiday-bridge" name="bridge_days"
+               type="number" value="1" min="0" max="5">
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary btn-sm" type="submit">Check deadlines</button>
+      </div>
+    </form>
+    <p class="small text-muted mt-2 mb-0">
+      Or open it directly:
+      <a href="{% url 'api-deadline-holidays' %}?country=US"><code>{% url 'api-deadline-holidays' %}?country=US</code></a>
+    </p>
+  </div>
+
 {% endblock %}
 
 {% block extra_js %}
-  {# Vega-Lite only loads on this page -- every other page pays nothing for it. #}
+  {# Vega-Lite only loads on the pages that draw a chart -- every other page pays nothing for it. #}
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
-  <script>
-    // One fetch of the internal JSON API feeds both charts below -- the same promise is
-    // reused rather than issuing the request twice.
-    fetch("{% url 'api-insights' %}")
-      .then(function (response) { return response.json(); })
-      .then(function (data) {
-        vegaEmbed("#vega-items-by-lane", {
-          "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-          "description": "Brief items grouped by lane.",
-          "data": {"values": data.items_by_lane},
-          "mark": "bar",
-          "encoding": {
-            "x": {"field": "label", "type": "nominal", "title": "Lane", "sort": null},
-            "y": {"field": "total", "type": "quantitative", "title": "Items"},
-            "color": {"field": "label", "type": "nominal", "legend": null}
-          },
-          "width": "container",
-          "height": 260
-        }, {"actions": false});
-
-        vegaEmbed("#vega-messages-by-day", {
-          "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-          "description": "Messages received per day.",
-          "data": {"values": data.messages_by_day},
-          "mark": {"type": "line", "point": true},
-          "encoding": {
-            "x": {"field": "date", "type": "temporal", "title": "Day"},
-            "y": {"field": "total", "type": "quantitative", "title": "Messages"}
-          },
-          "width": "container",
-          "height": 260
-        }, {"actions": false});
-      })
-      .catch(function (error) {
-        // A chart that fails to load should say so, not leave an empty box with no explanation.
-        ["#vega-items-by-lane", "#vega-messages-by-day"].forEach(function (id) {
-          document.querySelector(id).textContent = "Chart failed to load: " + error;
-        });
-      });
-  </script>
+  <script src="{% static 'js/vega-charts.js' %}"></script>
 {% endblock %}
