@@ -14,3 +14,8 @@ matplotlib>=3.8
 
 # The HTTP client behind the external public-holiday integration (Part 2).
 requests>=2.31
+
+# Renders the Vega-Lite specs to PNG on the server for /vega-lite/<chart>.png (Part 1).
+# Self-contained (no Node.js needed), about 80 MB installed -- still well inside PythonAnywhere's
+# 512 MB quota alongside everything above.
+vl-convert-python>=1.9

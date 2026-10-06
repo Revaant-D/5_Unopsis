@@ -1,0 +1,18 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "title": "Brief items by lane",
+  "description": "Bar chart: how many brief items sit in each lane (an aggregated GROUP BY lane).",
+  "data": {"url": "/api/insights/items-by-lane/"},
+  "mark": {"type": "bar", "cornerRadiusEnd": 3},
+  "encoding": {
+    "x": {"field": "label", "type": "nominal", "title": "Lane", "sort": null, "axis": {"labelAngle": 0}},
+    "y": {"field": "total", "type": "quantitative", "title": "Brief items", "axis": {"tickMinStep": 1}},
+    "color": {"field": "label", "type": "nominal", "legend": null, "sort": null},
+    "tooltip": [
+      {"field": "label", "type": "nominal", "title": "Lane"},
+      {"field": "total", "type": "quantitative", "title": "Items"}
+    ]
+  },
+  "width": 480,
+  "height": 260
+}

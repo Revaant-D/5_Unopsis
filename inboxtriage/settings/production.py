@@ -20,6 +20,13 @@ DEBUG = False
 # tried on a laptop.
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
+# PythonAnywhere ends HTTPS at its own proxy and passes the request on to Django over plain
+# HTTP, telling it the original scheme in the X-Forwarded-Proto header. Trusting that header
+# makes request.is_secure() and build_absolute_uri() say "https" -- which matters for
+# /vega-lite/<chart>.json, whose data.url is built from the request: an http:// URL there
+# would be blocked as mixed content when the spec is opened in the (https) Vega-Lite editor.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Same SQLite file for now; a real production database can be swapped in here later
 # without touching development settings.
 DATABASES = {

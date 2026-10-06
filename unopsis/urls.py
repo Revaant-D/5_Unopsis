@@ -18,13 +18,20 @@ it in get_absolute_url(). The address can then change here without touching a si
     /api/items/              api-items             JSON, function-based view
     /api/items/cbv/          api-items-cbv         JSON, class-based view
     /api/insights/           api-insights          JSON aggregations
+    /api/insights/items-by-lane/    api-items-by-lane     chart 1's feed: a flat JSON array
+    /api/insights/messages-by-hour/ api-messages-by-hour  chart 2's feed: a flat JSON array
     /api/items.txt           api-items-text        the same data via HttpResponse (text/plain)
     /api/items.csv           api-items-csv         the same data via HttpResponse (text/csv)
     /reports/                reports               grouped summaries + the two download buttons
     /export/brief-items.csv  export-items-csv      every BriefItem, downloadable CSV
     /export/brief-items.json export-items-json     every BriefItem, downloadable pretty JSON
-    /api/deadlines/holidays/ api-deadline-holidays external API: Nager.Date public holidays,
-                                                    triangulated against BriefItem.deadline_at
+    /api/deadlines/holidays/ api-deadline-holidays external API: Nager.Date public holidays
+                                                    and long weekends, triangulated against
+                                                    BriefItem.deadline_at
+    /vega-lite/<chart>/      vega-chart-page       one Vega-Lite chart on its own page
+    /vega-lite/<chart>.json  vega-chart-spec       that chart's spec, data.url made absolute
+    /vega-lite/<chart>.png   vega-chart-png        that chart rendered to PNG on the server
+                             (<chart> is chart1 or chart2; anything else is a 404)
 
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
@@ -64,6 +71,10 @@ urlpatterns = [
     path("api/items/", views.api_items, name="api-items"),
     path("api/items/cbv/", views.ItemsApiView.as_view(), name="api-items-cbv"),
     path("api/insights/", views.api_insights, name="api-insights"),
+    # Chart-ready feeds for Vega-Lite: bare arrays of flat records, nothing to unwrap.
+    path("api/insights/items-by-lane/", views.api_items_by_lane, name="api-items-by-lane"),
+    path("api/insights/messages-by-hour/", views.api_messages_by_hour,
+         name="api-messages-by-hour"),
     # Same data, different Content-Type, to show what JsonResponse is actually doing.
     path("api/items.txt", views.api_items_text, name="api-items-text"),
     path("api/items.csv", views.api_items_csv, name="api-items-csv"),
@@ -79,4 +90,10 @@ urlpatterns = [
 
     # ---- external API integration: a public holiday calendar, called live, never stored ----
     path("api/deadlines/holidays/", views.deadline_holidays, name="api-deadline-holidays"),
+
+    # ---- Assignment 4, Part 1: every Vega-Lite chart as a page, a spec and an image ----
+    # <str:chart> stops at "/" but not at ".", so "chart1.json" binds chart="chart1".
+    path("vega-lite/<str:chart>/", views.vega_chart_page, name="vega-chart-page"),
+    path("vega-lite/<str:chart>.json", views.vega_chart_spec, name="vega-chart-spec"),
+    path("vega-lite/<str:chart>.png", views.vega_chart_png, name="vega-chart-png"),
 ]
