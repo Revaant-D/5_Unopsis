@@ -23,6 +23,8 @@ it in get_absolute_url(). The address can then change here without touching a si
     /reports/                reports               grouped summaries + the two download buttons
     /export/brief-items.csv  export-items-csv      every BriefItem, downloadable CSV
     /export/brief-items.json export-items-json     every BriefItem, downloadable pretty JSON
+    /api/deadlines/holidays/ api-deadline-holidays external API: Nager.Date public holidays,
+                                                    triangulated against BriefItem.deadline_at
 
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
@@ -59,8 +61,6 @@ urlpatterns = [
     path("insights/providers.png", views.provider_chart_png, name="chart-providers"),
 
     # ---- Section 6: the JSON API ----
-    # Every /api/... route lives in this one block, in one order, so "what does the API
-    # expose?" is answered by reading five adjacent lines rather than scanning the file.
     path("api/items/", views.api_items, name="api-items"),
     path("api/items/cbv/", views.ItemsApiView.as_view(), name="api-items-cbv"),
     path("api/insights/", views.api_insights, name="api-insights"),
@@ -76,4 +76,7 @@ urlpatterns = [
     path("reports/", views.reports, name="reports"),
     path("export/brief-items.csv", views.export_items_csv, name="export-items-csv"),
     path("export/brief-items.json", views.export_items_json, name="export-items-json"),
+
+    # ---- external API integration: a public holiday calendar, called live, never stored ----
+    path("api/deadlines/holidays/", views.deadline_holidays, name="api-deadline-holidays"),
 ]

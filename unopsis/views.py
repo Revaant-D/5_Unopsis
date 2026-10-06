@@ -44,9 +44,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402  (must follow matplotlib.use)
 from matplotlib.ticker import MaxNLocator  # noqa: E402
 
+import requests
+
 from django.contrib import messages as flash
 from django.db.models import Avg, Case, Count, IntegerField, Q, TextField, Value, When
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, TruncDate
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.template import loader
@@ -796,6 +798,16 @@ def api_insights(request):
         .annotate(total=Count("id"))
         .order_by("-total")
     )
+    # Same shape, over time instead of over a category: one row per calendar day a message
+    # arrived. TruncDate collapses the datetime column to its date so two messages on the same
+    # day land in the same GROUP BY bucket regardless of time-of-day. Unfiltered by ?space=,
+    # same as messages_by_provider above -- Message has no direct space column to filter on.
+    by_day = (
+        Message.objects.annotate(day=TruncDate("sent_at"))
+        .values("day")
+        .annotate(total=Count("id"))
+        .order_by("day")
+    )
     return JsonResponse(
         {
             "space": space or "all",
@@ -815,6 +827,12 @@ def api_insights(request):
                  "label": PROVIDER_LABELS.get(row["connection__provider"], ""),
                  "total": row["total"]}
                 for row in by_provider
+            ],
+            # The Vega-Lite line chart on /insights/ is drawn straight from this list: one
+            # {date, total} point per day, already sorted so the chart does not have to sort it.
+            "messages_by_day": [
+                {"date": row["day"].isoformat(), "total": row["total"]}
+                for row in by_day
             ],
         },
         json_dumps_params={"indent": 2},
@@ -862,6 +880,103 @@ def api_items_csv(request):
     response = HttpResponse(buffer.getvalue(), content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="unopsis-items.csv"'
     return response
+
+
+# ======================================================================================
+# PART C -- EXTERNAL API INTEGRATION: do any open deadlines land on a public holiday?
+# ======================================================================================
+NAGER_DATE_URL = "https://date.nager.at/api/v3/PublicHolidays/{year}/{country}"
+
+
+def _fetch_holidays(year, country):
+    """
+    One year of a country's public holidays from Nager.Date -- keyless, no signup, no token.
+
+    Returns a dict of {"YYYY-MM-DD": "Holiday name"} for that year/country, built fresh on
+    every call and handed back to the caller to use and discard. Nothing this function
+    returns is ever written to a model, so a deadline's "is this a holiday" status is always
+    as current as the external service, never a stale copy sitting in our own database.
+
+    Raises requests.exceptions.RequestException on anything network-shaped (DNS failure,
+    connection refused, timeout) and ValueError on an HTTP error status, so the caller has
+    exactly two except clauses to handle rather than guessing which exceptions are possible.
+    """
+    response = requests.get(NAGER_DATE_URL.format(year=year, country=country), timeout=5)
+    if response.status_code == 404:
+        # Nager.Date's own way of saying "that is not a country code it knows."
+        raise ValueError(f"no holiday data for country code {country!r}")
+    response.raise_for_status()
+    return {row["date"]: row["localName"] for row in response.json()}
+
+
+def deadline_holidays(request):
+    """
+    Triangulation: take the deadlines already sitting in our own database (BriefItem.deadline_at)
+    and, for each one, ask a public holiday calendar whether that date is a holiday in the
+    requested country. Nothing the external API returns is saved anywhere -- the holiday
+    lookup table built below lives only for the duration of this one request.
+
+    Query parameter:
+        ?country=US   two-letter country code Nager.Date understands (default "US").
+
+    This is deliberately the same shape as the internal JSON API in Section 6: a filtered
+    queryset, a JsonResponse with an "error" key on bad input, and a predictable envelope.
+    """
+    country = request.GET.get("country", "US").strip().upper()
+    if not country.isalpha() or len(country) != 2:
+        return JsonResponse(
+            {"error": f"country must be a two-letter code, got {country!r}"}, status=400
+        )
+
+    items = (
+        BriefItem.objects.filter(state=BriefItem.State.OPEN, deadline_at__isnull=False)
+        .select_related("brief__space")
+        .order_by("deadline_at")
+    )
+    years = sorted({item.deadline_at.year for item in items})
+    if not years:
+        return JsonResponse(
+            {"country": country, "years_checked": [], "count": 0, "results": []},
+            json_dumps_params={"indent": 2},
+        )
+
+    # One holiday calendar per year actually in use, not one per item -- a dozen deadlines in
+    # the same year share a single external call.
+    holidays_by_date = {}
+    for year in years:
+        try:
+            holidays_by_date.update(_fetch_holidays(year, country))
+        except requests.exceptions.RequestException as exc:
+            return JsonResponse(
+                {"error": "could not reach the public holiday service", "detail": str(exc)},
+                status=502,
+            )
+        except ValueError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+
+    results = []
+    for item in items:
+        deadline_date = item.deadline_at.date().isoformat()
+        holiday_name = holidays_by_date.get(deadline_date)
+        results.append({
+            "id": item.pk,
+            "title": item.title,
+            "space": item.brief.space.kind,
+            "deadline_at": item.deadline_at.isoformat(),
+            "is_holiday": holiday_name is not None,
+            "holiday_name": holiday_name,
+            "url": item.get_absolute_url(),
+        })
+
+    return JsonResponse(
+        {
+            "country": country,
+            "years_checked": years,
+            "count": len(results),
+            "results": results,
+        },
+        json_dumps_params={"indent": 2},
+    )
 
 
 # ======================================================================================

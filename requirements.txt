@@ -1,5 +1,5 @@
 # Third-party packages this project needs. Install with:  pip install -r requirements.txt
-# Every line below is something the code actually imports -- except `requests`, which is noted.
+# Every line below is something the code actually imports.
 
 # The web framework itself. Pinned below 6 so a major release cannot land on us mid-semester.
 Django>=5.2,<6
@@ -12,6 +12,5 @@ django-environ>=0.14
 # (unopsis/views.py, with the headless Agg backend).
 matplotlib>=3.8
 
-# Not imported yet: this is the HTTP client for the external-API work in Part 2, which a
-# teammate owns. Listed ahead of time so the environment is ready when that code lands.
+# The HTTP client behind the external public-holiday integration (Part 2).
 requests>=2.31
