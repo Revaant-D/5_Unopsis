@@ -2,6 +2,13 @@
 
 INFO 490 · Part 4 · Data Modeling & Admin Kickoff
 
+> **Historical document.** This is the README from the *data-modeling* assignment, kept because
+> the naming rationale, the constraint evidence and the admin walkthrough are still the best
+> record of why the schema looks the way it does. It describes the project as it stood then:
+> admin-only, a single flat `settings.py`, no views. For how the project runs **today** — the
+> pages, the URL map, the static files, the settings package — read the top-level
+> [`README.md`](../../README.md) instead, which supersedes this file wherever the two disagree.
+
 Unopsis collects a person's notifications from every place they arrive (Gmail, Outlook,
 Slack, Discord, WhatsApp, iMessage) and turns them into one short brief: a handful of ranked
 items, each traceable back to the actual messages behind it.
@@ -51,26 +58,25 @@ python manage.py runserver
 ```
 
 The development server runs at http://127.0.0.1:8000/ and the admin at
-http://127.0.0.1:8000/admin/. Note that `/` has no view — this project is admin-only for
-Part 4, so the root URL shows Django's default welcome page rather than a 404.
+http://127.0.0.1:8000/admin/. At the time of this assignment `/` had no view and showed
+Django's default welcome page; it is now the home page, and every other page is reachable
+from its navigation bar. See the top-level README's **URL map**.
 
 ### Superusers
 
-The assignment specifies two different sets of credentials in two different sections, so
-**both accounts exist** and either will work:
-
-| Username | Password |
-|---|---|
-| `mohitg2` | `uiuc12345` |
-| `tester` | `uiuc12345` |
-
-`mohitg2` owns all of the seeded demo data.
+Two superuser accounts exist, `mohitg2` and `tester`; `mohitg2` owns all of the seeded demo
+data. Their passwords were written out here in an earlier draft and have been removed — the
+database file is committed to this repository now (see `.gitignore`), so the repo is the wrong
+place to publish working credentials. Ask a team member, or make your own account with
+`python manage.py createsuperuser`.
 
 ---
 
 ## Reproducing the database from scratch
 
-`db.sqlite3` ships with data already in it, but the whole thing rebuilds with:
+`db.sqlite3` ships with data already in it — and as of Assignment 4 it is **committed to the
+repository**, so deleting it is a change to a tracked file, not a local-only cleanup. Rebuild
+only if you mean to replace the data everyone else is working against:
 
 ```bash
 rm db.sqlite3
@@ -102,8 +108,9 @@ conditional) · `Meta.ordering` on all six · a docstring in every model class.
 (`BriefItem.primary_message`) — each justified in [DESIGN.md](DESIGN.md), which also
 explains why eleven further concepts are fields rather than tables.
 
-The entity relationship diagram is **[docs/er-diagram.pdf](docs/er-diagram.pdf)** (also
-`.png`, generated from `docs/er-diagram.html`).
+The entity relationship diagram workbook is **[unopsis-erd.xlsx](unopsis-erd.xlsx)**, in this
+folder. (An earlier draft of this file linked `docs/er-diagram.pdf`, `.png`, `.html` and a
+vendored `mermaid.min.js`; none of those were ever committed, so the links went nowhere.)
 
 ---
 
@@ -168,19 +175,24 @@ Log in at `/admin/` as `mohitg2` and open:
 
 ## Project layout
 
+The layout below is the one this assignment was handed in with. It has since grown views,
+templates, a stylesheet and a settings *package*; the current tree is described in the
+top-level README.
+
 ```
-inboxtriage/
+5_Unopsis/
 ├── manage.py
 ├── db.sqlite3                  ← at project root, as required
-├── README.md                   ← this file (naming rationale, setup)
-├── DESIGN.md                   ← model design decisions and justifications
-├── docs/
-│   ├── er-diagram.pdf          ← ER diagram (single page)
-│   ├── er-diagram.png
-│   ├── er-diagram.html         ← source; renders offline
-│   └── mermaid.min.js          ← vendored so the diagram needs no network
-├── inboxtriage/                ← project package (settings, urls, wsgi, asgi)
-│   └── settings.py
+├── README.md                   ← project README (setup, URL map, static files)
+├── docs/design/
+│   ├── PART4_README.md         ← this file (naming rationale, constraint evidence)
+│   ├── DESIGN.md               ← model design decisions and justifications
+│   └── unopsis-erd.xlsx        ← the ER diagram workbook
+├── inboxtriage/                ← project package (urls, wsgi, asgi)
+│   └── settings/               ← split per environment since Assignment 4
+│       ├── base.py
+│       ├── development.py
+│       └── production.py
 └── unopsis/                    ← the app
     ├── models.py               ← the six models, each with a docstring
     ├── admin.py                ← all six registered, with inlines and actions

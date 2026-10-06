@@ -50,11 +50,19 @@ DATABASES = {
 #
 # This is production-only on purpose: in development the file should be re-read on every
 # refresh, and the manifest would mean re-running collectstatic after every CSS edit.
+#
+# One wrinkle. staticfiles.json only exists after collectstatic has run, and Django's stock
+# ManifestStaticFilesStorage treats a missing entry as a fatal ValueError -- raised by the
+# {% static %} tag mid-render, so a fresh clone started in production mode answers HTTP 500 on
+# every HTML page instead of merely looking unstyled. We therefore point at our own subclass,
+# which keeps the hashing and only softens that one failure; inboxtriage/staticfiles_storage.py
+# explains the trade in full. Run collectstatic anyway -- README.md lists it as a required step
+# before production mode -- this just stops forgetting it from taking the site down.
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+        'BACKEND': 'inboxtriage.staticfiles_storage.ResilientManifestStaticFilesStorage',
     },
 }
