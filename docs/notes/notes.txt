@@ -455,3 +455,61 @@ What it would take to be correct for real users, when we get there:
 The private lookup on /insights/ is the sharpest case: it already keeps the query out of the URL,
 but until the queryset is scoped it can find people in any space, not only yours. The POST is the
 right half of that fix; the ownership filter is the missing half.
+
+
+16. ASSIGNMENT 4 -- WHO OWNS WHAT, AND WHAT IS DONE (updated 5 October 2026)
+-----------------------------------------------------------------------------
+Split agreed for A4:
+
+  Part 1  Internal API + two Vega-Lite charts      Pranay
+  Part 2  External keyless API integration         Pranay
+  Part 3  CSV + JSON exports and the reports page  Joy      DONE
+  Part 4.1 / 4.2  static files, requirements,
+          .gitignore, cleanup, db.sqlite3          Joy      DONE
+  Part 4.3 / 4.4  PythonAnywhere deployment        in class, together
+
+Part 3 (done):
+  /reports/                   grouped summaries, a totals line, both download buttons
+  /export/brief-items.csv     text/csv,          brief_items_YYYY-MM-DD_HH-MM.csv
+  /export/brief-items.json    application/json,  brief_items_YYYY-MM-DD_HH-MM.json
+  Both exports hold the same rows in the same order. The JSON one is indented and carries
+  generated_at and record_count alongside the records. 13 new tests; 45 in total, all passing.
+
+Part 4.1 / 4.2 (done):
+  - db.sqlite3 IS NOW COMMITTED and is deliberately not in .gitignore. A4 requires it. The
+    .gitignore says so in a comment so nobody "fixes" it back. It ships with the seed data AND
+    with the instructor's admin account (see below).
+  - .env, staticfiles/, __pycache__ and the virtualenvs are still ignored. Never commit .env.
+  - requirements.txt lists Django, django-environ, matplotlib and requests. requests is there
+    ahead of Pranay's Part 2 so the deployed site does not break when his code lands.
+  - Production settings now use inboxtriage/staticfiles_storage.py instead of Django's stock
+    ManifestStaticFilesStorage. Reason, found by actually rendering a page rather than only
+    running `manage.py check`: before collectstatic has run there is no staticfiles.json, and the
+    stock class raises ValueError from inside the {% static %} tag, so EVERY page answers 500
+    under production settings. The subclass falls back to the un-hashed name instead. After
+    collectstatic the behaviour is identical and cache busting still works -- verified both ways.
+  - Plaintext passwords were removed from docs/design/PART4_README.md, which matters more now
+    that the database itself is in the repository.
+
+ADMIN ACCOUNTS INSIDE THE COMMITTED DATABASE
+  tester  / uiuc12345    the account the assignment asks us to give the instructor
+  mohitg2 / demo12345    the demo data owner, created while building Assignment 3
+  Because db.sqlite3 is committed, these accounts ship in the repo and steps 6 and 7 of Part 4.3
+  (migrate + createsuperuser on the server) are NOT needed -- the assignment says to skip them
+  when the database is pushed. Treat both passwords as public. Nothing real goes in this database.
+
+CONTINUOUS INTEGRATION (new)
+  .github/workflows/ci.yml runs on every push and pull request to main: installs requirements,
+  fails if db.sqlite3 is missing, fails if .env was committed, runs manage.py check in both
+  settings, runs the tests, and runs collectstatic under production settings.
+  .github/pull_request_template.md and docs/sdlc/README.md document how we work.
+
+STILL TO DO FOR A4
+  [ ] Pranay: Parts 1 and 2
+  [ ] Everyone: pip install -r requirements.txt again
+  [ ] In class: Part 4.3 (clone on PythonAnywhere, virtualenv, install, collectstatic) and
+      Part 4.4 (WSGI file, virtualenv path, static mapping /static/ -> <project>/staticfiles,
+      reload). Remember to add <username>.pythonanywhere.com to ALLOWED_HOSTS in the .env you
+      create ON the server -- .env is git-ignored, so it will not be there after the clone.
+  [ ] Submit in the assignment comments: the GitHub link, the PythonAnywhere link, and the
+      PythonAnywhere username. Give teacher access to mohitg27.
