@@ -1,0 +1,135 @@
+# ---------------------------------------------------------------------------------------
+# Continuous Integration for Unopsis (Django project "inboxtriage", app "unopsis").
+#
+# What this is for: rule 1 of docs/branching_strategy/branching_strategy.md says "`main`
+# always runs" -- `check` passes in development AND production settings, and `test` passes.
+# Up to now that promise was kept by remembering to run three commands by hand. A human who
+# is in a hurry forgets. GitHub Actions does not, so this file runs the same commands on a
+# clean Ubuntu machine for every push and every pull request aimed at `main`.
+#
+# "A clean machine" is the point. It has no .env, no virtualenv and no half-finished edits
+# sitting in somebody's working tree, so a branch that only works because of something
+# untracked on one laptop fails here instead of failing for the next teammate who pulls.
+#
+# The whole thing is one job: the steps are fast and each one depends on the one before it
+# (you cannot run tests before installing Django), so splitting them across parallel jobs
+# would only mean installing the dependencies several times.
+# ---------------------------------------------------------------------------------------
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# This workflow only reads the repository -- it never pushes, tags or deploys.
+# Saying so explicitly means a compromised dependency cannot write to the repo with our token.
+permissions:
+  contents: read
+
+jobs:
+  django:
+    name: Django checks and tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # -------------------------------------------------------------------------------
+      # 1. Get the code
+      # -------------------------------------------------------------------------------
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # Cache the pip downloads between runs, keyed on requirements.txt. Purely a speed
+          # thing: change requirements.txt and the cache is rebuilt from scratch.
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # -------------------------------------------------------------------------------
+      # 2. Repository hygiene gates
+      #
+      # These two run BEFORE the .env is written, and they ask git what is *tracked*
+      # rather than looking at the filesystem -- by the end of this job a .env exists on
+      # disk (we create it below), so `test -f .env` would be the wrong question. The
+      # question that matters is "is it in the repository's history".
+      # -------------------------------------------------------------------------------
+      - name: Fail if db.sqlite3 is not committed
+        run: |
+          # Assignment 4 wants the seeded database committed so that a grader (or a
+          # teammate) can clone the repo and immediately see real rows, without running
+          # migrate + seed_demo first.
+          if git ls-files --error-unmatch db.sqlite3 > /dev/null 2>&1; then
+            echo "OK: db.sqlite3 is tracked by git."
+          else
+            echo "::error file=db.sqlite3::db.sqlite3 is not committed. A4 requires the seeded database in the repo. Fix it with a plain 'git add db.sqlite3' -- .gitignore no longer lists the file, so no -f is needed."
+            exit 1
+          fi
+
+      - name: Fail if .env was committed
+        run: |
+          # The mirror image of the step above. .env holds the real SECRET_KEY and API keys.
+          # Once a secret is in git history it is burned even if a later commit deletes it,
+          # so this is the one failure in this file that cannot be fixed by just editing a
+          # file: it needs a new key. Better to catch it on the pull request.
+          if git ls-files --error-unmatch .env > /dev/null 2>&1; then
+            echo "::error file=.env::.env is committed. It contains real secrets. Remove it from the repository, regenerate SECRET_KEY, and commit only .env.example."
+            exit 1
+          else
+            echo "OK: .env is not tracked by git."
+          fi
+
+      # -------------------------------------------------------------------------------
+      # 3. Build the .env this project refuses to start without
+      #
+      # inboxtriage/secrets_environment.py reads <project>/.env with django-environ, and
+      # base.py then does env('SECRET_KEY') with no default -- so a missing SECRET_KEY
+      # raises ImproperlyConfigured and every command below would fail before doing any
+      # real work. The runner is thrown away after the job, so a key generated here is
+      # exactly as good as a real one and never has to be stored as a GitHub secret.
+      #
+      # Format rules come from .env.example: one KEY=value per line, no spaces around `=`,
+      # no quotes.
+      # -------------------------------------------------------------------------------
+      - name: Create .env for this run
+        run: |
+          {
+            echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(50))')"
+            echo "OPENAI_API_KEY=dummy-key-not-real"
+            echo "ALLOWED_HOSTS=localhost,127.0.0.1"
+          } > .env
+          # Print the keys but never the values, so the log proves the file was written
+          # without putting the generated key into a public build log.
+          echo "Wrote .env with keys:"
+          cut -d= -f1 .env
+
+      # -------------------------------------------------------------------------------
+      # 4. The gate itself -- the same commands rule 1 asks a human to run
+      # -------------------------------------------------------------------------------
+      - name: Django check (development settings)
+        run: python manage.py check
+
+      - name: Django check (production settings)
+        # Production is a genuinely different code path: DEBUG=False, ALLOWED_HOSTS read
+        # from .env, and ManifestStaticFilesStorage. Plenty of mistakes pass the
+        # development check and only surface here.
+        run: python manage.py check --settings=inboxtriage.settings.production
+
+      - name: Run the test suite
+        run: python manage.py test
+
+      - name: collectstatic (production settings)
+        # Not a formality. In production STORAGES uses ManifestStaticFilesStorage, which
+        # hashes every static file and rewrites the references inside them. A stylesheet
+        # pointing at an image that does not exist fails HERE, at build time -- which is
+        # where we want to find out, rather than on the live site after a deploy.
+        run: python manage.py collectstatic --noinput --settings=inboxtriage.settings.production
