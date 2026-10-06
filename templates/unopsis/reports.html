@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% comment %}
+  reports.html: Assignment 4, Part 3.
+
+  The difference between this page and /insights/ is who it is for. /insights/ is a working
+  surface -- you search it, you POST to it, you narrow it down. This page answers one
+  question instead: "what does the database say right now, and can I take it with me?"
+  So it carries no forms, only
+
+    1. one TOTALS line, from .count() / .aggregate();
+    2. several GROUPED summaries, from .values(...).annotate(Count(...)) -- Django's GROUP BY;
+    3. the two export buttons, which are the only clickable way to get a file out of the
+       project. Both links are {% templatetag openblock %} url 'export-items-csv' {% templatetag closeblock %}
+       style lookups, so the download addresses live in unopsis/urls.py like every other one.
+
+  Every table below has real <th> headers and an {% templatetag openblock %} empty {% templatetag closeblock %}
+  branch, because a report that silently shows nothing on an empty database is indistinguishable
+  from a report that is broken.
+
+  The numbers come from the same aggregate_summaries() helper /insights/ uses, so the two
+  pages can never disagree about how many items are in a lane.
+{% endcomment %}
+
+{% block title %}Reports &amp; exports{% endblock %}
+
+{% block content %}
+
+  <h2 class="h3 mb-1">Reports &amp; exports</h2>
+  <p class="text-muted">
+    A read-only snapshot of the database, taken {{ generated_at|date:"j N Y, H:i" }}.
+    Take it with you as a spreadsheet or as JSON &mdash; both files hold the same
+    {{ export_count }} brief item{{ export_count|pluralize }} in the same order.
+  </p>
+
+  <!-- ============ THE DOWNLOAD BUTTONS ============ -->
+  <div class="panel mb-4">
+    <h3 class="h6 mb-1">Export the brief items</h3>
+    <p class="small text-muted mb-3">
+      Each file is named with the moment it was produced
+      (<code>brief_items_{{ generated_at|date:"Y-m-d_H-i" }}.csv</code>), so today's export
+      never quietly overwrites yesterday's in your Downloads folder. The CSV opens in Excel
+      or Sheets; the JSON carries <code>generated_at</code> and <code>record_count</code>
+      alongside the records, so the file can describe itself once it has left the site.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="{% url 'export-items-csv' %}" download>
+        Download CSV
+      </a>
+      <a class="btn btn-accent" href="{% url 'export-items-json' %}" download>
+        Download JSON
+      </a>
+      <a class="btn btn-outline-secondary" href="{% url 'insights' %}">
+        Search &amp; insights
+      </a>
+    </div>
+    <p class="small text-muted mt-2 mb-0">
+      {{ export_count }} record{{ export_count|pluralize }} per file &middot;
+      <code>text/csv</code> and <code>application/json</code>, both sent as attachments.
+    </p>
+  </div>
+
+  <!-- ============ THE TOTALS LINE ============ -->
+  <h3 class="section-title">Totals</h3>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.total_items }}</div>
+        <div class="stat-label">Brief items</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.total_messages }}</div>
+        <div class="stat-label">Messages ingested</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.total_briefs }}</div>
+        <div class="stat-label">Briefs assembled</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-tile">
+        <div class="stat-number">{{ summaries.avg_items_per_brief|floatformat:1 }}</div>
+        <div class="stat-label">Avg items per brief</div>
+      </div>
+    </div>
+  </div>
+  <p class="text-muted">
+    <strong>Total:</strong> {{ summaries.total_items }} brief item{{ summaries.total_items|pluralize }}
+    distilled from {{ summaries.total_messages }} message{{ summaries.total_messages|pluralize }}
+    across {{ summaries.total_briefs }} brief{{ summaries.total_briefs|pluralize }},
+    with {{ summaries.total_noise }} message{{ summaries.total_noise|pluralize }} suppressed as noise.
+  </p>
+
+  <!-- ============ THE GROUPED SUMMARIES ============ -->
+  <h3 class="section-title">Grouped summaries</h3>
+  <div class="row g-4">
+    <div class="col-md-6">
+      <h4 class="h6">Items per lane</h4>
+      <p class="small text-muted">
+        <code>BriefItem.objects.values("lane").annotate(total=Count("id"))</code>
+      </p>
+      <table class="table table-sm table-tight">
+        <thead><tr><th scope="col">Lane</th><th scope="col" class="text-end">Items</th></tr></thead>
+        <tbody>
+          {% for row in summaries.by_lane %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.total }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2" class="text-muted">No items to group yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col-md-6">
+      <h4 class="h6">Messages per provider</h4>
+      <p class="small text-muted">
+        Spans Message &rarr; Connection &rarr; provider in one query.
+      </p>
+      <table class="table table-sm table-tight">
+        <thead><tr><th scope="col">Provider</th><th scope="col" class="text-end">Messages</th></tr></thead>
+        <tbody>
+          {% for row in summaries.by_provider %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.total }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2" class="text-muted">No messages have arrived yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col-md-6">
+      <h4 class="h6">Items per space</h4>
+      <table class="table table-sm table-tight">
+        <thead><tr><th scope="col">Space</th><th scope="col" class="text-end">Items</th></tr></thead>
+        <tbody>
+          {% for row in summaries.by_space %}
+            <tr><td>{{ row.label }}</td><td class="text-end">{{ row.total }}</td></tr>
+          {% empty %}
+            <tr><td colspan="2" class="text-muted">No items to group yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col-md-6">
+      <h4 class="h6">Each brief</h4>
+      <table class="table table-sm table-tight">
+        <thead>
+          <tr>
+            <th scope="col">Brief</th>
+            <th scope="col" class="text-end">Items</th>
+            <th scope="col" class="text-end">Receipts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for brief in summaries.by_brief %}
+            <tr>
+              <td><a href="{{ brief.get_absolute_url }}">{{ brief.space.get_kind_display }}</a></td>
+              <td class="text-end">{{ brief.item_count }}</td>
+              <td class="text-end">{{ brief.receipt_count }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3" class="text-muted">No briefs have been assembled yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% endblock %}

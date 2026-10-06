@@ -862,3 +862,148 @@ def api_items_csv(request):
     response = HttpResponse(buffer.getvalue(), content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="unopsis-items.csv"'
     return response
+
+
+# ======================================================================================
+# ASSIGNMENT 4, PART 3 -- CSV AND JSON EXPORT + THE REPORTS PAGE
+# ======================================================================================
+# Everything below is additive. The Assignment-3 trio (/api/items.txt, /api/items.csv,
+# /api/items/) stays exactly as it was: its job is to show the SAME rows through three MIME
+# types, it is capped and reshaped by query parameters, and a test pins its headers. An
+# export is a different promise -- a whole, unfiltered, timestamped snapshot of one model
+# that a person saves to disk -- so it gets its own queryset, its own routes and its own
+# filenames rather than being bolted onto the demo endpoint.
+#
+# The exported model is BriefItem. CSV and JSON are deliberately built from ONE queryset and
+# ONE row serializer, so the two downloads provably contain the same records in the same
+# order; a reader can diff them.
+
+# The export's column order, written out rather than taken from dict ordering, because the
+# header row of a CSV is a contract: a spreadsheet somebody built on column D must not have
+# column D change meaning the next time a field is added to serialize_item().
+EXPORT_COLUMNS = [
+    "id",
+    "title",
+    "lane",
+    "lane_label",
+    "rank",
+    "state",
+    "summary",
+    "space",
+    "brief_id",
+    "deadline_at",
+    "receipt_count",
+    "url",
+]
+
+
+def export_item_queryset():
+    """
+    The rows both exports contain, in the order both exports write them.
+
+    No query parameters and no slice: an export is a snapshot of the whole table, not a
+    filtered feed, which is the difference between this and api_item_queryset(). The ordering
+    is the product's reading order (Needs-you -> Moving -> FYI, then rank) with the primary
+    key last as a tie-breaker, so two exports taken a second apart over an unchanged database
+    come out byte-identical apart from the timestamp. select_related/annotate are here so the
+    serializer does not fire one extra query per row.
+    """
+    return (
+        BriefItem.objects.select_related("brief__space")
+        .annotate(receipt_count=Count("messages"))
+        .annotate(lane_priority=LANE_PRIORITY)
+        .order_by("lane_priority", "rank", "pk")
+    )
+
+
+def export_filename(extension):
+    """
+    Build "brief_items_2026-10-05_14-30.<ext>" for the Content-Disposition header.
+
+    Timestamped on purpose: a download called brief_items.csv overwrites yesterday's
+    brief_items.csv in the Downloads folder, and then nobody can say which snapshot they are
+    looking at. localtime() rather than now() because the stamp is read by a human in this
+    timezone, not compared by a machine -- the ISO instant for that lives in the JSON body's
+    generated_at field.
+    """
+    return f"brief_items_{timezone.localtime().strftime('%Y-%m-%d_%H-%M')}.{extension}"
+
+
+def export_items_csv(request):
+    """
+    PART 3, CSV EXPORT: every BriefItem as a downloadable spreadsheet.
+
+    Three things make this a download rather than a page:
+      * content_type="text/csv" tells the browser what the bytes are;
+      * Content-Disposition: attachment makes it save instead of display;
+      * filename="..." names the saved file, and ours carries the timestamp.
+
+    The first row written is the header row, so the file opens in Excel or Sheets with
+    labelled columns instead of anonymous ones.
+    """
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(EXPORT_COLUMNS)
+    for item in export_item_queryset():
+        record = serialize_item(item)
+        # Indexing EXPORT_COLUMNS rather than record.values() is what keeps every row aligned
+        # with the header no matter what order the serializer builds its dict in.
+        writer.writerow([record[column] for column in EXPORT_COLUMNS])
+
+    response = HttpResponse(buffer.getvalue(), content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="{export_filename("csv")}"'
+    return response
+
+
+def export_items_json(request):
+    """
+    PART 3, JSON EXPORT: the same model, the same rows, the same order, as pretty JSON.
+
+    The payload is an OBJECT wrapping the list, not a bare array, because an export has to
+    describe itself once it is sitting in somebody's Downloads folder:
+
+        generated_at   when this file was produced, ISO 8601 with the offset. Note this is
+                       the RESPONSE's wall clock, not Brief.generated_at (models.py) -- that
+                       column says when a brief was assembled, which is a fact about the data;
+                       this says when the snapshot was taken, which is a fact about the file.
+        record_count   how many records the file claims to hold, so a truncated download is
+                       detectable by counting.
+        brief_items    the records themselves, under a key named for the model.
+
+    json_dumps_params={"indent": 2} only changes whitespace, but it is the difference between
+    a file a human can read in a text editor and one wall of characters.
+    """
+    items = list(export_item_queryset())
+    payload = {
+        "generated_at": timezone.now().isoformat(),
+        "record_count": len(items),
+        "brief_items": [serialize_item(item) for item in items],
+    }
+    response = JsonResponse(payload, json_dumps_params={"indent": 2})
+    # JsonResponse alone would make the browser display the JSON. The attachment disposition
+    # is what turns the same bytes into a saved file, exactly as it does for the CSV above.
+    response["Content-Disposition"] = f'attachment; filename="{export_filename("json")}"'
+    return response
+
+
+def reports(request):
+    """
+    PART 3, THE REPORTS PAGE: the printable read of the database, and the page the two
+    exports are launched from.
+
+    It reuses aggregate_summaries() rather than re-querying, so the numbers here can never
+    drift from the ones on /insights/ -- one helper, one definition of "items per lane". The
+    page's own job is presentation: the grouped tables, one totals line, and the two download
+    buttons, which is the only place in the project where an export is reachable by clicking.
+    """
+    return render(
+        request,
+        "unopsis/reports.html",
+        {
+            "summaries": aggregate_summaries(),
+            # The same count the JSON export will report, shown on the buttons so somebody
+            # knows how big the download is before they ask for it.
+            "export_count": export_item_queryset().count(),
+            "generated_at": timezone.localtime(),
+        },
+    )
