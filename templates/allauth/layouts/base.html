@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% comment %}
+  The frame allauth's OWN pages are drawn in (Assignment 5, Part 2).
+
+  ({% extends %} is on line 1 because Django requires it to be the first tag in the file --
+  even a {% comment %} ahead of it is a TemplateSyntaxError -- so the explanation follows it.)
+
+  The two pages this assignment asks us to write by hand -- log in and sign up -- are ours,
+  rendered by unopsis/auth_views.py from templates/registration/. But django-allauth brings a
+  handful of pages with it that nobody writes and that a visitor can still reach:
+
+      socialaccount/authentication_error.html   Google said no, or the state did not match
+      socialaccount/login_cancelled.html        the visitor pressed "cancel" on the consent screen
+      socialaccount/signup.html                 Google gave us an email we cannot use as-is
+      account/password_reset*.html, account/email.html, ...   reachable under /accounts/
+
+  Out of the box every one of them inherits allauth/layouts/base.html, which is a complete
+  standalone <!DOCTYPE html> document with its own bare <body> and its own little text-only
+  menu. The result is jarring in a specific and damaging way: the one page a visitor sees when
+  Google sign-in FAILS is the one page that does not look like this website, so the failure
+  reads as "I have ended up somewhere else" rather than "that did not work, try again".
+
+  Overriding one file fixes all of them at once. Django searches TEMPLATES['DIRS'] (this
+  folder) before each app's own templates, so this file is found instead of the one inside the
+  allauth package, and every allauth page now extends the site's base.html -- same header,
+  same navigation, same footer, same flash messages -- without any of those pages being
+  copied into this repository. Copying them would mean owning them at the next upgrade.
+
+  The mapping is just block names. allauth fills `head_title`, `content` and `extra_body`;
+  base.html offers `title`, `content` and `extra_js`.
+
+  Two deliberate omissions:
+
+    the menu       allauth's version draws its own list of account links. base.html already
+                   has a navigation bar with the signed-in username and a Log out button, so
+                   a second menu is repetition. It is simply not forwarded.
+
+    the messages   same reason: base.html renders {% if messages %} itself. Forwarding
+                   allauth's block would print every flash message twice.
+
+  `extra_head` is not forwarded either, because base.html has no <head> hook and inventing one
+  would mean editing a file every page shares for the benefit of pages nobody visits. The
+  allauth pages that would use it are styling-only, so the cost is that an error page is
+  plainer than it could be, not that it breaks.
+
+  `content` needs no line at all: both base.html and allauth call that block "content", so an
+  allauth page's content lands inside base.html's <main class="container"> by name. It is
+  mentioned here so the next reader does not go hunting for the line that connects them.
+  Those pages render their text through allauth's {% element %} tags, which emit plain
+  unclassed HTML -- a simple page in the site's own typography, which is the right amount of
+  effort for a page whose job is to say "something went wrong with Google".
+{% endcomment %}
+
+{% comment %}
+  A block nested inside a block: `title` is base.html's name for it, `head_title` is allauth's,
+  and allauth's pages set the inner one. The default covers any page that sets neither.
+{% endcomment %}
+{% block title %}{% block head_title %}Account{% endblock head_title %}{% endblock title %}
+
+{% block extra_js %}{% block extra_body %}{% endblock extra_body %}{% endblock extra_js %}
