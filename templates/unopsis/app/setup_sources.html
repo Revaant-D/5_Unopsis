@@ -1,0 +1,49 @@
+{% extends "unopsis/app/setup_base.html" %}
+{% load app_ui %}
+{% block title %}Setup · Sources{% endblock %}
+
+{% block setup_content %}
+  <h1 class="page-title">Connect what you'd otherwise be checking.</h1>
+  <p class="page-sub">Read-only to start. Nothing is sent or replied to without you pressing send.</p>
+
+  <div class="row row-cols-1 row-cols-md-3 row-cols-xl-4 g-3 my-3">
+    {% for tile in tiles %}
+      {% with connection=tile.connection %}
+      <div class="col">
+        <div class="app-card h-100 {% if connection and connection.status == 'connected' %}app-card--selected{% endif %}{% if connection.status == 'error' %} is-broken{% endif %}">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="tile">{{ tile.label|provider_letter }}</span>
+            <strong>{{ tile.label }}</strong>
+            {% if connection.status == 'connected' %}<span class="chip chip--on ms-auto">connected</span>{% endif %}
+            {% if connection.space.kind == 'personal' %}<span class="chip ms-auto">personal side</span>{% endif %}
+          </div>
+          {% if connection.status == 'error' %}
+            <p class="small mb-0" style="color: var(--app-alert)">can't sync — {{ connection.last_error|default:"the provider refused the last sync" }}</p>
+          {% elif connection %}
+            <p class="meta mb-0">{{ connection.external_account }}{% if connection.last_synced_at %} · synced {{ connection.last_synced_at|timesince }} ago{% endif %}</p>
+          {% else %}
+            <button type="button" class="btn-app btn-app--quiet" disabled
+                    title="Connecting accounts needs sign-in, which arrives in Assignment 5">Connect</button>
+          {% endif %}
+        </div>
+      </div>
+      {% endwith %}
+    {% empty %}
+      <p class="meta">No providers are configured.</p>
+    {% endfor %}
+    <div class="col">
+      <div class="app-card app-card--muted h-100">
+        <p class="mb-1"><span class="tile">+</span> <strong>Request a source</strong></p>
+        <p class="meta mb-0">{{ requestable|join:", " }}…</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block setup_footer %}
+  <span class="meta">{{ connected }} connected · {% if connected %}enough to build a first brief{% else %}connect one to build a first brief{% endif %}</span>
+  <span class="d-flex gap-2">
+    <a class="btn-app" href="{% url 'app-setup-scope' %}">Add more later</a>
+    <a class="btn-app btn-app--primary" href="{% url 'app-setup-scope' %}">Continue → what I read</a>
+  </span>
+{% endblock %}

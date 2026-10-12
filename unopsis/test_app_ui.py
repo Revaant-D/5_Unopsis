@@ -322,3 +322,61 @@ class AuthScreenTests(TestCase):
                 self.assertIn("disabled", html)
                 self.assertNotIn("Microsoft", html)
                 self.assertNotIn("Digest", html)   # discrepancy 1: the brand is Unopsis
+
+
+APP_ROUTES += ["app-setup-world", "app-setup-sources", "app-setup-scope", "app-setup-tuning"]
+
+
+class SetupTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rows = build_two_worlds()
+
+    def test_each_step_marks_itself_current_in_the_rail(self):
+        for number, name in enumerate(
+            ["app-setup-world", "app-setup-sources", "app-setup-scope", "app-setup-tuning"], start=1
+        ):
+            with self.subTest(step=number):
+                response = self.client.get(reverse(name))
+                self.assertContains(response, "Setting up")
+                self.assertContains(response, f"Setup · {number} of 4")
+                self.assertContains(response, 'aria-current="step"')
+
+    def test_world_shows_both_worlds_and_what_feeds_them(self):
+        response = self.client.get(reverse("app-setup-world"))
+        self.assertContains(response, "Which inbox life should I keep on top of?")
+        self.assertContains(response, "Ranked by who is blocked and what has a deadline.")
+        self.assertContains(response, "Ranked by mentions and by plans that changed.")
+        self.assertContains(response, f'href="{reverse("app-setup-sources")}"')
+
+    def test_sources_lists_every_provider_and_a_request_tile(self):
+        response = self.client.get(reverse("app-setup-sources"))
+        for label in ("Gmail", "Slack", "Outlook", "Discord", "WhatsApp Business", "iMessage"):
+            self.assertContains(response, label)
+        self.assertContains(response, "connected")
+        self.assertContains(response, "can't sync")             # the Discord row is in error
+        self.assertContains(response, "Request a source")
+        self.assertContains(response, "Teams")                  # discrepancy 5
+        self.assertContains(response, "2 connected")
+
+    def test_scope_shows_included_scopes_and_the_reading_load(self):
+        response = self.client.get(reverse("app-setup-scope"))
+        for scope in ("#acme", "#ops", "#eng-releases", "Inbox", "Clients"):
+            self.assertContains(response, scope)
+        self.assertContains(response, "~363 messages a day")
+
+    def test_tuning_shows_rules_schedule_quiet_hours_and_delivery(self):
+        response = self.client.get(reverse("app-setup-tuning"))
+        self.assertContains(response, "Priya")
+        self.assertContains(response, "#random")
+        self.assertContains(response, "8:00 AM")
+        self.assertContains(response, "4:30 PM")
+        self.assertContains(response, "7:00 PM – 8:00 AM")
+        self.assertContains(response, f'href="{reverse("app-work-building")}"')
+
+
+class EmptySetupTests(TestCase):
+    def test_setup_pages_render_with_no_spaces(self):
+        for name in ("app-setup-world", "app-setup-sources", "app-setup-scope", "app-setup-tuning"):
+            with self.subTest(route=name):
+                self.assertEqual(self.client.get(reverse(name)).status_code, 200)

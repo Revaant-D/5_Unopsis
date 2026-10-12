@@ -1,0 +1,17 @@
+{% extends "unopsis/app/shell.html" %}
+{% comment %}
+  The frame the four setup screens share (wireframe 02-05): the "Setting up" rail, the
+  read-only note in its footer and the "Setup · N of 4" chip. Each step fills setup_content
+  and setup_footer (the meta line + primary button along the bottom).
+{% endcomment %}
+{% block rail %}{% include "unopsis/app/_rail_setup.html" %}{% endblock %}
+{% block rail_foot %}
+  <p class="hint small mb-0">Read-only access. Replies are only ever sent by you, from the original platform.</p>
+{% endblock %}
+{% block topbar %}<span class="chip">Setup · {{ step }} of 4</span>{% endblock %}
+{% block app_content %}
+  {% block setup_content %}{% endblock %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-5">
+    {% block setup_footer %}{% endblock %}
+  </div>
+{% endblock %}
