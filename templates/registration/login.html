@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% comment %}
+  The log-in page, served at /accounts/login/ by UnopsisLoginView (unopsis/auth_views.py).
+
+  Why this file exists at all. django.contrib.auth.views.LoginView already does everything on
+  the server; what it does NOT ship is a template -- Django's own registration/login.html
+  belongs to the admin and looks like the admin. "Custom login page" in the assignment means
+  this: our frame (base.html), our panel/section-title/btn classes, our words.
+
+  The form is rendered field by field rather than with {{ form }}, for the same reason the
+  create form on brief_detail.html is: {{ form }} emits a <table> and ignores every Bootstrap
+  class, so the page ends up looking like two different websites stacked on top of each other.
+
+  Two details that are easy to get wrong and expensive to debug:
+
+    {% csrf_token %}   without it Django answers the POST with 403 and no form error, which
+                       reads exactly like "wrong password" and is not.
+
+    the hidden `next`  LoginView puts the ?next= it was called with into the context. Passing
+                       it back through the POST is what sends somebody who asked for
+                       /reports/, got bounced here, and signed in, on to /reports/ rather than
+                       to the home page. Without this line the redirect silently forgets.
+{% endcomment %}
+
+{% block title %}Log in{% endblock %}
+
+{% block content %}
+
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-xl-5">
+
+      <div class="panel">
+        <h2 class="h3 mb-1">Log in</h2>
+        <p class="text-muted small mb-3">
+          Briefs, items, search and the JSON feeds are private. Sign in to read them.
+        </p>
+
+        {% if form.non_field_errors %}
+          {% comment %}
+            Where "that username and password do not match" lands: it belongs to no single
+            field, because saying WHICH half was wrong tells an attacker which usernames are
+            real. Django's message is deliberately vague; leave it that way.
+          {% endcomment %}
+          <div class="alert alert-danger py-2 small mb-3">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+          </div>
+        {% endif %}
+
+        {% if next %}
+          <div class="alert alert-info py-2 small mb-3">
+            That page needs an account. You will be taken straight there after logging in.
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+            {{ form.username }}
+            {% for error in form.username.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+            {{ form.password }}
+            {% for error in form.password.errors %}
+              <div class="text-danger small">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          {# Carries the ?next= destination through the POST. Empty when there is none. #}
+          <input type="hidden" name="next" value="{{ next }}">
+
+          <button class="btn btn-primary w-100" type="submit">Log in</button>
+        </form>
+
+        {% comment %}
+          PART 2 LANDED HERE. The gap Part 1 left below the divider now holds the
+          "Continue with Google" button. The markup itself lives in _google_button.html,
+          because the signup page needs the identical button and allauth makes no distinction
+          between the two: the same URL signs an existing Google identity in and creates an
+          account for one it has never seen.
+
+          The include, not a {% url %}: the partial asks allauth whether a Google application
+          is configured at all before it builds any address, which is what keeps this page
+          rendering on a clone with no credentials in .env. See the long note in that file.
+
+          `next` is in this template's context (LoginView puts it there) and an {% include %}
+          passes the whole context down, so the partial can carry the ?next= destination
+          through Google without anything being handed over explicitly.
+        {% endcomment %}
+        <div class="d-flex align-items-center gap-2 my-3 text-muted small">
+          <hr class="flex-grow-1 m-0"><span>or</span><hr class="flex-grow-1 m-0">
+        </div>
+        {% block social_login %}
+          {% include "registration/_google_button.html" %}
+        {% endblock %}
+      </div>
+
+      <p class="small text-muted text-center mt-3">
+        No account yet?
+        <a href="{% url 'signup' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Create one</a>
+        &middot;
+        <a href="{% url 'home' %}">Back to the home page</a>
+      </p>
+
+    </div>
+  </div>
+
+{% endblock %}

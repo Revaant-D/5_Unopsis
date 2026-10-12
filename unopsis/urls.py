@@ -5,6 +5,9 @@ Every route has a name= so templates link to it with {% url 'name' %} and models
 it in get_absolute_url(). The address can then change here without touching a single template.
 
     /                        home                  the home page (Section 1)
+    /accounts/login/         login                 Assignment 5: the custom log-in page
+    /accounts/signup/        signup                Assignment 5: the custom sign-up page
+    /accounts/logout/        logout                Assignment 5: POST-only, ends the session
     /briefs/                 brief-list
     /briefs/<pk>/            brief-detail          detail by primary key + POST create form
     /items/manual/           item-list-manual      the four view kinds from the last assignment
@@ -33,6 +36,16 @@ it in get_absolute_url(). The address can then change here without touching a si
     /vega-lite/<chart>.png   vega-chart-png        that chart rendered to PNG on the server
                              (<chart> is chart1 or chart2; anything else is a 404)
 
+Assignment 5 note on the /accounts/ prefix. The three authentication routes are written out
+one by one instead of include("django.contrib.auth.urls"), for two reasons. That include also
+publishes five password-reset routes, and every one of them would 500 on a template this
+project does not have and cannot honestly provide (nothing here sends email). And Part 2 adds
+include("allauth.urls") under the same /accounts/ prefix: Django matches top to bottom, so
+these three being listed FIRST is what guarantees that /accounts/login/ keeps rendering our
+page rather than allauth's, while allauth still owns /accounts/google/... beneath it. The
+names login/logout are the ones Django itself reverses (LOGIN_URL, the {% url 'login' %} in
+base.html), so they must not be renamed.
+
 Ordering note: /items/<int:pk>/ is last among the /items/ routes on purpose. Django matches
 top to bottom, and <int:pk> cannot swallow "manual" or "render" because those are not integers,
 but keeping the literal paths above the variable one is the habit that stops the bug the day
@@ -41,11 +54,20 @@ the converter becomes <slug:...>.
 
 from django.urls import path
 
-from . import views
+from . import auth_views, views
 
 urlpatterns = [
     # ---- Section 1: home and the brief pages ----
     path("", views.home, name="home"),
+
+    # ---- Assignment 5, Part 1: internal authentication ----
+    # These three must stay above any later include() under /accounts/ (see the note above),
+    # and all three are reachable logged OUT -- a login page behind a login is a locked door
+    # with the key inside.
+    path("accounts/login/", auth_views.UnopsisLoginView.as_view(), name="login"),
+    path("accounts/signup/", auth_views.SignUpView.as_view(), name="signup"),
+    path("accounts/logout/", auth_views.UnopsisLogoutView.as_view(), name="logout"),
+
     path("briefs/", views.BriefListView.as_view(), name="brief-list"),
     path("briefs/<int:pk>/", views.BriefDetailView.as_view(), name="brief-detail"),
 
