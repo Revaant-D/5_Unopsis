@@ -513,3 +513,60 @@ STILL TO DO FOR A4
       create ON the server -- .env is git-ignored, so it will not be there after the clone.
   [ ] Submit in the assignment comments: the GitHub link, the PythonAnywhere link, and the
       PythonAnywhere username. Give teacher access to mohitg27.
+
+===========================================================================================
+17. WEEK 6 UPDATE (2026-10-12) -- THE WIREFRAME UI
+===========================================================================================
+
+What was built
+  The 13 screens of Wireframe.docx are now real pages (exported to docs/wireframes/v2/, with a
+  screen -> route -> data map and the design rationale A1 asked for). They live in NEW files so
+  nothing graded in A1-A4 was edited:
+    unopsis/ui.py           queries and small calculations (no rendering)
+    unopsis/app_views.py    the pages + one POST endpoint
+    unopsis/app_urls.py     /signup/ /login/ /setup/* /work/* /personal/* /app/* /journey/
+    unopsis/app_forms.py    ItemActionForm
+    templates/unopsis/app/  shell.html (left rail + top bar) and one template per screen
+    static/css/app.css, static/js/app.js
+    unopsis/test_app_ui.py  85 new tests (154 in total, all passing; tests.py untouched)
+  Course pages (briefs, four view kinds, insights, reports, Vega-Lite, JSON API) keep their URLs,
+  views and wording; they moved to the wireframe palette and sit under "Under the hood".
+  Start at /journey/ to click through every screen in order.
+
+Rule we followed: where an assignment and the wireframe disagree, the assignment wins.
+  - Sign-in is TWO pages, /signup/ and /login/, with Django-shaped fields (username, email,
+    password, confirm) instead of the wireframe's "Work email" -- A5 asks for separate pages and
+    username/password. "Continue with Google" is on both, disabled until A5. No Microsoft button.
+  - Every new template extends base.html (through shell.html), every loop has {% empty %}, every
+    link is {% url %} or get_absolute_url, every POST form has {% csrf_token %}, static files
+    go through {% static %}, the main nav stays in base.html.
+
+Where the wireframe and our data differ (full list: Assignements/2026-10-12-wireframe-ui-plan.md)
+  - Content is our seed (Ramirez, invoice, Mom, Lena), not the mock-up's Acme/Priya/Northwind.
+    db.sqlite3 was NOT changed.
+  - No Teams/Telegram providers -> shown only in the "Request a source" tile; no migration.
+  - "6 of 41 channels", "you're the approver", "mentioned" are not stored -> left out.
+  - Threads use /work/thread/<pk>/ (no slug field).
+  - Nothing is ever sent: Connect / Forward / Reconnect are disabled; "Copy & open" copies the
+    draft and opens the original message; the wrap-up says "marked handled" and Undo reopens.
+  - Setup pages SHOW the stored settings; editing them is a later step.
+
+New views, by kind (A2 asks us to keep this inventory)
+  All function-based views, no new class-based views:
+    signup, login_page           static auth pages (A5 will wire them)
+    setup_world, setup_sources, setup_scope, setup_tuning
+    building (work + personal), work_brief, focus, needs_you (redirect), thread, handled,
+    personal_catchup, caught_up, journey
+    item_action                  POST only (require_POST + CSRF): handle / snooze / dismiss /
+                                 reopen, then Post/Redirect/Get to a FIXED page (no open redirect)
+
+What A5 changes
+  - ui.current_space() is the only place that decides "whose space"; it will read request.user.
+  - /signup/ and /login/ get name= attributes, method="post", {% csrf_token %}, and allauth's
+    Google button; hide protected nav links in base.html and the app rail when logged out.
+  - Still owed from the A3 grading comment: /api/items/?brief=xyz and ?due_before=abc return a
+    500 instead of a 400. Left alone on purpose (the API was frozen for this work).
+
+Also done
+  - docs/design/unopsis-erd.png: the ER diagram as an image (A1 lost 0.5 for the .xlsx).
+  - docs/screenshots/22-36: one screenshot per new screen.

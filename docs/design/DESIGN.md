@@ -6,6 +6,10 @@ INFO 490 · Part 4 · Unopsis
 
 ## The spine
 
+![Unopsis ER diagram](unopsis-erd.png)
+
+*The ER diagram as an image; `unopsis-erd.xlsx` is the original workbook.*
+
 The whole schema is one chain, and every model earns its place by sitting on it:
 
 ```

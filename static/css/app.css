@@ -125,9 +125,21 @@
 .table-app caption { caption-side: top; background: #f1ede6; padding: .5rem 1rem; color: var(--app-ink); font-size: .85rem; }
 
 /* ---- 6. Small screens: the rail stacks above the page --------------------------------- */
+/* Stacked in full, the rail alone is taller than a phone screen and pushes the page below
+   the fold. So on small screens it keeps only what navigates -- the brand, the Work/Personal
+   switch and the page links, laid out in a row -- and drops the descriptions and source lists. */
 @media (max-width: 767.98px) {
   .app-shell { grid-template-columns: 1fr; }
-  .app-rail { border-right: 0; border-bottom: 1px solid var(--app-line); }
+  .app-rail {
+    border-right: 0; border-bottom: 1px solid var(--app-line);
+    flex-direction: row; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .75rem 1rem;
+  }
+  .rail-brand, .segmented { flex: 1 1 100%; }
+  .app-rail .rail-link, .app-rail .step { padding: .3rem .6rem; font-size: .85rem; }
+  .app-rail small, .rail-note, .rail-label, .rail-source, .app-rail hr, .app-rail p,
+  .app-rail__foot .hint { display: none; }
+  .app-rail small.d-block { display: none !important; }   /* beats Bootstrap's d-block !important */
+  .app-rail__foot { margin-top: 0; padding-top: 0; }
   .app-content { padding: .5rem 1rem 2rem; }
   .page-title { font-size: 1.6rem; }
 }

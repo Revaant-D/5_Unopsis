@@ -36,8 +36,6 @@ class WorldConverter:
 
 register_converter(WorldConverter, "world")
 
-soon = app_views.coming_soon
-
 urlpatterns = [
     path("signup/", app_views.signup, name="app-signup"),
     path("login/", app_views.login_page, name="app-login"),

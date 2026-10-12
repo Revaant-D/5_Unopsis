@@ -510,6 +510,10 @@ class BuildingTests(TestCase):
         self.assertContains(response, f'href="{reverse("app-work-brief")}"')
         self.assertContains(response, "data-animate-steps")
 
+    def test_first_run_chip_shows_the_real_total_of_the_stored_steps(self):
+        # 3000 ms + 4000 ms of stored steps -> "~7s", not a figure derived from the step count.
+        self.assertContains(self.client.get(reverse("app-work-building")), "first run · ~7s")
+
     def test_personal_building_points_at_the_catch_up(self):
         response = self.client.get(reverse("app-personal-building"))
         self.assertContains(response, "Reading 6 hours for you.")
@@ -752,3 +756,12 @@ class EmptyJourneyTests(TestCase):
         response = self.client.get(reverse("app-journey"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "needs a seeded item")
+
+
+class NothingIsComingSoonTests(TestCase):
+    def test_no_route_still_points_at_the_placeholder(self):
+        from . import app_urls
+        self.assertFalse(hasattr(app_urls, "soon"))
+        for pattern in app_urls.urlpatterns:
+            with self.subTest(route=pattern.name):
+                self.assertNotEqual(pattern.callback.__name__, "coming_soon")

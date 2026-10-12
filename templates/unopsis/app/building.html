@@ -8,7 +8,7 @@
 {% block title %}{% if world == 'work' %}Building your brief{% else %}Building your catch-up{% endif %}{% endblock %}
 {% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
 {% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
-{% block topbar %}{% if steps %}<span class="chip">first run · ~{{ steps|length }}0s</span>{% endif %}{% endblock %}
+{% block topbar %}{% if steps %}<span class="chip">first run · ~{{ total_seconds }}s</span>{% endif %}{% endblock %}
 
 {% block app_content %}
 {% if not brief %}

@@ -30,11 +30,6 @@ OPEN, HANDLED = BriefItem.State.OPEN, BriefItem.State.HANDLED
 MINUTES_PER_DECISION = 2
 
 
-def coming_soon(request, task="a later task", **kwargs):
-    """Temporary target for routes whose screen is not built yet. Task 11 proves none remain."""
-    return render(request, "unopsis/app/coming_soon.html", {"task": task})
-
-
 def signup(request):
     """Screen 1, "Create account" page. Static until A5: the page submits nothing."""
     return render(request, "unopsis/app/auth.html", {"mode": "signup"})
@@ -141,6 +136,7 @@ def building(request, kind):
         request, "unopsis/app/building.html", kind, "brief" if kind == WORK else "since",
         space, brief, now,
         steps=steps,
+        total_seconds=round(sum(step.get("ms", 0) for step in steps) / 1000),
         hours=ui.window_hours(brief),
         needs_count=ui.lane_items(brief, NEEDS_YOU).count(),
         moving_count=ui.lane_items(brief, MOVING).count(),
