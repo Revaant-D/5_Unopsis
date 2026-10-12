@@ -54,6 +54,6 @@ urlpatterns = [
     path("personal/catchup/building/", soon, {"task": "Task 9"}, name="app-personal-building"),
     path("personal/catchup/", soon, {"task": "Task 9"}, name="app-personal-catchup"),
     path("personal/caught-up/", soon, {"task": "Task 9"}, name="app-personal-caught-up"),
-    path("app/items/<int:pk>/action/", soon, {"task": "Task 4"}, name="app-item-action"),
+    path("app/items/<int:pk>/action/", app_views.item_action, name="app-item-action"),
     path("journey/", soon, {"task": "Task 10"}, name="app-journey"),
 ]

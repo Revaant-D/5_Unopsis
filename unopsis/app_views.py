@@ -12,12 +12,18 @@ Two deliberate limits until Assignment 5:
     original message, which is the read-only promise the wireframe makes.
 """
 
-from django.shortcuts import render
+from django.http import HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from . import ui
-from .models import Connection, Provider, Space
+from .app_forms import ItemActionForm
+from .models import BriefItem, Connection, Provider, Space
 
 WORK, PERSONAL = Space.Kind.WORK, Space.Kind.PERSONAL
+NEEDS_YOU = BriefItem.Lane.NEEDS_YOU
 
 
 def coming_soon(request, task="a later task", **kwargs):
@@ -98,3 +104,39 @@ def setup_tuning(request):
                   always=[r for r in rules if r.get("mode") == "always"],
                   never=[r for r in rules if r.get("mode") == "never"],
                   digest_times=[t for t in times if t])
+
+
+# ---- The POST endpoint behind every state-changing button ----------------------------------
+@require_POST
+def item_action(request, pk):
+    """
+    Every state-changing button on the wireframe pages posts here: handle, snooze, dismiss,
+    reopen. POST and a CSRF token because it writes; a redirect afterwards (Post/Redirect/Get)
+    so a refresh cannot press the button twice.
+    """
+    item = get_object_or_404(BriefItem.objects.select_related("brief__space"), pk=pk)
+    form = ItemActionForm(request.POST)
+    if not form.is_valid():
+        return HttpResponseBadRequest("Unknown action or destination.")
+    action = form.cleaned_data["action"]
+    ui.apply_action(item, action, timezone.now())
+    return redirect(_landing(item, action, form.cleaned_data["return_to"] or "brief"))
+
+
+def _landing(item, action, return_to):
+    """The page a button lands on. Personal items have no focus or wrap-up page of their own."""
+    if item.brief.space.kind == PERSONAL and return_to not in ("catchup", "caught-up"):
+        return reverse("app-personal-catchup")
+    if return_to == "next":
+        following = ui.lane_items(item.brief, NEEDS_YOU).filter(rank__gt=item.rank).first()
+        if following is not None:
+            return reverse("app-work-focus", args=[following.pk])
+        return reverse("app-work-handled")
+    if return_to == "handled":
+        url = reverse("app-work-handled")
+        return f"{url}?done={item.pk}" if action == "handle" else url
+    return reverse({
+        "brief": "app-work-brief",
+        "catchup": "app-personal-catchup",
+        "caught-up": "app-personal-caught-up",
+    }[return_to])

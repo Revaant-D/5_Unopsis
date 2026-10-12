@@ -380,3 +380,57 @@ class EmptySetupTests(TestCase):
         for name in ("app-setup-world", "app-setup-sources", "app-setup-scope", "app-setup-tuning"):
             with self.subTest(route=name):
                 self.assertEqual(self.client.get(reverse(name)).status_code, 200)
+
+
+class ItemActionTests(TestCase):
+    def setUp(self):
+        self.rows = build_two_worlds()
+        self.sow = self.rows["sow"]
+        self.url = reverse("app-item-action", args=[self.sow.pk])
+
+    def test_handle_lands_on_the_wrap_up_with_an_undo_marker(self):
+        response = self.client.post(self.url, {"action": "handle", "return_to": "handled"})
+        self.assertRedirects(response, f'{reverse("app-work-handled")}?done={self.sow.pk}',
+                             fetch_redirect_response=False)
+        self.sow.refresh_from_db()
+        self.assertEqual(self.sow.state, BriefItem.State.HANDLED)
+
+    def test_dismiss_moves_on_to_the_next_open_item(self):
+        response = self.client.post(self.url, {"action": "dismiss", "return_to": "next"})
+        self.assertRedirects(response, reverse("app-work-focus", args=[self.rows["payroll"].pk]),
+                             fetch_redirect_response=False)
+
+    def test_next_after_the_last_item_is_the_wrap_up(self):
+        url = reverse("app-item-action", args=[self.rows["payroll"].pk])
+        response = self.client.post(url, {"action": "snooze", "return_to": "next"})
+        self.assertRedirects(response, reverse("app-work-handled"), fetch_redirect_response=False)
+
+    def test_personal_items_always_land_back_on_the_catch_up(self):
+        url = reverse("app-item-action", args=[self.rows["mention"].pk])
+        response = self.client.post(url, {"action": "handle", "return_to": "next"})
+        self.assertRedirects(response, reverse("app-personal-catchup"), fetch_redirect_response=False)
+
+    def test_missing_return_to_defaults_to_the_brief(self):
+        response = self.client.post(self.url, {"action": "snooze"})
+        self.assertRedirects(response, reverse("app-work-brief"), fetch_redirect_response=False)
+
+    def test_unknown_action_is_a_400_and_changes_nothing(self):
+        response = self.client.post(self.url, {"action": "delete"})
+        self.assertEqual(response.status_code, 400)
+        self.sow.refresh_from_db()
+        self.assertEqual(self.sow.state, BriefItem.State.OPEN)
+
+    def test_return_to_cannot_be_a_url(self):
+        response = self.client.post(self.url, {"action": "handle", "return_to": "https://evil.example/"})
+        self.assertEqual(response.status_code, 400)
+
+    def test_get_is_not_allowed(self):
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_missing_item_is_a_404(self):
+        response = self.client.post(reverse("app-item-action", args=[99999]), {"action": "handle"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_csrf_token_is_required(self):
+        strict = Client(enforce_csrf_checks=True)
+        self.assertEqual(strict.post(self.url, {"action": "handle"}).status_code, 403)
