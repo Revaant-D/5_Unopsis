@@ -623,3 +623,51 @@ class ThreadTests(TestCase):
         self.assertEqual(self.client.get(self.url("personal", self.rows["sow"])).status_code, 404)
         self.assertEqual(self.client.get(f"/elsewhere/thread/{self.rows['sow'].pk}/").status_code, 404)
         self.assertEqual(self.client.get(reverse("app-thread", args=["work", 99999])).status_code, 404)
+
+
+APP_ROUTES += ["app-work-handled"]
+
+
+class HandledTests(TestCase):
+    def setUp(self):
+        self.rows = build_two_worlds()
+        self.url = reverse("app-work-handled")
+
+    def test_counts_what_is_left_and_offers_each_primary_action(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "2 things left. About 4 minutes.")
+        self.assertContains(response, "Approve the wording")
+        self.assertContains(response, ">Confirm<")
+        self.assertContains(response, 'value="handle"')
+
+    def test_handled_today_lists_what_was_closed(self):
+        ui.apply_action(self.rows["sow"], "handle", timezone.now())
+        response = self.client.get(self.url)
+        self.assertContains(response, "1 thing left. About 2 minutes.")
+        self.assertContains(response, "Handled today")
+        self.assertContains(response, f'href="{reverse("app-thread", args=["work", self.rows["sow"].pk])}"')
+
+    def test_done_marker_shows_an_undo_that_reopens(self):
+        ui.apply_action(self.rows["sow"], "handle", timezone.now())
+        response = self.client.get(f"{self.url}?done={self.rows['sow'].pk}")
+        self.assertContains(response, "marked handled")
+        self.assertContains(response, 'value="reopen"')
+
+    def test_bad_done_values_are_ignored(self):
+        for value in ("abc", "99999", "-1", ""):
+            with self.subTest(done=value):
+                response = self.client.get(f"{self.url}?done={value}")
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, 'value="reopen"')
+
+    def test_new_messages_since_the_brief_are_counted(self):
+        Message.objects.create(
+            connection=self.rows["gmail"], author=Person.objects.get(display_name="Dan Ito"),
+            external_id="late-1", sent_at=timezone.now(), body="late message",
+        )
+        self.assertContains(self.client.get(self.url), "1 new message")
+
+    def test_nothing_left(self):
+        for item in (self.rows["sow"], self.rows["payroll"]):
+            ui.apply_action(item, "handle", timezone.now())
+        self.assertContains(self.client.get(self.url), "Nothing left.")

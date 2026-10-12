@@ -20,11 +20,14 @@ from django.views.decorators.http import require_POST
 
 from . import ui
 from .app_forms import ItemActionForm
-from .models import BriefItem, Connection, Person, Provider, Space
+from .models import BriefItem, Connection, Message, Person, Provider, Space
 
 WORK, PERSONAL = Space.Kind.WORK, Space.Kind.PERSONAL
 NEEDS_YOU, MOVING, FYI = BriefItem.Lane.NEEDS_YOU, BriefItem.Lane.MOVING, BriefItem.Lane.FYI
 OPEN, HANDLED = BriefItem.State.OPEN, BriefItem.State.HANDLED
+
+# Roughly how long one decision takes, for "2 things left. About 4 minutes."
+MINUTES_PER_DECISION = 2
 
 
 def coming_soon(request, task="a later task", **kwargs):
@@ -228,6 +231,38 @@ def thread(request, kind, pk):
         secondary=ui.secondary_actions(item),
         open_url=primary.permalink if primary else "",
         open_label=primary.connection.get_provider_display() if primary else "",
+    )
+
+
+def handled(request):
+    """
+    Screen 10, the wrap-up: what is still open, what was closed today, and what arrived since
+    the brief was written. ?done=<pk> (set by the action endpoint) shows the Undo banner;
+    anything that is not the id of a handled work item is ignored rather than an error.
+    """
+    space, brief, now = _world(WORK)
+    still = list(ui.lane_items(brief, NEEDS_YOU))
+    for item in still:
+        item.primary = ui.primary_action(item)
+    start_of_day = timezone.localtime(now).replace(hour=0, minute=0, second=0, microsecond=0)
+    done_today = (
+        brief.items.filter(state=HANDLED, handled_at__gte=start_of_day)
+        .select_related("primary_message__connection").order_by("-handled_at")
+        if brief else BriefItem.objects.none()
+    )
+    done = request.GET.get("done", "")
+    just_done = (
+        BriefItem.objects.filter(pk=int(done), state=HANDLED, brief__space__kind=WORK).first()
+        if done.isdigit() else None
+    )
+    since = (brief.generated_at or brief.window_end) if brief else None
+    new_since = (
+        Message.objects.filter(connection__space=space, sent_at__gt=since).count() if since else 0
+    )
+    return _render_world(
+        request, "unopsis/app/handled.html", WORK, "handled", space, brief, now,
+        still=still, minutes=len(still) * MINUTES_PER_DECISION, done_today=done_today,
+        just_done=just_done, since=since, new_since=new_since,
     )
 
 # ---- The POST endpoint behind every state-changing button ----------------------------------
