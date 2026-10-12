@@ -1,0 +1,21 @@
+$ export UNOPSIS_API=http://127.0.0.1:8899     # the local dev server; drop this line to use the default http://127.0.0.1:8000
+
+# --- 1. the alerting path: 5 items are waiting on a human, the default threshold is 3 ---
+$ python 03_monitoring_check.py; echo "exit status: $?"
+ALERT: 5 items in 'Needs you' (threshold 3) -- the inbox is backing up. Source: http://127.0.0.1:8899/api/insights/items-by-lane/
+exit status: 1
+
+# --- 2. the quiet path: same data, a threshold cron is happy with ---
+$ UNOPSIS_MAX_NEEDS_YOU=10 python 03_monitoring_check.py; echo "exit status: $?"
+OK: 5 items in 'Needs you', at or under the threshold of 10.
+exit status: 0
+
+# --- 3. the check itself fails (server down / wrong URL): exit 2, NOT 0 and NOT 1 ---
+$ UNOPSIS_API=http://127.0.0.1:9 python 03_monitoring_check.py; echo "exit status: $?"
+CHECK FAILED: could not reach http://127.0.0.1:9/api/insights/items-by-lane/ -- [Errno 61] Connection refused
+exit status: 2
+
+# --- 4. watching a different lane, to show the lane and threshold are configuration ---
+$ UNOPSIS_WATCH_LANE=fyi UNOPSIS_MAX_NEEDS_YOU=0 python 03_monitoring_check.py; echo "exit status: $?"
+ALERT: 1 item in 'FYI' (threshold 0) -- the inbox is backing up. Source: http://127.0.0.1:8899/api/insights/items-by-lane/
+exit status: 1

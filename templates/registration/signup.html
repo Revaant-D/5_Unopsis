@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% comment %}
+  The sign-up page, served at /accounts/signup/ by SignUpView (unopsis/auth_views.py).
+
+  Django ships no signup view and no signup template, because what an "account" is differs per
+  project; this is the matching half of login.html, rendered the same way and from the same
+  panel/btn vocabulary.
+
+  The help text under each field is rendered rather than dropped on purpose. UserCreationForm's
+  password help text is the list of rules AUTH_PASSWORD_VALIDATORS will enforce -- at least
+  eight characters, not a common password, not all digits, not your username. Hiding it does
+  not make the rules go away; it just means the user discovers them one failed submit at a
+  time.
+{% endcomment %}
+
+{% block title %}Sign up{% endblock %}
+
+{% block content %}
+
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-xl-5">
+
+      <div class="panel">
+        <h2 class="h3 mb-1">Create an account</h2>
+        <p class="text-muted small mb-3">
+          One account unlocks the briefs, the search, the reports and the protected JSON
+          endpoints. The lane-count feed stays open to everybody either way.
+        </p>
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2 small mb-3">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'signup' %}" novalidate>
+          {% csrf_token %}
+
+          {% comment %}
+            One loop instead of four copies of the same five lines: every field on this form
+            is a single text-ish input, so the per-field markup in brief_detail.html (which
+            needs a grid) would be four-fold repetition here with nothing gained.
+          {% endcomment %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <div class="form-text small">{{ field.help_text }}</div>
+              {% endif %}
+              {% for error in field.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+
+          {# Same job as on the login page: remember where the visitor was headed. #}
+          <input type="hidden" name="next" value="{{ next }}">
+
+          <button class="btn btn-primary w-100" type="submit">Create account</button>
+        </form>
+
+        {% comment %}
+          PART 2 LANDED HERE too, and it is literally the same include as on login.html --
+          which is the point Part 1 predicted: signing up with Google and logging in with
+          Google are one button. The first trip through allauth creates the account from the
+          name and verified email address Google returns; every trip after that recognises the
+          same Google identity and signs the existing account in.
+
+          A consequence worth knowing when reading the two pages side by side: an account made
+          this way has no usable password, because none was ever chosen. Its owner signs in
+          with the button, not with the form above.
+        {% endcomment %}
+        <div class="d-flex align-items-center gap-2 my-3 text-muted small">
+          <hr class="flex-grow-1 m-0"><span>or</span><hr class="flex-grow-1 m-0">
+        </div>
+        {% block social_signup %}
+          {% include "registration/_google_button.html" %}
+        {% endblock %}
+      </div>
+
+      <p class="small text-muted text-center mt-3">
+        Already have an account?
+        <a href="{% url 'login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Log in</a>
+        &middot;
+        <a href="{% url 'home' %}">Back to the home page</a>
+      </p>
+
+    </div>
+  </div>
+
+{% endblock %}

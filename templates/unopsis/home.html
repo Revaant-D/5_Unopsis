@@ -9,6 +9,17 @@
     views.py   ->  home() queries the models and hands over a context dict
     this file  ->  renders that context and links onward with {% templatetag openblock %} url {% templatetag closeblock %}
                    and {{ item.get_absolute_url }}
+
+  Assignment 5. This is the only page that shows real data AND stays reachable logged out, so
+  it is the only one where the gate is in the template rather than on the view. home() has no
+  @login_required because / is the front door: bouncing a first-time visitor straight to a
+  login form is how a deployed site looks broken.
+
+  So everything below is inside {% templatetag openblock %} if user.is_authenticated {% templatetag closeblock %}: the brief headlines, the
+  Needs-you titles, the row counts, and the links to the four view kinds. A signed-out visitor
+  gets the pitch, the two buttons, and the one public endpoint instead. Note that the COUNTS
+  are hidden too -- six harmless-looking numbers still say how much mail this person gets and
+  how many people they talk to.
 {% endcomment %}
 
 {% block title %}Home{% endblock %}
@@ -22,14 +33,44 @@
       them into three lanes, and cites the real messages behind every line it writes.
     </p>
     <div class="d-flex flex-wrap gap-2">
-      <a class="btn btn-primary" href="{% url 'brief-list' %}">Open the briefs</a>
-      <a class="btn btn-accent" href="{% url 'insights' %}">Search &amp; insights</a>
-      <a class="btn btn-outline-secondary" href="{% url 'item-list-cbv-generic' %}">All brief items</a>
+      {% if user.is_authenticated %}
+        <a class="btn btn-primary" href="{% url 'brief-list' %}">Open the briefs</a>
+        <a class="btn btn-accent" href="{% url 'insights' %}">Search &amp; insights</a>
+        <a class="btn btn-outline-secondary" href="{% url 'item-list-cbv-generic' %}">All brief items</a>
+      {% else %}
+        {% comment %}
+          The same three buttons would all bounce to the login page, so offer the login
+          page itself instead of making the visitor discover that one click later.
+        {% endcomment %}
+        <a class="btn btn-primary" href="{% url 'login' %}">Log in</a>
+        <a class="btn btn-accent" href="{% url 'signup' %}">Create an account</a>
+      {% endif %}
     </div>
   </div>
 
+  {% if not user.is_authenticated %}
+    <div class="panel">
+      <h3 class="section-title mt-0">What is private, and what is not</h3>
+      <p class="text-muted mb-2">
+        Everything this site reports on is somebody's mail, so the briefs, the items, the
+        search, the reports and most of the JSON endpoints need an account. Sign in and this
+        page fills with the real figures.
+      </p>
+      <p class="text-muted mb-0">
+        One endpoint is open to everybody, on purpose, and it is counts only &mdash; how many
+        items sit in each lane, with no titles, no summaries and nobody's name attached:
+        <a href="{% url 'api-items-by-lane' %}"><code>{% url 'api-items-by-lane' %}</code></a>.
+        It is the feed the Vega-Lite chart for this project is drawn from, and anybody may
+        chart it.
+      </p>
+    </div>
+  {% endif %}
+
+  {% if user.is_authenticated %}
+
   <!-- Totals straight off the ORM (one .count() each) -->
-  <h3 class="section-title">What is in the database right now</h3>
+  {# "Yours" is load-bearing: A5 scoped every count to the signed-in account. #}
+  <h3 class="section-title">What is in your account right now</h3>
   <div class="row g-3 mb-4">
     {% for label, number in totals %}
       <div class="col-6 col-md-4 col-lg-2">
@@ -104,5 +145,6 @@
     <li class="list-inline-item">&middot;</li>
     <li class="list-inline-item"><a href="{% url 'item-list-cbv-generic' %}">4. Generic ListView</a></li>
   </ul>
+  {% endif %}{# user.is_authenticated: everything from the totals down is private #}
 
 {% endblock %}

@@ -53,8 +53,25 @@ team first:
 rm db.sqlite3
 python manage.py migrate
 python manage.py createsuperuser  # use username: mohitg2  (the demo data is owned by this user)
-python manage.py seed_demo
+python manage.py seed_demo                 # seeds mohitg2 by default
+python manage.py seed_demo --user somebody # or any other existing account
 ```
+
+Since A5 the demo data belongs to **one account at a time**, because every queryset is scoped
+to its owner. `seed_demo` gives one user their own set; signing up on the site does the same
+thing automatically for the new account (`SEED_NEW_ACCOUNTS`, see **Environment variables**).
+
+Before committing `db.sqlite3` &mdash; which this repository does on purpose &mdash; run:
+
+```bash
+python manage.py scrub_db          # report what must not be committed
+python manage.py scrub_db --apply  # empty django_session
+```
+
+A Django `session_key` *is* the value of the `sessionid` cookie, so a committed session row is
+a password-free login to the deployed site for anybody who can read the repository. Every
+`runserver` you log into writes one. `manage.py clearsessions` is not a substitute: it removes
+only sessions that have already expired, which is exactly the set that cannot be replayed.
 
 ## Running: development and production settings
 
@@ -97,7 +114,15 @@ Secrets are read from `.env` (see `.env.example` for every variable):
 |---|---|
 | `SECRET_KEY` | Django's signing key. Required; the project refuses to start without it |
 | `OPENAI_API_KEY` | Example third-party key (dummy value for now) |
-| `ALLOWED_HOSTS` | Comma-separated hosts allowed in production |
+| `ALLOWED_HOSTS` | Comma-separated hosts allowed in production. Production settings also derive `CSRF_TRUSTED_ORIGINS` from it, so adding the deployed domain here configures both |
+| `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth client id (A5 Part 2). Optional: without it the Google button renders disabled and username/password login is unaffected |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | The other half of that pair. Never commit it; it is not stored in the database either |
+| `SEED_NEW_ACCOUNTS` | Default `True`. Gives each new account its own copy of the demo rows, so a fresh sign-up does not land on an empty site |
+| `HTTPS_ONLY` | Default `True`, production settings only. Drives `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` and `SECURE_SSL_REDIRECT`. Set `False` only to try production mode on a laptop |
+
+**No hostname is written into any tracked file.** The deployed domain reaches the code through
+`ALLOWED_HOSTS` alone, and the Google redirect URI is built by allauth from the incoming request.
+One line in the server's `.env` moves the site to a new domain.
 
 ## URL map
 
@@ -140,6 +165,69 @@ after a POST needs no `success_url`.
 **End-to-end flow**, all visible on the home page: `models.py` (the data and its own URL) →
 `urls.py` (the address and its name) → `views.py` (the query and the context) → `templates/`
 (the rendering and the links onward).
+
+## Authentication and access (A5 Parts 1 and 2)
+
+| URL | Route name | View | What it is |
+|---|---|---|---|
+| `/accounts/login/` | `login` | `UnopsisLoginView` | Our login page, with "Continue with Google" |
+| `/accounts/signup/` | `signup` | `SignUpView` | Our sign-up page, same Google button |
+| `/accounts/logout/` | `logout` | `UnopsisLogoutView` | **POST only** &mdash; Django 5 answers 405 to a GET |
+| `/accounts/google/login/` | `google_login` | django-allauth | Off to Google |
+| `/accounts/google/login/callback/` | `google_callback` | django-allauth | Back from Google; this is the URI registered in Google Cloud |
+
+The three views are in `unopsis/auth_views.py`; the templates are
+`templates/registration/{login,signup}.html` with the button shared in `_google_button.html`.
+Log out is a small POST form in the navigation bar rather than a link, because a GET logout can
+be fired by any `<img src>` on any page.
+
+**Who can reach what**, in three tiers:
+
+| Tier | What is in it | Logged out |
+|---|---|---|
+| Public by design | `/`, `/accounts/login/`, `/accounts/signup/`, and **`/api/insights/items-by-lane/`** | 200 |
+| Everything else | every page and feed above that returns something a person wrote, including both POST forms | 302 → `/accounts/login/?next=…` |
+| Yours only | all of the above, once signed in: every queryset is scoped to the requesting account | &mdash; |
+
+Two details worth knowing before reading the code:
+
+- **The mixin has to be first.** `BriefDetailView(LoginRequiredMixin, DetailView)`, never the
+  other way round. Python resolves `dispatch()` left to right, so a mixin listed second never
+  runs: the class looks protected, reviews as protected, and serves the page to anybody, with no
+  error anywhere.
+- **A protected JSON endpoint answers 302, not 401.** That is Django's standard behaviour and
+  what `LOGIN_URL` is for, but it means `curl` follows the redirect and prints an HTML login page
+  with status 200 &mdash; which reads at a glance as though the endpoint were still open. The
+  tests assert the 302 itself (`fetch_redirect_response=False`), which is the honest check.
+
+The navigation in `templates/base.html` is wrapped in `{% if user.is_authenticated %}`, so the
+protected links are not shown before login. Hiding a link is not security &mdash; the views are
+what turn a request away &mdash; but showing a logged-out stranger a brief headline is a leak
+even when the page behind the link would have bounced them.
+
+Google credentials come from `.env` (`GOOGLE_OAUTH_CLIENT_ID` / `_SECRET`) and are never stored
+in the database or in any tracked file. With them absent the login and sign-up pages still render
+and still work &mdash; the Google button is simply shown disabled with a note saying why. Setup,
+including both redirect URIs, is in [`docs/a5/google-oauth-setup.md`](docs/a5/google-oauth-setup.md).
+
+<a id="the-one-public-api-a5-part-3"></a>
+### The one public API (A5 Part 3)
+
+`/api/insights/items-by-lane/` is the single endpoint that needs no account. It returns a bare
+JSON array of `{lane, label, total}` &mdash; counts only, backed by the real tables, with no
+title, no summary, no name, no handle and no timestamp in it. That is *why* it can be published:
+not because of who asks, but because of what it answers.
+
+It is the feed behind the submitted Vega-Lite chart
+([`docs/a5/vega_lite_chart.txt`](docs/a5/vega_lite_chart.txt)) and the three alternative-use
+programs in [`docs/a5/alternative_uses/`](docs/a5/alternative_uses/). Its response shape is a
+contract with those files: it is a bare array on purpose, and wrapping it in an object would
+make the chart fail by silently rendering empty. `PublicApiSubmissionTests` reads those files on
+every test run and checks their field names against what the live view actually returns.
+
+Note that this feed reports **site-wide** counts while every other view reports only your own
+rows. That is deliberate and is the reason it is safe to publish: an aggregate over everybody is
+not a fact about anybody.
 
 ## Searching the data (ORM)
 
@@ -210,13 +298,42 @@ Both charts are also embedded on `/insights/`. How the pieces fit:
 - **The data feeds** return a *bare JSON array of flat records*, the shape Vega-Lite reads with
   nothing but a URL. `/api/insights/` has the same numbers, but nested inside an object.
 - **The spec files** store `data.url` as a path, so they work on any host. The `.json` endpoint
-  rewrites it to an absolute URL for the host that served it. That way, a spec copied from
-  `https://<you>.pythonanywhere.com/vega-lite/chart1.json` and pasted into the
-  [Vega-Lite editor](https://vega.github.io/editor/) loads live data from the deployed site.
-- **Cross-origin reads are allowed.** The editor runs on another site, so `/api/` and
-  `/vega-lite/` responses carry `Access-Control-Allow-Origin: *` (`unopsis/middleware.py`).
-  These endpoints are public, GET-only and cookie-free, so nothing new is exposed. HTML pages do
-  not get the header.
+  rewrites it to an absolute URL for the host that served it.
+- **Cross-origin reads are allowed.** The editor runs on another site, so these responses carry
+  `Access-Control-Allow-Origin: *` (`unopsis/middleware.py`). HTML pages do not get the header.
+
+> **Assignment 5 changed who may read these, and this section used to say otherwise.**
+> It claimed the chart endpoints were "public, GET-only and cookie-free, so nothing new is
+> exposed", and that a spec URL could be pasted straight into the
+> [Vega-Lite editor](https://vega.github.io/editor/) to load live data from the deployed site.
+> Both were true when they were written and neither is true now. A5 put a login on every
+> endpoint that returns anything a person wrote, and `/vega-lite/chartN.json` and
+> `/api/insights/messages-by-hour/` are among them. The editor is another origin with no
+> session cookie, so it now receives a 302 to the login page.
+>
+> What that means in practice, because the failure is silent -- Vega-Lite does not error on an
+> unreachable `data.url`, it draws an empty chart:
+>
+> | URL | Signed out | Signed in |
+> |---|---|---|
+> | `/api/insights/items-by-lane/` | **200, the one public feed** | 200 |
+> | `/api/insights/messages-by-hour/` | 302 to the login page | 200 |
+> | `/vega-lite/chart1.json`, `/vega-lite/chart2.json` | 302 to the login page | 200 |
+> | `/vega-lite/chart1/`, `/vega-lite/chart2/`, the `.png`s | 302 to the login page | 200 |
+>
+> So: **both charts work on the site**, signed in, exactly as before -- `/insights/`,
+> `/vega-lite/chart1/` and `/vega-lite/chart2/` are unchanged for a logged-in reader. What no
+> longer works is pasting a spec URL into the Vega-Lite editor and having it fetch for itself.
+> The chart that can still be built in the editor is the bar chart, because its data is the one
+> public feed; the spec to paste is in
+> [`docs/a5/vega_lite_chart.txt`](docs/a5/vega_lite_chart.txt), which is the A5 Part 3
+> deliverable and is kept honest by `PublicApiSubmissionTests`.
+>
+> Chart 2 is protected rather than published on purpose. An hour-by-hour record of when one
+> person's messages arrive is also a record of when they sleep, when they work and when they
+> were away; a count about a person is still about a person. `/api/insights/items-by-lane/` is
+> three rows of `{lane, label, total}` with no title, no name and no timestamp in it, which is
+> why that one, and only that one, is open.
 - **Embedding.** `static/js/vega-charts.js` fetches each spec by URL and hands it to
   `vega-embed`. It changes only the width (`"container"`), so the chart fills its column.
 - **The PNG endpoints** render the same spec on the server with
@@ -242,9 +359,13 @@ Three class-based views were adapted to handle input: `InsightsView` (a `ListVie
 
 ## JSON API
 
-A small public read-only API over the briefs. It serves the *ranked, public-facing read* of a
-brief &mdash; titles, lanes, ranks, states, summaries, deadlines and links &mdash; and never the
-raw provider payloads, the private message bodies, draft replies or credential references.
+A small read-only API over the briefs. It serves the *ranked, public-facing read* of a brief
+&mdash; titles, lanes, ranks, states, summaries, deadlines and links &mdash; and never the raw
+provider payloads, the private message bodies, draft replies or credential references.
+
+Since A5 it requires a session and returns **only the signed-in account's own rows**. The one
+exception is `/api/insights/items-by-lane/`, which is open to everybody; see
+[A5 Part 3](#the-one-public-api-a5-part-3) below.
 
 | Endpoint | Style | Notes |
 |---|---|---|
@@ -255,10 +376,36 @@ raw provider payloads, the private message bodies, draft replies or credential r
 Filtering is by query parameter: `?lane=`, `?state=`, `?space=`, `?brief=`, `?q=`, `?due_before=`,
 `?limit=`. Unknown parameters are ignored, so a client can add one without breaking.
 
-> **Scope.** This is a single-user demo: there is no login, so the pages, the API and the POST
-> forms are all open, and every queryset covers every space. Section 15 of
-> [`docs/notes/notes.txt`](docs/notes/notes.txt) records what scoping to the signed-in user would
-> take.
+> **Scope &mdash; this paragraph used to say the opposite, and both halves have changed.**
+> It read: *"This is a single-user demo: there is no login, so the pages, the API and the POST
+> forms are all open, and every queryset covers every space."* Assignment 5 closed both.
+>
+> **Authentication.** Every page and every endpoint that returns something a person wrote now
+> needs a session (`@login_required` / `LoginRequiredMixin`), including the two POST forms,
+> which were the only unauthenticated writes this project had.
+>
+> **Authorization.** Every queryset now runs through an `owned_*(user)` helper in
+> `unopsis/views.py`, so a signed-in account reads and writes its own briefs and nobody
+> else's. This is the half that is easy to skip, because skipping it has no symptom: with a
+> login and no scoping, the site looks locked, every test about the lock passes, and any
+> account reads every other account's item titles, summaries, draft replies, contacts and
+> message bodies. And `/accounts/signup/` is public &mdash; the assignment requires it &mdash;
+> so "any account" means anybody who wants one. `TenantIsolationTests` performs that exact
+> attack (sign up through the real form, then reach for another user's rows by primary key)
+> and asserts on response bodies and on the database, not on status codes, because a 200 that
+> renders an empty page and a 200 that renders somebody else's data look identical to a status
+> check.
+>
+> Another user's `pk` answers **404, not 403**: 403 would confirm the row exists and belongs
+> to someone, which is itself a fact about another account and enough to enumerate the table
+> by walking the integers.
+>
+> **Why a new account is not empty.** Scoping means a brand-new account owns nothing, so it
+> would sign in and land on a site with no briefs and six zeroes &mdash; correct, and
+> indistinguishable from a failed deployment, which is the page a grader signing in with
+> Google would meet. So each new account is given its *own* copy of the demo rows when it is
+> created (`unopsis/onboarding.py`, `SEED_NEW_ACCOUNTS` in `.env`). Nothing is shared between
+> accounts; `NewAccountSeedingTests` pins that two sign-ups get two separate sets.
 
 ```bash
 curl -s "http://127.0.0.1:8000/api/items/?lane=needs_you&limit=2"

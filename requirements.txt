@@ -19,3 +19,14 @@ requests>=2.31
 # Self-contained (no Node.js needed), about 80 MB installed -- still well inside PythonAnywhere's
 # 512 MB quota alongside everything above.
 vl-convert-python>=1.9
+
+# Google sign-in (Assignment 5, Part 2). The [socialaccount] extra is not optional for this
+# project: without it allauth has no oauthlib to drive the OAuth2 handshake and no
+# pyjwt[crypto] to verify the signature on the id_token Google returns, so the Google button
+# fails at the last step with an import error rather than at install time. The extra pulls in
+# oauthlib, PyJWT and cryptography (~20 MB together -- still well inside PythonAnywhere's
+# 512 MB quota next to matplotlib and vl-convert-python).
+# Pinned below 66 for the same reason as Django: a major release should be a decision, not a
+# surprise on deployment day. 65.19 is the floor because the ACCOUNT_LOGIN_METHODS /
+# ACCOUNT_SIGNUP_FIELDS settings used in settings/base.py replaced the older names in 65.x.
+django-allauth[socialaccount]>=65.19,<66
