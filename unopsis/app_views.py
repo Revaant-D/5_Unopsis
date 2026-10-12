@@ -32,6 +32,20 @@ OPEN, HANDLED = BriefItem.State.OPEN, BriefItem.State.HANDLED
 MINUTES_PER_DECISION = 2
 
 
+def landing(request):
+    """
+    "/" -- the product page for a visitor; a signed-in user goes straight to their brief.
+
+    Today the only way to be signed in is the Django admin login; from Assignment 5 it is every
+    account, with no change here. It renders unopsis/home.html (the template the course's
+    home-page tests pin at "/") in landing mode. The course dashboard that used to live at "/"
+    is views.home, unchanged, at /under-the-hood/.
+    """
+    if request.user.is_authenticated:
+        return redirect("app-work-brief")
+    return render(request, "unopsis/home.html", {"landing": True})
+
+
 def signup(request):
     """Screen 1, "Create account" page. Static until A5: the page submits nothing."""
     return render(request, "unopsis/app/auth.html", {"mode": "signup"})

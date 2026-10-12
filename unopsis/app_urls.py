@@ -2,6 +2,8 @@
 Routes for the wireframe UI (app_views.py), included from inboxtriage/urls.py beside
 unopsis/urls.py. Every name starts with "app-" so it can never collide with a course route.
 
+    /                                          app-landing               product page; signed in -> brief
+    /under-the-hood/                           under-the-hood            the course dashboard (views.home)
     /signup/  /login/                          app-signup, app-login     static until A5
     /setup/world|sources|scope|tuning/         app-setup-*               the four setup steps
     /work/brief/building/                      app-work-building         first-run screen
@@ -19,7 +21,7 @@ unopsis/urls.py. Every name starts with "app-" so it can never collide with a co
 
 from django.urls import path, register_converter
 
-from . import app_views
+from . import app_views, views
 
 
 class WorldConverter:
@@ -37,6 +39,11 @@ class WorldConverter:
 register_converter(WorldConverter, "world")
 
 urlpatterns = [
+    # "/" is matched here first (this file is included before unopsis/urls.py), so the old
+    # dashboard -- views.home, graded code, unchanged -- moves to /under-the-hood/. The name
+    # "home" still reverses to "/" from unopsis/urls.py, so every {% url 'home' %} still works.
+    path("", app_views.landing, name="app-landing"),
+    path("under-the-hood/", views.home, name="under-the-hood"),
     path("signup/", app_views.signup, name="app-signup"),
     path("login/", app_views.login_page, name="app-login"),
     path("setup/world/", app_views.setup_world, name="app-setup-world"),

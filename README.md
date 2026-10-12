@@ -10,6 +10,8 @@
 - The site is navigable from the home page at `/`: briefs, brief items, a search-and-insights
   page with live matplotlib and Vega-Lite charts, a reports page with CSV/JSON exports, and a
   public JSON API that also checks deadlines against a live public-holiday calendar.
+- `/` is the product page for a visitor (a signed-in user goes straight to `/work/brief/`); the
+  course dashboard that used to be the home page is at `/under-the-hood/`.
 - **The app itself** -- the screens from the wireframes -- starts at `/work/brief/`; `/journey/`
   links every screen in order. See **The app (wireframe UI)** below.
 
@@ -117,6 +119,8 @@ to the clipboard and finished in the original app. Run it the usual way and open
 
 | URL | Route name | Screen |
 |---|---|---|
+| `/` | `app-landing` (and `home`) | Product page for a visitor; a signed-in user is redirected to `/work/brief/` |
+| `/under-the-hood/` | `under-the-hood` | The course dashboard (`views.home`, unchanged): totals, latest briefs, the four view kinds |
 | `/signup/`, `/login/` | `app-signup`, `app-login` | Create account / sign in (static until A5) |
 | `/setup/world/` | `app-setup-world` | Setup 1: work, personal or both |
 | `/setup/sources/` | `app-setup-sources` | Setup 2: the connected accounts |
@@ -141,7 +145,8 @@ address in `get_absolute_url()`. Nothing in this project hard-codes a path.
 
 | URL | Route name | View | What it is |
 |---|---|---|---|
-| `/` | `home` | `home` (FBV) | Home page. Totals, the latest briefs and the three items that need you |
+| `/` | `home` | `app_views.landing` (FBV) | The product page (see **The app**). `reverse("home")` is still `/` |
+| `/under-the-hood/` | `under-the-hood` | `home` (FBV) | The course dashboard: totals, the latest briefs and the three items that need you |
 | `/briefs/` | `brief-list` | `BriefListView` (ListView) | Every brief, with its item count annotated in the database |
 | `/briefs/<id>/` | `brief-detail` | `BriefDetailView` (DetailView) | One brief by **primary key**, plus the POST form that creates an item |
 | `/items/manual/` | `item-list-manual` | `item_list_manual` (FBV, `HttpResponse`) | The four view kinds from the previous assignment: same list, four ways |
@@ -172,7 +177,7 @@ reverses the named route, so templates write `{{ item.get_absolute_url }}` inste
 `{% url 'item-detail' item.pk %}`, the admin's *View on site* button works, and `redirect(item)`
 after a POST needs no `success_url`.
 
-**End-to-end flow**, all visible on the home page: `models.py` (the data and its own URL) →
+**End-to-end flow**, all visible on the dashboard at `/under-the-hood/`: `models.py` (the data and its own URL) →
 `urls.py` (the address and its name) → `views.py` (the query and the context) → `templates/`
 (the rendering and the links onward).
 
@@ -400,6 +405,8 @@ for the run, so the committed `db.sqlite3` is never read or written by the tests
 
 | | |
 |---|---|
+| **Landing page** (`/`) | ![Landing page](docs/screenshots/37_landing_page.png) |
+| **Under the hood** (`/under-the-hood/`) | ![Under the hood](docs/screenshots/38_under_the_hood.png) |
 | **Sign up** (`/signup/`) | ![Sign up](docs/screenshots/22_app_signup.png) |
 | **Sign in** (`/login/`) | ![Sign in](docs/screenshots/23_app_login.png) |
 | **Setup 1-4** | ![World](docs/screenshots/24_app_setup_world.png) ![Sources](docs/screenshots/25_app_setup_sources.png) ![Scope](docs/screenshots/26_app_setup_scope.png) ![Tuning](docs/screenshots/27_app_setup_tuning.png) |

@@ -270,7 +270,7 @@ class ShellTests(TestCase):
 
     def test_shell_links_back_to_the_course_pages(self):
         html = self.client.get(reverse("app-signup")).content.decode()
-        self.assertIn(f'href="{reverse("home")}"', html)
+        self.assertIn(f'href="{reverse("under-the-hood")}"', html)
         self.assertIn("Under the hood", html)
 
     def test_course_pages_keep_their_own_layout_and_link_into_the_app(self):
@@ -802,3 +802,45 @@ class ReviewFixTests(TestCase):
         Message.objects.filter(external_id="g1").update(permalink="https://mail.example/g1")
         html = self.client.get(reverse("app-thread", args=["work", self.rows["sow"].pk])).content.decode()
         self.assertIn('data-open="https://mail.example/g1"', html)
+
+
+class LandingTests(TestCase):
+    """
+    "/" is the product page for a visitor and a doorway for a signed-in user; the course
+    dashboard that used to live at "/" is still there, at /under-the-hood/.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.rows = build_two_worlds()
+
+    def test_a_visitor_gets_the_product_page(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "unopsis/home.html")
+        self.assertContains(response, "Know what happened, in one page a day.")
+        self.assertContains(response, "It reads")
+        self.assertContains(response, f'href="{reverse("app-signup")}"')
+        self.assertContains(response, f'href="{reverse("app-login")}"')
+        self.assertNotContains(response, "What is in the database right now")
+
+    def test_a_signed_in_user_goes_straight_to_their_brief(self):
+        self.client.force_login(self.rows["work"].user)
+        self.assertRedirects(self.client.get("/"), reverse("app-work-brief"))
+
+    def test_the_course_dashboard_lives_under_the_hood(self):
+        response = self.client.get(reverse("under-the-hood"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "unopsis/home.html")
+        self.assertContains(response, "What is in the database right now")
+        self.assertContains(response, f'href="{reverse("item-list-manual")}"')   # the four view kinds
+        self.assertContains(response, "Two things need you before noon.")        # latest briefs
+
+    def test_under_the_hood_does_not_redirect_a_signed_in_user(self):
+        self.client.force_login(self.rows["work"].user)
+        self.assertEqual(self.client.get(reverse("under-the-hood")).status_code, 200)
+
+    def test_under_the_hood_is_in_the_site_navigation(self):
+        for url in ("/", reverse("brief-list"), reverse("under-the-hood")):
+            with self.subTest(url=url):
+                self.assertContains(self.client.get(url), f'href="{reverse("under-the-hood")}"')

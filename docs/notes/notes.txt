@@ -570,3 +570,20 @@ What A5 changes
 Also done
   - docs/design/unopsis-erd.png: the ER diagram as an image (A1 lost 0.5 for the .xlsx).
   - docs/screenshots/22-36: one screenshot per new screen.
+
+===========================================================================================
+18. WHO THE HOME PAGE IS FOR (2026-10-12)
+===========================================================================================
+
+  "/" used to be the course dashboard (database totals, latest briefs, the four view kinds) --
+  useful to us and the graders, confusing to anyone actually using Unopsis. Now:
+    /                  app_views.landing: the product page for a visitor (It reads / It ranks /
+                       It writes, Create account, Sign in, try the demo). A signed-in user is
+                       redirected straight to /work/brief/. Today "signed in" only happens
+                       through the Django admin login; from A5 it is every account, no change.
+    /under-the-hood/   views.home, UNCHANGED, rendering the same dashboard as before. Linked as
+                       "Under the hood" in the main nav, the app sidebar and /journey/.
+  Both render unopsis/home.html (the A3 tests pin that template at "/"), which now just picks
+  _landing.html or _dashboard.html. reverse("home") is still "/", so no {% url 'home' %} broke.
+  inboxtriage/urls.py includes unopsis.app_urls BEFORE unopsis.urls so the landing wins "/".
+  Tests: 5 new (163 total, all passing).

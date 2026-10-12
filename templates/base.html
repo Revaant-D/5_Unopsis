@@ -54,8 +54,13 @@
       {% with current=request.resolver_match.url_name %}
       <ul class="nav flex-wrap gap-1 py-2">
         <li class="nav-item">
-          <a class="nav-link {% if current == 'home' %}active{% endif %}"
+          <a class="nav-link {% if current == 'home' or current == 'app-landing' %}active{% endif %}"
              href="{% url 'home' %}">Home</a>
+        </li>
+        <li class="nav-item">
+          {# The course dashboard that used to be the home page. #}
+          <a class="nav-link {% if current == 'under-the-hood' %}active{% endif %}"
+             href="{% url 'under-the-hood' %}">Under the hood</a>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if current == 'brief-list' or current == 'brief-detail' %}active{% endif %}"
