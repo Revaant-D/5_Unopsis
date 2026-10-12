@@ -12,6 +12,8 @@ Two deliberate limits until Assignment 5:
     original message, which is the read-only promise the wireframe makes.
 """
 
+from urllib.parse import urlparse
+
 from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -124,11 +126,17 @@ def _broken(space):
     return list(space.connections.filter(status=Connection.Status.ERROR)) if space else []
 
 
+def _step_ms(step):
+    """A stored step's duration in ms, or 0 when it is missing or not a number."""
+    value = step.get("ms", 0)
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
+
+
 def building(request, kind):
     """Screens 6 and 11, "Reading 14 hours for you.": the stored Brief.steps, replayed."""
     space, brief, now = _world(kind)
     steps = [
-        {**step, "seconds": round(step.get("ms", 0) / 1000)}
+        {**step, "ms": _step_ms(step), "seconds": round(_step_ms(step) / 1000)}
         for step in (brief.steps if brief else [])
         if isinstance(step, dict)
     ]
@@ -213,6 +221,8 @@ def thread(request, kind, pk):
         receipts = receipts.exclude(is_noise=True)
     space, brief, now = item.brief.space, item.brief, timezone.now()
     primary = item.primary_message
+    # Only ever hand the browser an http(s) link to open: permalinks come from provider data.
+    safe_link = primary is not None and urlparse(primary.permalink).scheme in ("http", "https")
     return _render_world(
         request, "unopsis/app/thread.html", kind, "threads" if kind == WORK else "since",
         space, brief, now,
@@ -225,7 +235,7 @@ def thread(request, kind, pk):
         people=Person.objects.filter(messages__brief_items=item).distinct().order_by("display_name"),
         decision=ui.primary_action(item),
         secondary=ui.secondary_actions(item),
-        open_url=primary.permalink if primary else "",
+        open_url=primary.permalink if safe_link else "",
         open_label=primary.connection.get_provider_display() if primary else "",
     )
 
@@ -249,7 +259,7 @@ def handled(request):
     done = request.GET.get("done", "")
     just_done = (
         BriefItem.objects.filter(pk=int(done), state=HANDLED, brief__space__kind=WORK).first()
-        if done.isdigit() else None
+        if done.isascii() and done.isdigit() else None   # "²".isdigit() is True; int("²") fails
     )
     since = (brief.generated_at or brief.window_end) if brief else None
     new_since = (

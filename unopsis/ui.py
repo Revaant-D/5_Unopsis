@@ -34,11 +34,19 @@ def latest_brief(space):
 
 
 def lane_items(brief, lane, states=(BriefItem.State.OPEN,)):
-    """One lane of a brief in rank order, with everything a card shows prefetched."""
+    """
+    One lane of a brief in rank order, with everything a card shows prefetched.
+
+    Asking for open items also returns snoozed items whose snoozed_until has passed: that is
+    what "Snooze to 4:30 PM" promises, and without it a snoozed item would never come back.
+    """
     if brief is None:
         return BriefItem.objects.none()
+    wanted = Q(state__in=states)
+    if BriefItem.State.OPEN in states:
+        wanted |= Q(state=BriefItem.State.SNOOZED, snoozed_until__lte=timezone.now())
     return (
-        brief.items.filter(lane=lane, state__in=states)
+        brief.items.filter(wanted, lane=lane)
         .select_related("primary_message__connection")
         .prefetch_related("messages__connection", "messages__author")
         .order_by("rank")

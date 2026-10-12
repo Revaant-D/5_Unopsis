@@ -765,3 +765,40 @@ class NothingIsComingSoonTests(TestCase):
         for pattern in app_urls.urlpatterns:
             with self.subTest(route=pattern.name):
                 self.assertNotEqual(pattern.callback.__name__, "coming_soon")
+
+
+class ReviewFixTests(TestCase):
+    """Findings from the whole-branch review: never 500 on bad input, never lose a snoozed item."""
+
+    def setUp(self):
+        self.rows = build_two_worlds()
+
+    def test_unicode_digit_in_done_is_ignored_not_a_500(self):
+        response = self.client.get(reverse("app-work-handled") + "?done=%C2%B2")   # "²"
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'value="reopen"')
+
+    def test_a_snoozed_item_comes_back_once_its_time_has_passed(self):
+        sow = self.rows["sow"]
+        ui.apply_action(sow, "snooze", timezone.now())
+        self.assertNotContains(self.client.get(reverse("app-work-brief")), "Acme wants the revised SOW today")
+        BriefItem.objects.filter(pk=sow.pk).update(snoozed_until=timezone.now() - timedelta(minutes=1))
+        response = self.client.get(reverse("app-work-brief"))
+        self.assertContains(response, "Acme wants the revised SOW today")
+        self.assertContains(response, "Needs you · 2")
+
+    def test_building_survives_malformed_step_durations(self):
+        Brief.objects.filter(pk=self.rows["brief"].pk).update(
+            steps=[{"label": "Read", "ms": None}, {"label": "Ranked", "ms": "fast"}, {"label": "Wrote"}])
+        response = self.client.get(reverse("app-work-building"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "first run · ~0s")
+
+    def test_only_http_permalinks_are_opened(self):
+        Message.objects.filter(external_id="g1").update(permalink="javascript:alert(1)")
+        html = self.client.get(reverse("app-thread", args=["work", self.rows["sow"].pk])).content.decode()
+        self.assertNotIn("javascript:", html)
+        self.assertNotIn("data-open=", html)
+        Message.objects.filter(external_id="g1").update(permalink="https://mail.example/g1")
+        html = self.client.get(reverse("app-thread", args=["work", self.rows["sow"].pk])).content.decode()
+        self.assertIn('data-open="https://mail.example/g1"', html)
