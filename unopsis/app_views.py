@@ -20,7 +20,7 @@ from django.views.decorators.http import require_POST
 
 from . import ui
 from .app_forms import ItemActionForm
-from .models import BriefItem, Connection, Provider, Space
+from .models import BriefItem, Connection, Person, Provider, Space
 
 WORK, PERSONAL = Space.Kind.WORK, Space.Kind.PERSONAL
 NEEDS_YOU, MOVING, FYI = BriefItem.Lane.NEEDS_YOU, BriefItem.Lane.MOVING, BriefItem.Lane.FYI
@@ -194,6 +194,41 @@ def needs_you(request):
     if first is None:
         return redirect("app-work-brief")
     return redirect("app-work-focus", pk=first.pk)
+
+
+def thread(request, kind, pk):
+    """
+    Screen 9: one topic in full -- what happened, the receipts in order, and the reply draft
+    with copy buttons. Read-only: replying happens in the original app.
+    ?show=all brings back the messages marked as noise; any other value is ignored.
+    """
+    item = get_object_or_404(
+        BriefItem.objects.select_related("brief__space", "primary_message__connection")
+        .prefetch_related("messages__connection"),
+        pk=pk, brief__space__kind=kind,
+    )
+    show_all = request.GET.get("show") == "all"
+    receipts = item.messages.select_related("author", "connection").order_by("sent_at")
+    hidden = receipts.filter(is_noise=True).count()
+    if not show_all:
+        receipts = receipts.exclude(is_noise=True)
+    space, brief, now = item.brief.space, item.brief, timezone.now()
+    primary = item.primary_message
+    return _render_world(
+        request, "unopsis/app/thread.html", kind, "threads" if kind == WORK else "since",
+        space, brief, now,
+        item=item,
+        chips=ui.source_chips(item),
+        receipts=list(receipts),
+        hidden=hidden,
+        show_all=show_all,
+        total=item.messages.count(),
+        people=Person.objects.filter(messages__brief_items=item).distinct().order_by("display_name"),
+        decision=ui.primary_action(item),
+        secondary=ui.secondary_actions(item),
+        open_url=primary.permalink if primary else "",
+        open_label=primary.connection.get_provider_display() if primary else "",
+    )
 
 # ---- The POST endpoint behind every state-changing button ----------------------------------
 @require_POST

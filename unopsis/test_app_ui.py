@@ -572,3 +572,54 @@ class FocusTests(TestCase):
 class EmptyFocusTests(TestCase):
     def test_needs_you_falls_back_to_the_brief(self):
         self.assertRedirects(self.client.get(reverse("app-work-needs-you")), reverse("app-work-brief"))
+
+
+class ThreadTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rows = build_two_worlds()
+
+    def url(self, kind, item, **query):
+        base = reverse("app-thread", args=[kind, item.pk])
+        return base + ("?" + "&".join(f"{k}={v}" for k, v in query.items()) if query else "")
+
+    def test_receipts_in_order_with_noise_hidden_by_default(self):
+        response = self.client.get(self.url("work", self.rows["sow"]))
+        html = response.content.decode()
+        self.assertLess(html.index("Two edits. Can you approve"), html.index("Numbers check out"))
+        self.assertNotIn("thanks!", html)
+        self.assertIn("1 message hidden", html)
+
+    def test_show_all_includes_the_noise(self):
+        self.assertContains(self.client.get(self.url("work", self.rows["sow"], show="all")), "thanks!")
+
+    def test_unknown_show_value_is_ignored(self):
+        response = self.client.get(self.url("work", self.rows["sow"], show="<script>"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "thanks!")
+
+    def test_decision_panel_draft_copy_buttons_and_people(self):
+        html = self.client.get(self.url("work", self.rows["sow"])).content.decode()
+        self.assertIn("Needs a decision", html)
+        self.assertIn("Approve the wording", html)
+        self.assertIn("Approved as written. Go ahead and send for signature at 2.", html)
+        self.assertIn('data-copy="#draft"', html)
+        self.assertIn("Copy text", html)
+        self.assertIn(">PS<", html)    # Priya Shah
+        self.assertIn(">DI<", html)    # Dan Ito
+        self.assertIn("nothing is sent from here", html)
+
+    def test_item_without_a_draft_or_primary_message_still_renders(self):
+        response = self.client.get(self.url("work", self.rows["payroll"]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'data-copy="#draft"')
+
+    def test_personal_thread_uses_the_personal_rail(self):
+        response = self.client.get(self.url("personal", self.rows["mention"]))
+        self.assertContains(response, "Your places")
+        self.assertContains(response, "Would you share your launch numbers?")
+
+    def test_wrong_world_and_unknown_world_are_404(self):
+        self.assertEqual(self.client.get(self.url("personal", self.rows["sow"])).status_code, 404)
+        self.assertEqual(self.client.get(f"/elsewhere/thread/{self.rows['sow'].pk}/").status_code, 404)
+        self.assertEqual(self.client.get(reverse("app-thread", args=["work", 99999])).status_code, 404)

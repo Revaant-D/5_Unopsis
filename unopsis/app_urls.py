@@ -50,7 +50,7 @@ urlpatterns = [
     path("work/brief/item/<int:pk>/", app_views.focus, name="app-work-focus"),
     path("work/needs-you/", app_views.needs_you, name="app-work-needs-you"),
     path("work/handled/", soon, {"task": "Task 8"}, name="app-work-handled"),
-    path("<world:kind>/thread/<int:pk>/", soon, {"task": "Task 7"}, name="app-thread"),
+    path("<world:kind>/thread/<int:pk>/", app_views.thread, name="app-thread"),
     path("personal/catchup/building/", app_views.building, {"kind": "personal"},
          name="app-personal-building"),
     path("personal/catchup/", soon, {"task": "Task 9"}, name="app-personal-catchup"),
