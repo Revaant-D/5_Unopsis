@@ -528,7 +528,7 @@ What was built
     unopsis/app_forms.py    ItemActionForm
     templates/unopsis/app/  shell.html (left rail + top bar) and one template per screen
     static/css/app.css, static/js/app.js
-    unopsis/test_app_ui.py  85 new tests (154 in total, all passing; tests.py untouched)
+    unopsis/test_app_ui.py  89 new tests (158 in total, all passing; tests.py untouched)
   Course pages (briefs, four view kinds, insights, reports, Vega-Lite, JSON API) keep their URLs,
   views and wording; they moved to the wireframe palette and sit under "Under the hood".
   Start at /journey/ to click through every screen in order.
