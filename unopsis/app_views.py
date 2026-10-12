@@ -299,6 +299,29 @@ def caught_up(request):
         work_next=ui.next_digest(ui.current_space(WORK), now),
     )
 
+
+def journey(request):
+    """Every screen in the order a new user meets them -- the screen flow, clickable."""
+    first = ui.lane_items(ui.latest_brief(ui.current_space(WORK)), NEEDS_YOU).first()
+    screens = [
+        ("Sign up", reverse("app-signup"), "The account, before any source is connected."),
+        ("Setup 1 · Your world", reverse("app-setup-world"), "Work, personal, or both."),
+        ("Setup 2 · Sources", reverse("app-setup-sources"), "The read-only accounts."),
+        ("Setup 3 · What's read", reverse("app-setup-scope"), "Channels and labels."),
+        ("Setup 4 · What matters", reverse("app-setup-tuning"), "The ranking rule."),
+        ("First run", reverse("app-work-building"), "The funnel: messages → topics → things."),
+        ("Today's brief", reverse("app-work-brief"), "The one page."),
+        ("Focus", reverse("app-work-focus", args=[first.pk]) if first else None,
+         "One decision at a time."),
+        ("Thread", reverse("app-thread", args=["work", first.pk]) if first else None,
+         "Receipts and the reply."),
+        ("Handled today", reverse("app-work-handled"), "What is left, what is done."),
+        ("Personal first run", reverse("app-personal-building"), "The same funnel, other world."),
+        ("Catch-up", reverse("app-personal-catchup"), "You were gone N hours."),
+        ("Caught up", reverse("app-personal-caught-up"), "The deliberate dead end."),
+    ]
+    return render(request, "unopsis/app/journey.html", {"screens": screens})
+
 # ---- The POST endpoint behind every state-changing button ----------------------------------
 @require_POST
 def item_action(request, pk):

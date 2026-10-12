@@ -56,5 +56,5 @@ urlpatterns = [
     path("personal/catchup/", app_views.personal_catchup, name="app-personal-catchup"),
     path("personal/caught-up/", app_views.caught_up, name="app-personal-caught-up"),
     path("app/items/<int:pk>/action/", app_views.item_action, name="app-item-action"),
-    path("journey/", soon, {"task": "Task 10"}, name="app-journey"),
+    path("journey/", app_views.journey, name="app-journey"),
 ]

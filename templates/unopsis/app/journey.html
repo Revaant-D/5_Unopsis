@@ -1,0 +1,34 @@
+{% extends "unopsis/app/shell.html" %}
+{% comment %}
+  The screen flow from the wireframes (docs/wireframes/v2/README.md), as clickable cards in the
+  order a new user meets them. Screens that need an item (focus, thread) link to the first
+  open Needs-you item, or explain that one has to be seeded.
+{% endcomment %}
+{% block title %}The whole journey{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_auth.html" %}{% endblock %}
+
+{% block app_content %}
+  <h1 class="page-title">The whole journey.</h1>
+  <p class="page-sub">Every screen from the wireframe, in the order a new user meets them.</p>
+
+  <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3 my-3">
+    {% for title, url, note in screens %}
+      <div class="col">
+        <div class="app-card h-100">
+          <p class="mb-1"><span class="num">{{ forloop.counter }}</span> <strong>{{ title }}</strong></p>
+          <p class="meta">{{ note }}</p>
+          {% if url %}<a class="btn-app" href="{{ url }}">Open</a>{% else %}<span class="meta">needs a seeded item — run seed_demo</span>{% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <p class="meta">No screens.</p>
+    {% endfor %}
+    <div class="col">
+      <div class="app-card app-card--muted h-100">
+        <p class="mb-1"><strong>Under the hood</strong></p>
+        <p class="meta">The course pages: briefs, the four view kinds, insights, reports, charts and the JSON API.</p>
+        <a class="btn-app" href="{% url 'home' %}">Open</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

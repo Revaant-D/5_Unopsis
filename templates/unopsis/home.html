@@ -16,15 +16,23 @@
 {% block content %}
 
   <div class="panel mb-4">
-    <h2 class="h3 mb-2">Everything that needs you, in one read.</h2>
+    <h2 class="h3 mb-2">Know what happened, in one page a day.</h2>
     <p class="text-muted mb-3">
       Unopsis collects messages from every place they arrive, groups them into topics, ranks
       them into three lanes, and cites the real messages behind every line it writes.
     </p>
+    {# The product itself: the wireframe screens (unopsis/app_urls.py). #}
     <div class="d-flex flex-wrap gap-2">
-      <a class="btn btn-primary" href="{% url 'brief-list' %}">Open the briefs</a>
-      <a class="btn btn-accent" href="{% url 'insights' %}">Search &amp; insights</a>
-      <a class="btn btn-outline-secondary" href="{% url 'item-list-cbv-generic' %}">All brief items</a>
+      <a class="btn btn-primary" href="{% url 'app-work-brief' %}">Open today's brief</a>
+      <a class="btn btn-accent" href="{% url 'app-personal-catchup' %}">Personal catch-up</a>
+      <a class="btn btn-outline-secondary" href="{% url 'app-journey' %}">See the whole journey</a>
+    </div>
+    {# The course pages, still one click away. #}
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+      <small class="text-muted">Under the hood:</small>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'brief-list' %}">Open the briefs</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'insights' %}">Search &amp; insights</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'item-list-cbv-generic' %}">All brief items</a>
     </div>
   </div>
 

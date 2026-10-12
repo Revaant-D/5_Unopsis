@@ -720,3 +720,35 @@ class EmptyPersonalTests(TestCase):
                 response = self.client.get(reverse(name))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "seed_demo")
+
+
+APP_ROUTES += ["app-journey"]
+
+
+class JourneyAndHomeTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rows = build_two_worlds()
+
+    def test_journey_links_every_screen_in_order(self):
+        html = self.client.get(reverse("app-journey")).content.decode()
+        order = ["app-signup", "app-setup-world", "app-setup-sources", "app-setup-scope",
+                 "app-setup-tuning", "app-work-building", "app-work-brief", "app-work-handled",
+                 "app-personal-building", "app-personal-catchup", "app-personal-caught-up"]
+        positions = [html.index(f'href="{reverse(name)}"') for name in order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn(f'href="{reverse("app-work-focus", args=[self.rows["sow"].pk])}"', html)
+        self.assertIn(f'href="{reverse("app-thread", args=["work", self.rows["sow"].pk])}"', html)
+
+    def test_home_hero_opens_the_app(self):
+        response = self.client.get(reverse("home"))
+        self.assertContains(response, f'href="{reverse("app-work-brief")}"')
+        self.assertContains(response, f'href="{reverse("app-personal-catchup")}"')
+        self.assertContains(response, f'href="{reverse("app-journey")}"')
+
+
+class EmptyJourneyTests(TestCase):
+    def test_journey_without_items_skips_the_item_screens(self):
+        response = self.client.get(reverse("app-journey"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "needs a seeded item")
