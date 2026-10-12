@@ -53,8 +53,8 @@ urlpatterns = [
     path("<world:kind>/thread/<int:pk>/", app_views.thread, name="app-thread"),
     path("personal/catchup/building/", app_views.building, {"kind": "personal"},
          name="app-personal-building"),
-    path("personal/catchup/", soon, {"task": "Task 9"}, name="app-personal-catchup"),
-    path("personal/caught-up/", soon, {"task": "Task 9"}, name="app-personal-caught-up"),
+    path("personal/catchup/", app_views.personal_catchup, name="app-personal-catchup"),
+    path("personal/caught-up/", app_views.caught_up, name="app-personal-caught-up"),
     path("app/items/<int:pk>/action/", app_views.item_action, name="app-item-action"),
     path("journey/", soon, {"task": "Task 10"}, name="app-journey"),
 ]

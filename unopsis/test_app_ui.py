@@ -671,3 +671,52 @@ class HandledTests(TestCase):
         for item in (self.rows["sow"], self.rows["payroll"]):
             ui.apply_action(item, "handle", timezone.now())
         self.assertContains(self.client.get(self.url), "Nothing left.")
+
+
+APP_ROUTES += ["app-personal-catchup", "app-personal-caught-up"]
+
+
+class PersonalTests(TestCase):
+    def setUp(self):
+        self.rows = build_two_worlds()
+
+    def test_catch_up_leads_with_what_wants_a_reply(self):
+        response = self.client.get(reverse("app-personal-catchup"))
+        self.assertContains(response, "You were gone 6 hours.")
+        self.assertContains(response, "318 messages · 1 place · 1 want a reply")
+        self.assertContains(response, "Maya asked for your launch numbers")
+        self.assertContains(response, f'href="{reverse("app-thread", args=["personal", self.rows["mention"].pk])}"')
+        self.assertContains(response, 'value="dismiss"')        # "Ignore"
+
+    def test_rail_ranks_places_and_flags_the_broken_source(self):
+        response = self.client.get(reverse("app-personal-catchup"))
+        self.assertContains(response, "Your places — ranked by what wants you")
+        self.assertContains(response, "#launches")
+        self.assertContains(response, 'class="badge-count">1<')
+        self.assertContains(response, "Discord · can't sync")
+
+    def test_error_banner_for_the_broken_connection(self):
+        response = self.client.get(reverse("app-personal-catchup"))
+        self.assertContains(response, "Discord couldn't be read this time.")
+        self.assertContains(response, "401 Unauthorized: token revoked.")
+
+    def test_caught_up_empty_then_filled(self):
+        url = reverse("app-personal-caught-up")
+        self.assertContains(self.client.get(url), "Nothing marked done yet")
+        ui.apply_action(self.rows["mention"], "handle", timezone.now())
+        response = self.client.get(url)
+        self.assertContains(response, "That was everything.")
+        self.assertContains(response, "Maya asked for your launch numbers")
+        # The next work digest depends on the wall clock (08:00 or 16:30 UTC), so accept either.
+        self.assertRegex(response.content.decode(), r"Work brief (8:00 AM|4:30 PM)")
+        self.assertContains(response, f'href="{reverse("app-setup-world")}"')
+        self.assertContains(response, f'href="{reverse("app-journey")}"')
+
+
+class EmptyPersonalTests(TestCase):
+    def test_personal_pages_render_with_no_rows(self):
+        for name in ("app-personal-catchup", "app-personal-caught-up"):
+            with self.subTest(route=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "seed_demo")

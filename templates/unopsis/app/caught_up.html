@@ -1,0 +1,46 @@
+{% extends "unopsis/app/shell.html" %}
+{% comment %}
+  Screen 13 (docs/wireframes/v2/13-personal-caught-up.png): the deliberate dead end. What the
+  user did, when the next read lands, and nothing more to scroll.
+{% endcomment %}
+{% block title %}Caught up{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}<p class="hint small mb-0">Next catch-up when you're back.</p>{% endblock %}
+{% block topbar %}<span class="chip">Personal · done</span>{% endblock %}
+
+{% block app_content %}
+{% if not brief %}
+  <h1 class="page-title">Nothing to catch up on yet.</h1>
+  <p class="page-sub">There is no personal catch-up yet. Load the demo data with <code>python manage.py seed_demo</code>.</p>
+{% else %}
+  <div class="d-flex gap-2 mb-5" aria-label="All four parts done">
+    <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
+    <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
+    <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
+    <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
+  </div>
+
+  <div class="text-center mx-auto" style="max-width: 560px">
+    <h1 class="page-title">That was everything.</h1>
+    <p>{{ done|length }} thing{{ done|length|pluralize }} handled, and {{ brief.message_count }} messages are behind you. Nothing is unread that matters.</p>
+
+    <div class="app-card text-start my-4">
+      <small class="meta">What you did</small>
+      {% for item in done %}
+        <div class="list-row"><span class="check">✓</span>{{ item.title }}</div>
+      {% empty %}
+        <p class="meta mb-0 mt-2">Nothing marked done yet — <a href="{% url 'app-personal-catchup' %}">back to the catch-up</a>.</p>
+      {% endfor %}
+    </div>
+
+    <p class="d-flex flex-wrap justify-content-center gap-2">
+      <span class="chip">Next catch-up when you're back</span>
+      {% if work_next %}<span class="chip">Work brief {{ work_next|time:"g:i A" }}</span>{% endif %}
+    </p>
+    <p class="d-flex flex-wrap justify-content-center gap-2">
+      <a class="btn-app" href="{% url 'app-journey' %}">See the whole journey</a>
+      <a class="btn-app btn-app--quiet" href="{% url 'app-setup-world' %}">Restart from setup</a>
+    </p>
+  </div>
+{% endif %}
+{% endblock %}

@@ -265,6 +265,40 @@ def handled(request):
         just_done=just_done, since=since, new_since=new_since,
     )
 
+
+def personal_catchup(request):
+    """Screen 12: "You were gone 6 hours." The lead reply, the rest by place, then the quiet."""
+    space, brief, now = _world(PERSONAL)
+    needs = list(ui.lane_items(brief, NEEDS_YOU))
+    for item in needs:
+        item.chips = ui.source_chips(item)
+        item.primary = ui.primary_action(item)
+    place_rows = ui.places(space, brief)
+    return _render_world(
+        request, "unopsis/app/personal_catchup.html", PERSONAL, "since", space, brief, now,
+        lead=needs[0] if needs else None,
+        rest=needs[1:],
+        want_reply=len(needs),
+        hours=ui.window_hours(brief),
+        place_count=len(place_rows),
+        quiet_places=[p for p in place_rows if not p["wants_you"]],
+        broken=_broken(space),
+    )
+
+
+def caught_up(request):
+    """Screen 13: the deliberate dead end -- what you did, and when the next read lands."""
+    space, brief, now = _world(PERSONAL)
+    done = (
+        brief.items.filter(state=HANDLED).order_by("handled_at")
+        if brief else BriefItem.objects.none()
+    )
+    return _render_world(
+        request, "unopsis/app/caught_up.html", PERSONAL, "caught-up", space, brief, now,
+        done=done,
+        work_next=ui.next_digest(ui.current_space(WORK), now),
+    )
+
 # ---- The POST endpoint behind every state-changing button ----------------------------------
 @require_POST
 def item_action(request, pk):
