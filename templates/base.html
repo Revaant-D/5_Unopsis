@@ -87,10 +87,12 @@
           <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
              href="{% url 'api-items' %}">JSON API</a>
         </li>
+        {% if user.is_authenticated %}
         <li class="nav-item ms-auto">
-          {# The product itself. Everything else in this bar is the course's "under the hood" view. #}
+          {# The product itself -- only once signed in. A visitor's way in is Sign in / Create account. #}
           <a class="nav-link nav-link--app" href="{% url 'app-work-brief' %}">Open the app &rarr;</a>
         </li>
+        {% endif %}
       </ul>
       {% endwith %}
     </div>

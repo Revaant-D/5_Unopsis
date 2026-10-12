@@ -11,7 +11,9 @@
   page with live matplotlib and Vega-Lite charts, a reports page with CSV/JSON exports, and a
   public JSON API that also checks deadlines against a live public-holiday calendar.
 - `/` is the product page for a visitor (a signed-in user goes straight to `/work/brief/`); the
-  course dashboard that used to be the home page is at `/under-the-hood/`.
+  course dashboard that used to be the home page is at `/under-the-hood/`. A visitor's only way
+  into the app is **Sign in** or **Create account**: the "Open the app" shortcuts appear only
+  once signed in.
 - **The app itself** -- the screens from the wireframes -- starts at `/work/brief/`; `/journey/`
   links every screen in order. See **The app (wireframe UI)** below.
 

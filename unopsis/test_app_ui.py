@@ -273,10 +273,19 @@ class ShellTests(TestCase):
         self.assertIn(f'href="{reverse("under-the-hood")}"', html)
         self.assertIn("Under the hood", html)
 
-    def test_course_pages_keep_their_own_layout_and_link_into_the_app(self):
+    def test_course_pages_keep_their_own_layout(self):
         response = self.client.get(reverse("brief-list"))
         self.assertTemplateNotUsed(response, "unopsis/app/shell.html")
-        self.assertContains(response, f'href="{reverse("app-work-brief")}"')
+
+    def test_open_the_app_is_only_offered_once_signed_in(self):
+        brief = f'href="{reverse("app-work-brief")}"'
+        signed_out = self.client.get(reverse("brief-list"))
+        self.assertNotContains(signed_out, "Open the app")
+        self.assertNotContains(signed_out, brief)
+        self.client.force_login(self.rows["work"].user)
+        signed_in = self.client.get(reverse("brief-list"))
+        self.assertContains(signed_in, "Open the app")
+        self.assertContains(signed_in, brief)
 
     def test_app_stylesheet_only_loads_inside_the_shell(self):
         from django.templatetags.static import static
@@ -744,11 +753,19 @@ class JourneyAndHomeTests(TestCase):
         self.assertIn(f'href="{reverse("app-work-focus", args=[self.rows["sow"].pk])}"', html)
         self.assertIn(f'href="{reverse("app-thread", args=["work", self.rows["sow"].pk])}"', html)
 
-    def test_home_hero_opens_the_app(self):
+    def test_a_visitor_can_only_sign_in_or_sign_up_from_home(self):
         response = self.client.get(reverse("home"))
-        self.assertContains(response, f'href="{reverse("app-work-brief")}"')
-        self.assertContains(response, f'href="{reverse("app-personal-catchup")}"')
-        self.assertContains(response, f'href="{reverse("app-journey")}"')
+        self.assertContains(response, f'href="{reverse("app-signup")}"')
+        self.assertContains(response, f'href="{reverse("app-login")}"')
+        for name in ("app-work-brief", "app-personal-catchup", "app-journey"):
+            with self.subTest(route=name):
+                self.assertNotContains(response, f'href="{reverse(name)}"')
+
+    def test_under_the_hood_links_into_the_app_only_when_signed_in(self):
+        brief = f'href="{reverse("app-work-brief")}"'
+        self.assertNotContains(self.client.get(reverse("under-the-hood")), brief)
+        self.client.force_login(self.rows["work"].user)
+        self.assertContains(self.client.get(reverse("under-the-hood")), brief)
 
 
 class EmptyJourneyTests(TestCase):

@@ -1,6 +1,7 @@
 {% comment %}
   The product page at "/" for someone who is not signed in. It is the wireframe's sign-up
-  pitch (It reads / It ranks / It writes) with the two ways in: an account, or the demo.
+  pitch (It reads / It ranks / It writes), and the only ways into the app from here are
+  Sign in and Create account -- no shortcut around them.
 {% endcomment %}
 <div class="panel mb-4">
   <h2 class="h3 mb-2">Know what happened, in one page a day.</h2>
@@ -34,13 +35,6 @@
       <p class="mb-0 text-muted">A short brief twice a day, in prose. Three things that need you; everything else folded into one line.</p>
     </div>
   </div>
-</div>
-
-<h3 class="section-title">Try it without an account</h3>
-<div class="d-flex flex-wrap gap-2 mb-4">
-  <a class="btn btn-accent" href="{% url 'app-work-brief' %}">Open today's brief</a>
-  <a class="btn btn-outline-secondary" href="{% url 'app-personal-catchup' %}">Personal catch-up</a>
-  <a class="btn btn-outline-secondary" href="{% url 'app-journey' %}">See the whole journey</a>
 </div>
 
 <p class="small text-muted">

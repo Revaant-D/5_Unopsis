@@ -586,4 +586,8 @@ Also done
   Both render unopsis/home.html (the A3 tests pin that template at "/"), which now just picks
   _landing.html or _dashboard.html. reverse("home") is still "/", so no {% url 'home' %} broke.
   inboxtriage/urls.py includes unopsis.app_urls BEFORE unopsis.urls so the landing wins "/".
-  Tests: 5 new (163 total, all passing).
+  No shortcut around sign-in: "Open the app" (nav), the landing's demo links and the dashboard's
+  "The app:" row show only when user.is_authenticated. A visitor gets Sign in / Create account
+  (still the static pages until A5, whose buttons continue into the app). This is also A5
+  Part 1.5 -- protected links hidden before login -- done ahead of time; no login code added.
+  Tests: 7 new (165 total, all passing).

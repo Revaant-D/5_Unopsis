@@ -13,13 +13,15 @@
     <a class="btn btn-accent" href="{% url 'insights' %}">Search &amp; insights</a>
     <a class="btn btn-outline-secondary" href="{% url 'item-list-cbv-generic' %}">All brief items</a>
   </div>
-  {# The product itself: the wireframe screens (unopsis/app_urls.py). #}
+  {# The product itself (unopsis/app_urls.py) -- only once signed in; a visitor signs in first. #}
+  {% if user.is_authenticated %}
   <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
     <small class="text-muted">The app:</small>
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'app-work-brief' %}">Open today's brief</a>
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'app-personal-catchup' %}">Personal catch-up</a>
     <a class="btn btn-sm btn-outline-secondary" href="{% url 'app-journey' %}">See the whole journey</a>
   </div>
+  {% endif %}
 </div>
 
 <!-- Totals straight off the ORM (one .count() each) -->
