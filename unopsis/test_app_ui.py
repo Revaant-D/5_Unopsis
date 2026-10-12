@@ -523,3 +523,52 @@ class EmptyWorkTests(TestCase):
                 response = self.client.get(reverse(name))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, "seed_demo")
+
+
+class FocusTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rows = build_two_worlds()
+
+    def get(self, item):
+        return self.client.get(reverse("app-work-focus", args=[item.pk]))
+
+    def test_position_why_and_navigation(self):
+        response = self.get(self.rows["sow"])
+        self.assertContains(response, "1 of 2")
+        self.assertContains(response, "Why this is number one")
+        self.assertContains(response, "A deadline today, and you are the only person who can unblock it.")
+        self.assertContains(response, f'href="{reverse("app-work-focus", args=[self.rows["payroll"].pk])}"')
+        self.assertContains(response, f'href="{reverse("app-thread", args=["work", self.rows["sow"].pk])}"')
+
+    def test_buttons_post_and_carry_keyboard_shortcuts(self):
+        html = self.get(self.rows["sow"]).content.decode()
+        for key in ('data-key="e"', 'data-key="s"', 'data-key="j"'):
+            self.assertIn(key, html)
+        self.assertIn('value="dismiss"', html)          # "Not important"
+        self.assertIn('Forward to legal', html)
+        self.assertIn('disabled', html)                 # secondary actions never send
+
+    def test_second_item_has_previous_but_no_next(self):
+        html = self.get(self.rows["payroll"]).content.decode()
+        self.assertIn("2 of 2", html)
+        self.assertIn('data-key="k"', html)
+        self.assertNotIn('data-key="j"', html)
+
+    def test_item_without_why_or_receipt_time_still_renders(self):
+        self.assertEqual(self.get(self.rows["payroll"]).status_code, 200)
+
+    def test_personal_items_are_not_found_under_work(self):
+        self.assertEqual(self.get(self.rows["mention"]).status_code, 404)
+
+    def test_missing_item_is_a_404(self):
+        self.assertEqual(self.client.get(reverse("app-work-focus", args=[99999])).status_code, 404)
+
+    def test_needs_you_redirects_to_the_first_open_item(self):
+        self.assertRedirects(self.client.get(reverse("app-work-needs-you")),
+                             reverse("app-work-focus", args=[self.rows["sow"].pk]))
+
+
+class EmptyFocusTests(TestCase):
+    def test_needs_you_falls_back_to_the_brief(self):
+        self.assertRedirects(self.client.get(reverse("app-work-needs-you")), reverse("app-work-brief"))

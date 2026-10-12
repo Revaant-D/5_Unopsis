@@ -162,6 +162,39 @@ def work_brief(request):
         snooze_to=ui.snooze_until(space, now),
     )
 
+
+def focus(request, pk):
+    """Screen 8: one Needs-you item on screen, with its place in the queue and J/K/E/S."""
+    item = get_object_or_404(
+        BriefItem.objects.select_related("brief__space", "primary_message")
+        .prefetch_related("messages__connection"),
+        pk=pk, brief__space__kind=WORK,
+    )
+    space, brief, now = item.brief.space, item.brief, timezone.now()
+    queue = list(ui.lane_items(brief, NEEDS_YOU).values_list("pk", flat=True))
+    index = queue.index(item.pk) if item.pk in queue else None
+    return _render_world(
+        request, "unopsis/app/focus.html", WORK, "needs-you", space, brief, now,
+        item=item,
+        chips=ui.source_chips(item),
+        queue=queue,
+        position=index + 1 if index is not None else None,
+        previous_pk=queue[index - 1] if index else None,
+        next_pk=queue[index + 1] if index is not None and index + 1 < len(queue) else None,
+        secondary=ui.secondary_actions(item),
+        since=min((m.sent_at for m in item.messages.all()), default=None),
+        snooze_to=ui.snooze_until(space, now),
+    )
+
+
+def needs_you(request):
+    """Sidebar "Needs you · N": the first open item, or the brief once none are left."""
+    _space, brief, _now = _world(WORK)
+    first = ui.lane_items(brief, NEEDS_YOU).first()
+    if first is None:
+        return redirect("app-work-brief")
+    return redirect("app-work-focus", pk=first.pk)
+
 # ---- The POST endpoint behind every state-changing button ----------------------------------
 @require_POST
 def item_action(request, pk):
