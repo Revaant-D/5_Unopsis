@@ -1,0 +1,43 @@
+{% comment %}
+  The product page at "/" for someone who is not signed in. It is the wireframe's sign-up
+  pitch (It reads / It ranks / It writes), and the only ways into the app from here are
+  Sign in and Create account -- no shortcut around them.
+{% endcomment %}
+<div class="panel mb-4">
+  <h2 class="h3 mb-2">Know what happened, in one page a day.</h2>
+  <p class="text-muted mb-3" style="max-width: 46rem">
+    Unopsis reads the places your messages arrive, works out what actually needs you, and writes
+    it up as one short page — with every line traceable to the real messages behind it. Work and
+    personal stay separate, and nothing is ever sent on your behalf.
+  </p>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-primary" href="{% url 'app-signup' %}">Create account</a>
+    <a class="btn btn-outline-secondary" href="{% url 'app-login' %}">Sign in</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-tile">
+      <h3 class="h5">It reads</h3>
+      <p class="mb-0 text-muted">Gmail, Outlook, Slack, WhatsApp Business — or Discord and your group chats. Read-only, revocable per source.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-tile">
+      <h3 class="h5">It ranks</h3>
+      <p class="mb-0 text-muted">By who is blocked and what has a deadline, using rules you set. The ranking is stored, so it reads the same every time.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-tile">
+      <h3 class="h5">It writes</h3>
+      <p class="mb-0 text-muted">A short brief twice a day, in prose. Three things that need you; everything else folded into one line.</p>
+    </div>
+  </div>
+</div>
+
+<p class="small text-muted">
+  Building or grading this project? The course pages — briefs, the four view kinds, search,
+  reports, charts and the JSON API — are <a href="{% url 'under-the-hood' %}">under the hood</a>.
+</p>

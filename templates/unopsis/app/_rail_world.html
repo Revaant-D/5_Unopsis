@@ -1,0 +1,60 @@
+{% load static app_ui %}
+<div class="rail-brand">
+  <img class="rail-logo" src="{% static 'img/unopsis-logo.svg' %}" alt="">
+  {% if world == 'work' %}Brief{% else %}Catch up{% endif %}
+  <span class="rail-day">{{ today|date:"D" }}</span>
+</div>
+<nav class="segmented" aria-label="Switch world">
+  <a href="{% url 'app-work-brief' %}" class="{% if world == 'work' %}is-on{% endif %}"
+     {% if world == 'work' %}aria-current="page"{% endif %}>Work</a>
+  <a href="{% url 'app-personal-catchup' %}" class="{% if world == 'personal' %}is-on{% endif %}"
+     {% if world == 'personal' %}aria-current="page"{% endif %}>Personal</a>
+</nav>
+<p class="rail-note">{% if world == 'work' %}Two worlds, never blended into one summary.{% else %}Different sources, different ranking.{% endif %}</p>
+
+{% if world == 'work' %}
+  <a class="rail-link {% if active == 'brief' %}is-active{% endif %}" href="{% url 'app-work-brief' %}">
+    <strong>Today's brief</strong><small>The one page: {{ needs_you_count }} thing{{ needs_you_count|pluralize }} ranked, in prose</small></a>
+  <a class="rail-link {% if active == 'needs-you' %}is-active{% endif %}" href="{% url 'app-work-needs-you' %}">
+    <strong>Needs you · {{ needs_you_count }}</strong><small>Open items only, one decision per screen</small></a>
+  <a class="rail-link {% if active == 'threads' %}is-active{% endif %}"
+     href="{% if first_needs_you %}{% url 'app-thread' 'work' first_needs_you.pk %}{% else %}{% url 'app-work-brief' %}{% endif %}">
+    <strong>Threads</strong><small>A topic in full: chronology, receipts, draft reply</small></a>
+  <a class="rail-link {% if active == 'handled' %}is-active{% endif %}" href="{% url 'app-work-handled' %}">
+    <strong>Handled today</strong><small>What you closed, and what is still waiting</small></a>
+  <hr>
+  <p class="rail-label">Digesting — click to change</p>
+  {% for row in connections %}
+    <a class="rail-source {% if row.broken %}is-broken{% endif %}" href="{% url 'app-setup-scope' %}">
+      <span class="tile">{{ row.connection|provider_letter }}</span>
+      <span>{% if row.broken %}{{ row.connection.get_provider_display }} · can't sync{% else %}{{ row.label }}{% endif %}</span>
+      {% if row.broken %}<span class="badge-alert" title="{{ row.connection.last_error }}">!</span>{% endif %}
+    </a>
+  {% empty %}
+    <p class="rail-note">No sources yet. <a href="{% url 'app-setup-sources' %}">Connect one</a>.</p>
+  {% endfor %}
+  <a class="rail-link mt-2" href="{% url 'app-setup-tuning' %}">
+    <strong>Tuning</strong><small>What counts as urgent, detail level, delivery times</small></a>
+{% else %}
+  <a class="rail-link {% if active == 'since' %}is-active{% endif %}" href="{% url 'app-personal-catchup' %}">
+    <strong>Since last visit</strong><small>Everything that happened while you were away, in order</small></a>
+  <a class="rail-link {% if active == 'caught-up' %}is-active{% endif %}" href="{% url 'app-personal-caught-up' %}">
+    <strong>Caught up</strong><small>The ending: what you did, and when the next one lands</small></a>
+  <hr>
+  <p class="rail-label">Your places — ranked by what wants you</p>
+  {% for place in places %}
+    <div class="rail-source">
+      <span class="avatar">{{ place.name|initials }}</span>
+      <span>{{ place.name }} · {{ place.messages }} msg{{ place.messages|pluralize }}</span>
+      {% if place.wants_you %}<span class="badge-count">{{ place.wants_you }}</span>{% endif %}
+    </div>
+  {% empty %}
+    <p class="rail-note">No places yet.</p>
+  {% endfor %}
+  {% for row in connections %}{% if row.broken %}
+    <div class="rail-source is-broken"><span class="tile">{{ row.connection|provider_letter }}</span>
+      <span>{{ row.connection.get_provider_display }} · can't sync</span><span class="badge-alert">!</span></div>
+  {% endif %}{% empty %}{% endfor %}
+  <a class="rail-link mt-2" href="{% url 'app-setup-tuning' %}">
+    <strong>Quiet hours</strong><small>When a catch-up may interrupt you, and when it may not</small></a>
+{% endif %}

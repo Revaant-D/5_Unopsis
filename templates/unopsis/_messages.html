@@ -1,0 +1,10 @@
+{# Flash messages: what a POST says back to the user after it redirects. Shared by base.html and the app shell. #}
+{% if messages %}
+  <div class="container">
+    {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

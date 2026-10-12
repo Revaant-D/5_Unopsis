@@ -1,0 +1,69 @@
+{% extends "unopsis/app/shell.html" %}
+{% comment %}
+  Screen 8 (docs/wireframes/v2/08-work-focus.png): one decision on screen at a time.
+  Keyboard (static/js/app.js): J next item, K previous, E done, S snooze -- each is an element
+  carrying data-key, so the shortcuts exist only where this page puts them.
+{% endcomment %}
+{% block title %}{{ item.title }}{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
+{% block topbar %}<span class="chip">focus mode</span>{% endblock %}
+
+{% block app_content %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <p class="mb-0">
+      {% if position %}
+        <span class="num" style="width:auto;padding:0 .4rem;background:var(--app-ink)">{{ position }} of {{ queue|length }}</span>
+        <span class="meta">things that need you</span>
+      {% else %}
+        <span class="chip">{{ item.get_state_display }}</span> <span class="meta">not in today's queue</span>
+      {% endif %}
+    </p>
+    <p class="d-flex align-items-center gap-2 mb-0">
+      {% for pk in queue %}<span aria-hidden="true" style="display:inline-block;width:{% if pk == item.pk %}40px{% else %}18px{% endif %};height:6px;border-radius:999px;background:{% if pk == item.pk %}var(--app-blue){% else %}var(--app-line){% endif %}"></span>{% empty %}{% endfor %}
+      <a class="btn-app btn-app--quiet" href="{% url 'app-work-brief' %}">← back to brief</a>
+    </p>
+  </div>
+
+  <div class="app-card" style="max-width: 860px">
+    <p class="d-flex flex-wrap align-items-center gap-2">
+      {% for chip in chips %}<span class="chip">{{ chip.label }}</span>{% empty %}<span class="meta">no receipts cited</span>{% endfor %}
+      {% if since %}<span class="meta ms-auto">since {{ since|time:"g:i A" }}</span>{% endif %}
+    </p>
+    <h1 class="h3">{{ item.title }}</h1>
+    <p>{{ item.summary }}</p>
+    {% if item.why %}
+      <div class="hint"><small>Why this is number one</small><p class="mb-0">{{ item.why }}</p></div>
+    {% endif %}
+    <hr>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <a class="btn-app btn-app--primary" href="{% url 'app-thread' 'work' item.pk %}">See the receipts &amp; reply</a>
+      {% for action in secondary %}
+        <button type="button" class="btn-app" disabled title="Unopsis is read-only — nothing is sent on your behalf">{{ action.label }}</button>
+      {% empty %}{% endfor %}
+      <form method="post" action="{% url 'app-item-action' item.pk %}" data-key="s">{% csrf_token %}
+        <input type="hidden" name="action" value="snooze">
+        <input type="hidden" name="return_to" value="next">
+        <button class="btn-app" type="submit" title="Back at {{ snooze_to|time:'g:i A' }}">Snooze</button>
+      </form>
+      <form method="post" action="{% url 'app-item-action' item.pk %}" class="ms-auto">{% csrf_token %}
+        <input type="hidden" name="action" value="dismiss">
+        <input type="hidden" name="return_to" value="next">
+        <button class="btn-app btn-app--quiet" type="submit">Not important →</button>
+      </form>
+    </div>
+  </div>
+
+  {# E = done. A form of its own, so the keyboard shortcut is a real POST with a CSRF token. #}
+  <form method="post" action="{% url 'app-item-action' item.pk %}" data-key="e" hidden>{% csrf_token %}
+    <input type="hidden" name="action" value="handle">
+    <input type="hidden" name="return_to" value="handled">
+  </form>
+  {% if next_pk %}<a data-key="j" href="{% url 'app-work-focus' next_pk %}" class="visually-hidden">Next item</a>{% endif %}
+  {% if previous_pk %}<a data-key="k" href="{% url 'app-work-focus' previous_pk %}" class="visually-hidden">Previous item</a>{% endif %}
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-5 meta">
+    <span><span class="kbd">J</span> <span class="kbd">K</span> move · <span class="kbd">E</span> done · <span class="kbd">S</span> snooze</span>
+    <span>one decision on screen at a time</span>
+  </div>
+{% endblock %}

@@ -28,10 +28,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&display=swap">
   <link rel="stylesheet" href="{% static 'css/unopsis.css' %}">
+  {% block extra_css %}{% endblock %}
   <link rel="icon" href="{% static 'img/unopsis-logo.svg' %}" type="image/svg+xml">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 
+{% block body %}
   <!-- Header -->
   <header class="site-header py-3">
     <div class="container d-flex align-items-center gap-3">
@@ -39,7 +41,7 @@
            alt="Unopsis logo: many inbound message lines collapsing into three ranked items">
       <div>
         <h1 class="h4 mb-0 brand-mark">
-          <a class="text-white text-decoration-none" href="{% url 'home' %}">Unopsis</a>
+          <a class="text-reset text-decoration-none" href="{% url 'home' %}">Unopsis</a>
         </h1>
         <p class="mb-0 small site-tagline">One view of everything that needs you. Team 5, INFO 490.</p>
       </div>
@@ -52,8 +54,13 @@
       {% with current=request.resolver_match.url_name %}
       <ul class="nav flex-wrap gap-1 py-2">
         <li class="nav-item">
-          <a class="nav-link {% if current == 'home' %}active{% endif %}"
+          <a class="nav-link {% if current == 'home' or current == 'app-landing' %}active{% endif %}"
              href="{% url 'home' %}">Home</a>
+        </li>
+        <li class="nav-item">
+          {# The course dashboard that used to be the home page. #}
+          <a class="nav-link {% if current == 'under-the-hood' %}active{% endif %}"
+             href="{% url 'under-the-hood' %}">Under the hood</a>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if current == 'brief-list' or current == 'brief-detail' %}active{% endif %}"
@@ -80,21 +87,19 @@
           <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
              href="{% url 'api-items' %}">JSON API</a>
         </li>
+        {% if user.is_authenticated %}
+        <li class="nav-item ms-auto">
+          {# The product itself -- only once signed in. A visitor's way in is Sign in / Create account. #}
+          <a class="nav-link nav-link--app" href="{% url 'app-work-brief' %}">Open the app &rarr;</a>
+        </li>
+        {% endif %}
       </ul>
       {% endwith %}
     </div>
   </nav>
 
   {# Flash messages: what a POST says back to the user after it redirects. #}
-  {% if messages %}
-    <div class="container">
-      {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+  {% include "unopsis/_messages.html" %}
 
   <!-- Main content: each page fills this block -->
   <main class="container mb-5">
@@ -107,10 +112,11 @@
   <footer class="site-footer py-3">
     <div class="container small text-center">
       5_Unopsis &middot; INFO 490 &middot; Team 5 &middot;
-      <a class="link-light" href="{% url 'insights' %}">Insights</a> &middot;
-      <a class="link-light" href="{% url 'api-items' %}">API</a>
+      <a class="link-secondary" href="{% url 'insights' %}">Insights</a> &middot;
+      <a class="link-secondary" href="{% url 'api-items' %}">API</a>
     </div>
   </footer>
+{% endblock %}
 
   {# A page-specific script hook, filled in by e.g. insights.html for its Vega-Lite charts; kept empty here so every other page pays nothing for it. #}
   {% block extra_js %}{% endblock %}

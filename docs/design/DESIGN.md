@@ -6,6 +6,10 @@ INFO 490 · Part 4 · Unopsis
 
 ## The spine
 
+![Unopsis ER diagram](unopsis-erd.png)
+
+*The ER diagram as an image; `unopsis-erd.xlsx` is the original workbook.*
+
 The whole schema is one chain, and every model earns its place by sitting on it:
 
 ```
@@ -26,17 +30,21 @@ of their life.
 
 ### Screen to model
 
+Numbered as in `docs/wireframes/v2/` (one image per screen, with the route each is served at).
+
 | Screen | Where it lives |
 |---|---|
-| 1 — pick a world | `Space` |
-| 2 — connect accounts | `Connection` |
-| 3 — choose channels | `Connection.included_scopes` |
-| 4 — tune it | `Space.rules` + the delivery fields + `Space.digest_times` |
-| 5 — generating | `Brief.steps` |
-| 6 / 9 / 10 — the brief | `Brief`, `BriefItem.lane`, `BriefItem.state` |
-| 7 — one item | `BriefItem` + `BriefItem.primary_message` |
-| 8 — receipts and reply | `BriefItem.messages` + `BriefItem.draft_body` |
-| 11 / 12 — personal | the same models with `Space.kind = "personal"` |
+| 1 — sign up / sign in | Django's `User` (Assignment 5) |
+| 2 — pick a world | `Space` |
+| 3 — connect accounts | `Connection` |
+| 4 — choose channels | `Connection.included_scopes` |
+| 5 — tune it | `Space.rules` + the delivery fields + `Space.digest_times` |
+| 6 / 11 — generating | `Brief.steps` |
+| 7 / 10 — the brief and the wrap-up | `Brief`, `BriefItem.lane`, `BriefItem.state` |
+| 8 — one item | `BriefItem` + `BriefItem.primary_message` |
+| 9 — receipts and reply | `BriefItem.messages` + `BriefItem.draft_body` |
+| 11 / 12 / 13 — personal | the same models with `Space.kind = "personal"` |
+| sync error (`v1/error_state.png`) | `Connection.status`, `last_error`, `last_synced_at` |
 
 ---
 

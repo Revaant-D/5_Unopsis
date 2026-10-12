@@ -1,0 +1,13 @@
+{# The sync-error state (docs/wireframes/v1/error_state.png). Needs `connection` and `world`. #}
+<section class="banner mb-4" data-dismissable role="alert">
+  <h2 class="h5 mb-1">{{ connection.get_provider_display }} couldn't be read this time.</h2>
+  <p class="mb-2">
+    {{ connection.last_error|default:"The provider refused the last sync." }}
+    This {% if world == 'work' %}brief{% else %}catch-up{% endif %} only covers the sources that answered,
+    so anything that arrived on {{ connection.get_provider_display }} may be missing.
+  </p>
+  <button type="button" class="btn-app btn-app--primary" disabled
+          title="Reconnecting needs sign-in, which arrives in Assignment 5">Reconnect {{ connection.get_provider_display }} →</button>
+  <button type="button" class="btn-app" data-dismiss>Keep reading without {{ connection.get_provider_display }}</button>
+  <span class="meta ms-2">Last good sync: {{ connection.last_synced_at|date:"D g:i A"|default:"never" }}</span>
+</section>

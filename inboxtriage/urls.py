@@ -19,5 +19,8 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # The wireframe UI first, so its "/" (the product page) wins over the course dashboard,
+    # which it re-homes at /under-the-hood/. See unopsis/app_urls.py.
+    path('', include('unopsis.app_urls')),
     path('', include('unopsis.urls')),   # all unopsis routes live in unopsis/urls.py
 ]
