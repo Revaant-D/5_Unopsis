@@ -434,3 +434,92 @@ class ItemActionTests(TestCase):
     def test_csrf_token_is_required(self):
         strict = Client(enforce_csrf_checks=True)
         self.assertEqual(strict.post(self.url, {"action": "handle"}).status_code, 403)
+
+
+APP_ROUTES += ["app-work-building", "app-work-brief", "app-personal-building"]
+
+
+class WorkBriefTests(TestCase):
+    def setUp(self):
+        self.rows = build_two_worlds()
+
+    def get(self):
+        return self.client.get(reverse("app-work-brief"))
+
+    def test_header_line_and_headline(self):
+        response = self.get()
+        self.assertContains(response, "Covers 14 hours · 212 messages · 2 sources")
+        self.assertContains(response, "Two things need you before noon.")
+        self.assertContains(response, "read time 90s")
+
+    def test_needs_you_items_in_rank_order_with_source_chips(self):
+        html = self.get().content.decode()
+        self.assertLess(html.index("Acme wants the revised SOW today"),
+                        html.index("Payroll cutoff moved to Wednesday"))
+        self.assertIn("Slack #acme · 2", html)
+        self.assertIn("Gmail · 1", html)
+        self.assertIn(f'href="{reverse("app-work-focus", args=[self.rows["sow"].pk])}"', html)
+
+    def test_first_item_offers_a_snooze_that_posts(self):
+        html = self.get().content.decode()
+        self.assertIn(f'action="{reverse("app-item-action", args=[self.rows["sow"].pk])}"', html)
+        self.assertIn('value="snooze"', html)
+        self.assertIn("csrfmiddlewaretoken", html)
+
+    def test_moving_section_and_quiet_line(self):
+        response = self.get()
+        self.assertContains(response, "Moving without you")
+        self.assertContains(response, "Design landed the pricing page")
+        self.assertContains(response, "208 messages needed nothing from you.")
+        self.assertContains(response, "Promotions suppressed")   # inside "Show anyway"
+
+    def test_sidebar(self):
+        response = self.get()
+        self.assertContains(response, "Needs you · 2")
+        self.assertContains(response, "Gmail · Inbox + Clients")
+        self.assertContains(response, "Slack · 3 channels")
+        self.assertContains(response, "quiet hours from 7 PM")
+
+    def test_healthy_work_space_has_no_error_banner(self):
+        self.assertNotContains(self.get(), "couldn't be read this time")
+
+    def test_a_broken_work_connection_shows_the_error_banner(self):
+        Connection.objects.filter(pk=self.rows["slack"].pk).update(
+            status=Connection.Status.ERROR, last_error="401 Unauthorized: token revoked.")
+        response = self.get()
+        self.assertContains(response, "Slack couldn't be read this time.")
+        self.assertContains(response, "Slack · can't sync")
+
+    def test_handled_items_leave_the_brief(self):
+        ui.apply_action(self.rows["sow"], "handle", timezone.now())
+        response = self.get()
+        self.assertContains(response, "Needs you · 1")
+        self.assertNotContains(response, "Slack #acme · 2")
+
+
+class BuildingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rows = build_two_worlds()
+
+    def test_work_building_replays_the_stored_steps_and_the_funnel(self):
+        response = self.client.get(reverse("app-work-building"))
+        self.assertContains(response, "Reading 14 hours for you.")
+        self.assertContains(response, "Pulled 212 messages from 2 sources")
+        self.assertContains(response, "212 messages → 18 topics → 2 things that need you")
+        self.assertContains(response, f'href="{reverse("app-work-brief")}"')
+        self.assertContains(response, "data-animate-steps")
+
+    def test_personal_building_points_at_the_catch_up(self):
+        response = self.client.get(reverse("app-personal-building"))
+        self.assertContains(response, "Reading 6 hours for you.")
+        self.assertContains(response, f'href="{reverse("app-personal-catchup")}"')
+
+
+class EmptyWorkTests(TestCase):
+    def test_brief_and_building_explain_the_emptiness(self):
+        for name in ("app-work-brief", "app-work-building", "app-personal-building"):
+            with self.subTest(route=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "seed_demo")

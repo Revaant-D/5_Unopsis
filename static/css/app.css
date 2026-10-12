@@ -22,6 +22,10 @@
 
 /* ---- 1. The frame ---------------------------------------------------------------------- */
 .app-body { background: var(--app-paper); color: var(--app-ink); }
+/* The wireframe's headings are a heavy sans, not unopsis.css's Fraunces serif. */
+.app-body h1, .app-body h2, .app-body h3, .app-body h4, .app-body h5, .app-body h6 {
+  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif; font-weight: 700; color: var(--app-ink);
+}
 .app-shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
 .app-rail {
   background: var(--app-rail); border-right: 1px solid var(--app-line);

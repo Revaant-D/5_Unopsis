@@ -23,7 +23,8 @@ from .app_forms import ItemActionForm
 from .models import BriefItem, Connection, Provider, Space
 
 WORK, PERSONAL = Space.Kind.WORK, Space.Kind.PERSONAL
-NEEDS_YOU = BriefItem.Lane.NEEDS_YOU
+NEEDS_YOU, MOVING, FYI = BriefItem.Lane.NEEDS_YOU, BriefItem.Lane.MOVING, BriefItem.Lane.FYI
+OPEN, HANDLED = BriefItem.State.OPEN, BriefItem.State.HANDLED
 
 
 def coming_soon(request, task="a later task", **kwargs):
@@ -105,6 +106,61 @@ def setup_tuning(request):
                   never=[r for r in rules if r.get("mode") == "never"],
                   digest_times=[t for t in times if t])
 
+
+# ---- Work and personal pages: shared plumbing ---------------------------------------------
+def _world(kind):
+    """(space, brief, now) for one side of the product."""
+    space = ui.current_space(kind)
+    return space, ui.latest_brief(space), timezone.now()
+
+
+def _render_world(request, template, kind, active, space, brief, now, **extra):
+    """Render a /work/ or /personal/ page with its sidebar context."""
+    context = {"active": active, "brief": brief, **ui.sidebar_context(kind, space, brief, now)}
+    context.update(extra)
+    return render(request, template, context)
+
+
+def _broken(space):
+    """The space's connections whose last sync failed -- each gets the error banner."""
+    return list(space.connections.filter(status=Connection.Status.ERROR)) if space else []
+
+
+def building(request, kind):
+    """Screens 6 and 11, "Reading 14 hours for you.": the stored Brief.steps, replayed."""
+    space, brief, now = _world(kind)
+    steps = [
+        {**step, "seconds": round(step.get("ms", 0) / 1000)}
+        for step in (brief.steps if brief else [])
+        if isinstance(step, dict)
+    ]
+    return _render_world(
+        request, "unopsis/app/building.html", kind, "brief" if kind == WORK else "since",
+        space, brief, now,
+        steps=steps,
+        hours=ui.window_hours(brief),
+        needs_count=ui.lane_items(brief, NEEDS_YOU).count(),
+        moving_count=ui.lane_items(brief, MOVING).count(),
+    )
+
+
+def work_brief(request):
+    """Screen 7, today's brief: Needs-you in rank order, then Moving, then what was folded away."""
+    space, brief, now = _world(WORK)
+    needs = list(ui.lane_items(brief, NEEDS_YOU))
+    for item in needs:
+        item.chips = ui.source_chips(item)
+    return _render_world(
+        request, "unopsis/app/work_brief.html", WORK, "brief", space, brief, now,
+        needs=needs,
+        moving=ui.lane_items(brief, MOVING, states=(OPEN, HANDLED)),
+        fyi=ui.lane_items(brief, FYI, states=(OPEN, HANDLED)),
+        hours=ui.window_hours(brief),
+        source_count=space.connections.count() if space else 0,
+        quiet_count=ui.quiet_message_count(brief),
+        broken=_broken(space),
+        snooze_to=ui.snooze_until(space, now),
+    )
 
 # ---- The POST endpoint behind every state-changing button ----------------------------------
 @require_POST

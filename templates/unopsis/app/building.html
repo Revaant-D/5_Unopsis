@@ -1,0 +1,44 @@
+{% extends "unopsis/app/shell.html" %}
+{% comment %}
+  Screens 6 and 11 (docs/wireframes/v2/06-work-building.png, 11-personal-building.png): the
+  first run. The steps are Brief.steps as stored, rendered as done; app.js replays them one by
+  one unless the visitor prefers reduced motion. The funnel line is what makes the short
+  answer on the next page believable.
+{% endcomment %}
+{% block title %}{% if world == 'work' %}Building your brief{% else %}Building your catch-up{% endif %}{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
+{% block topbar %}{% if steps %}<span class="chip">first run · ~{{ steps|length }}0s</span>{% endif %}{% endblock %}
+
+{% block app_content %}
+{% if not brief %}
+  <h1 class="page-title">Nothing to read yet.</h1>
+  <p class="page-sub">There is no {% if world == 'work' %}work brief{% else %}personal catch-up{% endif %} to build from.
+    Load the demo data with <code>python manage.py seed_demo</code>.</p>
+{% else %}
+  <h1 class="page-title">Reading {{ hours }} hours for you.</h1>
+  {% if world == 'work' %}
+    <p class="page-sub">After this first run it's ready before you open the tab — the sidebar switches from setup to your daily brief.</p>
+  {% else %}
+    <p class="page-sub">After this first run it's ready the moment you come back — the sidebar switches from setup to your catch-up.</p>
+  {% endif %}
+
+  <div class="app-card my-4" style="max-width: 560px">
+    <ol class="build-steps" data-animate-steps>
+      {% for step in steps %}
+        <li class="is-done"><span class="check" aria-hidden="true">✓</span> {{ step.label }} <span class="meta">{{ step.seconds }}s</span></li>
+      {% empty %}
+        <li class="is-done"><span class="check" aria-hidden="true">✓</span> Read and ranked</li>
+      {% endfor %}
+    </ol>
+    <div class="progress-thin my-3"><span data-progress style="width:100%"></span></div>
+    <p class="meta mb-0">{{ brief.message_count }} messages → {{ brief.topic_count }} topics → {{ needs_count }} things that need you. {{ moving_count }} moving, the rest folded away.</p>
+  </div>
+
+  {% if world == 'work' %}
+    <a class="btn-app btn-app--primary" href="{% url 'app-work-brief' %}">Open my brief</a>
+  {% else %}
+    <a class="btn-app btn-app--primary" href="{% url 'app-personal-catchup' %}">Open my catch-up</a>
+  {% endif %}
+{% endif %}
+{% endblock %}

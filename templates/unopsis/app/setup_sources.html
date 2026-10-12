@@ -15,12 +15,11 @@
             <span class="tile">{{ tile.label|provider_letter }}</span>
             <strong>{{ tile.label }}</strong>
             {% if connection.status == 'connected' %}<span class="chip chip--on ms-auto">connected</span>{% endif %}
-            {% if connection.space.kind == 'personal' %}<span class="chip ms-auto">personal side</span>{% endif %}
           </div>
           {% if connection.status == 'error' %}
-            <p class="small mb-0" style="color: var(--app-alert)">can't sync — {{ connection.last_error|default:"the provider refused the last sync" }}</p>
+            <p class="small mb-0" style="color: var(--app-alert)">{% if connection.space.kind == 'personal' %}personal side · {% endif %}can't sync — {{ connection.last_error|default:"the provider refused the last sync" }}</p>
           {% elif connection %}
-            <p class="meta mb-0">{{ connection.external_account }}{% if connection.last_synced_at %} · synced {{ connection.last_synced_at|timesince }} ago{% endif %}</p>
+            <p class="meta mb-0">{% if connection.space.kind == 'personal' %}personal side · {% endif %}{{ connection.external_account }}{% if connection.last_synced_at %} · synced {{ connection.last_synced_at|timesince }} ago{% endif %}</p>
           {% else %}
             <button type="button" class="btn-app btn-app--quiet" disabled
                     title="Connecting accounts needs sign-in, which arrives in Assignment 5">Connect</button>
