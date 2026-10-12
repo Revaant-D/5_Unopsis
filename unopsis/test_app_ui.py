@@ -250,3 +250,75 @@ class TemplateFilterTests(TestCase):
         self.assertEqual(provider_letter(Connection(provider="whatsapp_business")), "W")
         self.assertEqual(provider_letter("Gmail"), "G")
         self.assertEqual(provider_letter(None), "·")
+
+
+APP_ROUTES += ["app-signup", "app-login"]
+
+
+class ShellTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rows = build_two_worlds()
+
+    def test_every_app_page_renders_inside_the_shell_and_base(self):
+        for name in APP_ROUTES:
+            with self.subTest(route=name):
+                response = self.client.get(reverse(name))
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "unopsis/app/shell.html")
+                self.assertTemplateUsed(response, "base.html")
+
+    def test_shell_links_back_to_the_course_pages(self):
+        html = self.client.get(reverse("app-signup")).content.decode()
+        self.assertIn(f'href="{reverse("home")}"', html)
+        self.assertIn("Under the hood", html)
+
+    def test_course_pages_keep_their_own_layout_and_link_into_the_app(self):
+        response = self.client.get(reverse("brief-list"))
+        self.assertTemplateNotUsed(response, "unopsis/app/shell.html")
+        self.assertContains(response, f'href="{reverse("app-work-brief")}"')
+
+    def test_app_stylesheet_only_loads_inside_the_shell(self):
+        from django.templatetags.static import static
+        self.assertContains(self.client.get(reverse("app-signup")), static("css/app.css"))
+        self.assertNotContains(self.client.get(reverse("home")), static("css/app.css"))
+
+
+class AuthScreenTests(TestCase):
+    """A5 Part 1 wins over the wireframe: two separate pages, Django-shaped fields, Google only."""
+
+    def test_login_and_signup_are_separate_pages(self):
+        for name, active, heading in (
+            ("app-signup", "Create account", "Know what happened, in one page a day."),
+            ("app-login", "Sign in", "Welcome back."),
+        ):
+            with self.subTest(route=name):
+                response = self.client.get(reverse(name))
+                self.assertTemplateUsed(response, "unopsis/app/auth.html")
+                self.assertContains(response, heading)
+                self.assertContains(response, f'aria-current="page">{active}<')
+
+    def test_fields_follow_django_auth_not_the_wireframe(self):
+        login = self.client.get(reverse("app-login")).content.decode()
+        signup = self.client.get(reverse("app-signup")).content.decode()
+        self.assertIn(">Username<", login)
+        self.assertIn(">Password<", login)
+        self.assertNotIn("Work email", login + signup)
+        for label in (">Username<", ">Email<", ">Password<", ">Confirm password<"):
+            self.assertIn(label, signup)
+
+    def test_auth_pages_submit_nothing(self):
+        for name in ("app-signup", "app-login"):
+            with self.subTest(route=name):
+                html = self.client.get(reverse(name)).content.decode()
+                self.assertNotIn('method="post"', html)
+                self.assertNotIn("name=", html.split("<main", 1)[1])   # no named inputs in the page
+
+    def test_google_button_on_both_pages_disabled_until_a5_and_no_microsoft(self):
+        for name in ("app-signup", "app-login"):
+            with self.subTest(route=name):
+                html = self.client.get(reverse(name)).content.decode()
+                self.assertIn("Continue with Google", html)
+                self.assertIn("disabled", html)
+                self.assertNotIn("Microsoft", html)
+                self.assertNotIn("Digest", html)   # discrepancy 1: the brand is Unopsis

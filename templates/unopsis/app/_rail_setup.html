@@ -1,0 +1,15 @@
+{% load static %}
+<div class="rail-brand"><img class="rail-logo" src="{% static 'img/unopsis-logo.svg' %}" alt=""> Setting up</div>
+<p class="rail-note">Four pages, once. Each one feeds the next.</p>
+{% for number, title, blurb, route in steps %}
+  <a class="step {% if number == step %}is-active{% endif %}" href="{% url route %}"
+     {% if number == step %}aria-current="step"{% endif %}>
+    <strong>{{ number }} · {{ title }}</strong><small class="d-block rail-note mb-0">{{ blurb }}</small>
+  </a>
+{% empty %}
+  <p class="rail-note">No setup steps.</p>
+{% endfor %}
+<hr>
+<p class="rail-label">Then</p>
+<a class="step" href="{% url 'app-work-building' %}"><strong>First brief</strong>
+  <small class="d-block rail-note mb-0">Built once, then ready before you open the tab</small></a>

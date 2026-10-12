@@ -20,4 +20,5 @@ from django.urls import include, path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('unopsis.urls')),   # all unopsis routes live in unopsis/urls.py
+    path('', include('unopsis.app_urls')),   # the wireframe UI; see unopsis/app_urls.py
 ]

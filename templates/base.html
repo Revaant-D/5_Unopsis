@@ -28,10 +28,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&display=swap">
   <link rel="stylesheet" href="{% static 'css/unopsis.css' %}">
+  {% block extra_css %}{% endblock %}
   <link rel="icon" href="{% static 'img/unopsis-logo.svg' %}" type="image/svg+xml">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 
+{% block body %}
   <!-- Header -->
   <header class="site-header py-3">
     <div class="container d-flex align-items-center gap-3">
@@ -80,21 +82,17 @@
           <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
              href="{% url 'api-items' %}">JSON API</a>
         </li>
+        <li class="nav-item ms-auto">
+          {# The product itself. Everything else in this bar is the course's "under the hood" view. #}
+          <a class="nav-link nav-link--app" href="{% url 'app-work-brief' %}">Open the app &rarr;</a>
+        </li>
       </ul>
       {% endwith %}
     </div>
   </nav>
 
   {# Flash messages: what a POST says back to the user after it redirects. #}
-  {% if messages %}
-    <div class="container">
-      {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} py-2">
-          {{ message }}
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+  {% include "unopsis/_messages.html" %}
 
   <!-- Main content: each page fills this block -->
   <main class="container mb-5">
@@ -111,6 +109,7 @@
       <a class="link-light" href="{% url 'api-items' %}">API</a>
     </div>
   </footer>
+{% endblock %}
 
   {# A page-specific script hook, filled in by e.g. insights.html for its Vega-Lite charts; kept empty here so every other page pays nothing for it. #}
   {% block extra_js %}{% endblock %}

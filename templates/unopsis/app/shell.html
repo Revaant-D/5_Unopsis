@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  The frame of every wireframe screen (docs/wireframes/v2): a left rail, a thin top bar and the
+  page. Extends base.html, so the <head>, Bootstrap, unopsis.css and the flash messages are
+  shared with the course pages; it swaps only the body layout.
+
+  Children fill: title, rail, rail_foot (optional), topbar (optional), app_content.
+{% endcomment %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/app.css' %}">{% endblock %}
+{% block body_class %}app-body{% endblock %}
+
+{% block body %}
+<div class="app-shell">
+  <aside class="app-rail" aria-label="Sidebar">
+    {% block rail %}{% endblock %}
+    <div class="app-rail__foot">
+      {% block rail_foot %}{% endblock %}
+      <a class="app-rail__under" href="{% url 'home' %}">Under the hood &rarr;</a>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-topbar">
+      {% block topbar %}{% endblock %}
+      <a class="chip" href="{% url 'app-login' %}">Sign in / Sign up</a>
+    </header>
+    {% include "unopsis/_messages.html" %}
+    <main class="app-content">
+      {% block app_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script src="{% static 'js/app.js' %}" defer></script>
+{% endblock %}

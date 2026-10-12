@@ -1,0 +1,4 @@
+<p class="hint small mb-0">
+  {% if next_digest %}Next brief {{ next_digest|time:"g:i A" }}{% else %}Briefs build on demand{% endif %}
+  {% if space.quiet_start %}· quiet hours from {{ space.quiet_start|time:"g A" }}{% endif %}
+</p>

@@ -1,0 +1,129 @@
+/* =======================================================================================
+   app.css -- the wireframe UI (templates/unopsis/app/). Loaded only by shell.html, on top of
+   Bootstrap and unopsis.css, so the course pages pay nothing for it.
+
+   Read off docs/wireframes/v2: warm paper, a cream left rail, black for "selected", one blue
+   for the action you are meant to take, dashed boxes for asides, pills for metadata.
+   ======================================================================================= */
+
+:root {
+  --app-paper: #fbfaf7;
+  --app-rail: #f6f3ee;
+  --app-ink: #1b1b1b;
+  --app-ink-soft: #6b665e;
+  --app-line: #e4dfd6;
+  --app-selected: #ebe6dc;
+  --app-blue: #2b7bd8;
+  --app-blue-deep: #1f63b4;
+  --app-alert: #c0392b;
+  --app-alert-soft: #fbeceb;
+  --app-radius: 12px;
+}
+
+/* ---- 1. The frame ---------------------------------------------------------------------- */
+.app-body { background: var(--app-paper); color: var(--app-ink); }
+.app-shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+.app-rail {
+  background: var(--app-rail); border-right: 1px solid var(--app-line);
+  padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: .3rem;
+}
+.app-rail__foot { margin-top: auto; display: grid; gap: .6rem; padding-top: 1rem; }
+.app-rail__under { font-size: .8rem; color: var(--app-ink-soft); }
+.app-main { display: flex; flex-direction: column; min-width: 0; }
+.app-topbar { display: flex; justify-content: flex-end; align-items: center; gap: .5rem; padding: .75rem 1.5rem; }
+.app-content { padding: .5rem 2rem 3rem; max-width: 1120px; width: 100%; }
+
+/* ---- 2. Rail pieces -------------------------------------------------------------------- */
+.rail-brand { display: flex; align-items: center; gap: .6rem; font-weight: 700; margin-bottom: .4rem; }
+.rail-logo { width: 28px; height: 28px; }
+.rail-day { margin-left: auto; font-size: .8rem; font-weight: 400; color: var(--app-ink-soft); }
+.rail-note, .rail-label { font-size: .8rem; color: var(--app-ink-soft); margin: .25rem 0 .5rem; }
+.rail-link, .step {
+  display: block; padding: .55rem .7rem; border-radius: 10px; border: 1px solid transparent;
+  color: var(--app-ink); text-decoration: none;
+}
+.rail-link small { display: block; color: var(--app-ink-soft); font-size: .75rem; }
+.rail-link:hover, .step:hover { background: var(--app-selected); color: var(--app-ink); }
+.rail-link.is-active, .step.is-active { background: var(--app-selected); border-color: #cfc8bb; }
+.rail-source {
+  display: flex; align-items: center; gap: .6rem; padding: .3rem .2rem;
+  font-size: .85rem; color: var(--app-ink-soft); text-decoration: none;
+}
+.rail-source.is-broken { color: var(--app-alert); }
+
+/* ---- 3. Small marks -------------------------------------------------------------------- */
+.tile {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none;
+  border: 1.5px solid var(--app-ink); border-radius: 6px; font-size: .7rem; font-weight: 700; color: var(--app-ink);
+}
+.is-broken .tile { border-color: var(--app-alert); color: var(--app-alert); }
+.avatar {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%;
+  border: 1.5px solid #8a8378; background: #f1ede6; font-size: .68rem; font-weight: 700;
+}
+.badge-alert {
+  margin-left: auto; display: inline-grid; place-items: center; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--app-alert); color: #fff; font-size: .7rem;
+}
+.badge-count { margin-left: auto; background: var(--app-blue); color: #fff; border-radius: 6px; padding: 0 .4rem; font-size: .72rem; }
+.num {
+  display: inline-grid; place-items: center; width: 22px; height: 20px; border-radius: 4px;
+  background: var(--app-blue); color: #fff; font-size: .75rem; font-weight: 700; vertical-align: middle;
+}
+.check {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 4px;
+  background: var(--app-ink); color: #fff; font-size: .7rem;
+}
+.is-done .check { background: var(--app-blue); }
+.kbd {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 .3rem;
+  border: 1px solid #bdb6aa; border-radius: 5px; font-size: .72rem;
+}
+
+/* ---- 4. Controls ----------------------------------------------------------------------- */
+.segmented { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--app-ink); border-radius: 8px; overflow: hidden; }
+.segmented a { text-align: center; padding: .35rem; font-size: .85rem; color: var(--app-ink); text-decoration: none; }
+.segmented a.is-on { background: var(--app-ink); color: #fff; }
+.chip {
+  display: inline-flex; align-items: center; gap: .3rem; border: 1px solid #bdb6aa; border-radius: 999px;
+  padding: .1rem .65rem; font-size: .8rem; color: var(--app-ink); background: #fff; text-decoration: none;
+}
+.chip--on { border-color: var(--app-blue); color: var(--app-blue); }
+.chip--add { border-style: dashed; color: var(--app-ink-soft); }
+.btn-app {
+  display: inline-flex; align-items: center; justify-content: center; gap: .35rem; border-radius: 8px;
+  padding: .45rem .9rem; font-weight: 600; font-size: .9rem; border: 1.5px solid var(--app-ink);
+  background: #fff; color: var(--app-ink); text-decoration: none; cursor: pointer;
+}
+.btn-app--primary { background: var(--app-blue); border-color: var(--app-blue); color: #fff; }
+.btn-app--primary:hover { background: var(--app-blue-deep); border-color: var(--app-blue-deep); color: #fff; }
+.btn-app--quiet { border-color: #bdb6aa; color: var(--app-ink-soft); }
+.btn-app:disabled, .btn-app[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.app-body a:focus-visible, .app-body button:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 2px; }
+
+/* ---- 5. Blocks ------------------------------------------------------------------------- */
+.page-title { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 0 0 .35rem; }
+.page-sub { color: var(--app-ink-soft); max-width: 36rem; }
+.meta { color: var(--app-ink-soft); font-size: .85rem; }
+.app-card { background: #fff; border: 1.5px solid var(--app-ink); border-radius: var(--app-radius); padding: 1.25rem; }
+.app-card--selected { border-color: var(--app-blue); }
+.app-card--muted { border-style: dashed; border-color: #bdb6aa; }
+.hint { border: 1.5px dashed #bdb6aa; border-radius: var(--app-radius); padding: .9rem 1.1rem; color: var(--app-ink-soft); }
+.list-row { display: flex; align-items: center; gap: .75rem; padding: .7rem 0; border-bottom: 1px solid var(--app-line); }
+.list-row time { margin-left: auto; color: var(--app-ink-soft); font-size: .8rem; }
+.banner { border: 1.5px solid var(--app-alert); background: var(--app-alert-soft); border-radius: var(--app-radius); padding: 1.1rem 1.25rem; }
+.progress-thin { height: 5px; background: var(--app-line); border-radius: 999px; overflow: hidden; }
+.progress-thin > span { display: block; height: 100%; background: var(--app-blue); transition: width .3s ease; }
+.build-steps { list-style: none; padding: 0; margin: 0; }
+.build-steps li { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; }
+.build-steps li .meta { margin-left: auto; }
+.table-app { width: 100%; border: 1.5px solid var(--app-ink); border-radius: var(--app-radius); border-collapse: separate; overflow: hidden; }
+.table-app caption { caption-side: top; background: #f1ede6; padding: .5rem 1rem; color: var(--app-ink); font-size: .85rem; }
+
+/* ---- 6. Small screens: the rail stacks above the page --------------------------------- */
+@media (max-width: 767.98px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .app-rail { border-right: 0; border-bottom: 1px solid var(--app-line); }
+  .app-content { padding: .5rem 1rem 2rem; }
+  .page-title { font-size: 1.6rem; }
+}
