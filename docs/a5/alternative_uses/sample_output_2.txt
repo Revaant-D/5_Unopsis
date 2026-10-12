@@ -1,0 +1,37 @@
+$ export UNOPSIS_API=http://127.0.0.1:8899     # the local dev server; drop this line to use the default http://127.0.0.1:8000
+$ python 02_csv_for_spreadsheets.py
+
+Fetched  http://127.0.0.1:8899/api/insights/items-by-lane/
+Wrote    unopsis_lane_counts.csv  (3 data rows + 1 header, as of 2026-10-12 19:11 UTC)
+
+File contents:
+----------------------------------------------
+lane,label,total
+needs_you,Needs you,5
+moving,Moving without you,1
+fyi,FYI,1
+----------------------------------------------
+
+1. EXCEL / NUMBERS -- open the file directly.
+   File > Open, pick the .csv. Columns A-C are lane, label, total; select B:C and
+   Insert > Chart to get the same bar chart the Vega-Lite spec draws.
+
+2. GOOGLE SHEETS, LIVE -- paste this into Extensions > Apps Script, save, then put
+   =UNOPSIS_LANES() in a cell. It reads the public JSON feed directly, so the sheet
+   refreshes from production instead of from a file somebody re-uploaded in March:
+
+       function UNOPSIS_LANES() {
+         var url = "https://<your-pythonanywhere-domain>/api/insights/items-by-lane/";
+         var rows = JSON.parse(UrlFetchApp.fetch(url).getContentText());
+         return [["lane", "label", "total"]].concat(
+           rows.map(function (r) { return [r.lane, r.label, r.total]; }));
+       }
+
+3. GOOGLE SHEETS, =IMPORTDATA() -- worth knowing why it does NOT work here, because
+   it is the first thing everyone tries. IMPORTDATA parses CSV and HTML, never JSON,
+   and the project's CSV endpoint /api/items.csv is one of the ones Assignment 5 put
+   behind a login, so Sheets receives the login page and shows you HTML. Use the
+   Apps Script above for live data, or File > Import > Upload this .csv for a frozen
+   snapshot.
+
+[exit status: 0]

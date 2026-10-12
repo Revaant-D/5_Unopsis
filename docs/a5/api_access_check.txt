@@ -1,0 +1,113 @@
+=======================================================================================
+ Assignment 5, Part 3.1 -- the public endpoint, and the contrast with every other one
+=======================================================================================
+ Produced by actually calling a running server with curl, not by reading the source.
+ Locally the server was on 127.0.0.1:8899; on the deployed site run the same commands
+ against https://<your-pythonanywhere-domain> and the status codes must be identical.
+
+ -w '%{http_code}' prints the status of the FIRST response, and that matters here. A
+ protected endpoint answers 302 and curl without -L stops there. WITH -L it follows the
+ redirect to /accounts/login/ and prints 200 for an HTML login page -- which reads at a
+ glance like the endpoint is still open when it is not. Anyone checking this with curl
+ should check it the way it is checked below.
+
+---------------------------------------------------------------------------------------
+ 1. THE ONE PUBLIC ENDPOINT, requested with no cookie and no credentials
+---------------------------------------------------------------------------------------
+$ curl -s -D - http://127.0.0.1:8899/api/insights/items-by-lane/
+HTTP/1.1 200 OK
+Date: Mon, 12 Oct 2026 19:16:20 GMT
+Server: WSGIServer/0.2 CPython/3.14.6
+Content-Type: application/json
+Access-Control-Allow-Origin: *
+X-Frame-Options: DENY
+Content-Length: 221
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin
+
+[
+  {
+    "lane": "needs_you",
+    "label": "Needs you",
+    "total": 5
+  },
+  {
+    "lane": "moving",
+    "label": "Moving without you",
+    "total": 1
+  },
+  {
+    "lane": "fyi",
+    "label": "FYI",
+    "total": 1
+  }
+]
+ Three things to note about that response:
+   * Content-Type: application/json -- clean JSON. No HTML, no wrapper, no debug output.
+   * Access-Control-Allow-Origin: * -- which is what lets the Vega-Lite editor, which
+     lives on another origin (vega.github.io), read it at all.
+   * The body is a BARE ARRAY of {lane, label, total}: aggregate counts, plus labels that
+     come from BriefItem.Lane.choices in code. No title, summary, message body, person,
+     handle or timestamp -- nothing anybody typed. And it is backed by the real database:
+     those numbers are a GROUP BY lane over the BriefItem table (views.items_by_lane_rows),
+     which unopsis/tests.py proves by adding a row and watching the count move.
+
+ Because the top level is a bare array, a Vega-Lite spec needs no
+ "format": {"property": ...} clause. If it were {"results": [...]}, every spec pointed at
+ it would need one and would otherwise draw an empty chart.
+
+---------------------------------------------------------------------------------------
+ 2. EVERY OTHER ENDPOINT, same anonymous client: 302 to the login page
+---------------------------------------------------------------------------------------
+STATUS   URL                                    REDIRECTED TO
+302      /api/items/                            /accounts/login/?next=/api/items/
+302      /api/items/cbv/                        /accounts/login/?next=/api/items/cbv/
+302      /api/insights/                         /accounts/login/?next=/api/insights/
+302      /api/insights/messages-by-hour/        /accounts/login/?next=/api/insights/messages-by-hour/
+302      /api/items.txt                         /accounts/login/?next=/api/items.txt
+302      /api/items.csv                         /accounts/login/?next=/api/items.csv
+302      /api/deadlines/holidays/               /accounts/login/?next=/api/deadlines/holidays/
+302      /export/brief-items.csv                /accounts/login/?next=/export/brief-items.csv
+302      /export/brief-items.json               /accounts/login/?next=/export/brief-items.json
+302      /vega-lite/chart1.json                 /accounts/login/?next=/vega-lite/chart1.json
+302      /vega-lite/chart1.png                  /accounts/login/?next=/vega-lite/chart1.png
+302      /briefs/                               /accounts/login/?next=/briefs/
+302      /items/manual/                         /accounts/login/?next=/items/manual/
+302      /items/1/                              /accounts/login/?next=/items/1/
+302      /insights/                             /accounts/login/?next=/insights/
+302      /insights/lanes.png                    /accounts/login/?next=/insights/lanes.png
+302      /reports/                              /accounts/login/?next=/reports/
+
+ Note which two are in that list. /api/insights/ and /api/insights/messages-by-hour/ both
+ return counts and no free text, so both look as harmless as the public feed -- and both
+ are protected on purpose. The first is a day-by-day activity timeline plus the list of
+ providers the user has connected; the second is an hour-by-hour record of when one
+ person's messages arrive, which also says when they are asleep. Counts ABOUT A PERSON are
+ still about that person. "Exactly one public API" is only true because those two are shut.
+
+---------------------------------------------------------------------------------------
+ 3. THE THREE PAGES THAT MUST STAY REACHABLE LOGGED OUT
+---------------------------------------------------------------------------------------
+STATUS   URL
+200      /
+200      /accounts/login/
+200      /accounts/signup/
+
+ A login page behind a login is a locked door with the key inside, so those two are open by
+ necessity. / is open by judgement: it is the front door and it carries the Log in and Sign
+ up buttons, so a login_required there would bounce a first-time visitor straight to the
+ login page and make the deployed site look broken. The protection on / is in the template
+ instead -- templates/unopsis/home.html hides every headline, item title and row count
+ behind {% if user.is_authenticated %}, and templates/base.html hides the nav links.
+
+---------------------------------------------------------------------------------------
+ HOW THIS IS KEPT TRUE
+---------------------------------------------------------------------------------------
+ A transcript goes stale. unopsis/tests.py asserts the same thing on every run:
+   * AuthenticationTests.test_exactly_one_api_endpoint_is_public COUNTS the open doors
+     rather than trusting that nobody added one, and fails if a second endpoint opens.
+   * PublicApiSubmissionTests checks that the feed is a bare array of exactly
+     {lane, label, total}, that the count moves when a row is added, and that the field
+     names in docs/a5/vega_lite_chart.txt are real keys of it -- because a field name that
+     does not exist renders an EMPTY chart with no error anywhere.
