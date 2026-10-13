@@ -6,7 +6,7 @@ it comes from the `UNOPSIS_API` environment variable at run time.
 
 | File | What it is |
 | --- | --- |
-| [`vega_lite_chart.txt`](vega_lite_chart.txt) | **3.2 / 3.3** — the Vega-Lite spec to paste into the editor. Two blocks: a production one with a `<your-pythonanywhere-domain>` placeholder, and a localhost one that runs as-is. |
+| [`vega_lite_chart.txt`](vega_lite_chart.txt) | **3.2 / 3.3** — the Vega-Lite spec to paste into the editor. Two blocks: a production one with a `joys3.pythonanywhere.com` placeholder, and a localhost one that runs as-is. |
 | [`api_access_check.txt`](api_access_check.txt) | **3.1** — a real curl transcript: the public endpoint answering 200 with clean JSON, and seventeen other routes answering 302 to the login page. |
 | [`alternative_uses/`](alternative_uses/) | **3.4** — three standalone programs, their real stdout, and a README explaining each one. |
 | [`screenshots/`](screenshots/) | The capture checklist for **all** of A5 — sixteen shots, each tied to the requirement it evidences. The images themselves are the last deployment step; none of them can be produced from a checkout. |
