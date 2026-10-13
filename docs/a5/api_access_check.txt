@@ -3,7 +3,7 @@
 =======================================================================================
  Produced by actually calling a running server with curl, not by reading the source.
  Locally the server was on 127.0.0.1:8899; on the deployed site run the same commands
- against https://<your-pythonanywhere-domain> and the status codes must be identical.
+ against https://joys3.pythonanywhere.com and the status codes must be identical.
 
  -w '%{http_code}' prints the status of the FIRST response, and that matters here. A
  protected endpoint answers 302 and curl without -L stops there. WITH -L it follows the

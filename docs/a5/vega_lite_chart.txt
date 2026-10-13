@@ -11,7 +11,7 @@
     make the editor report a parse error on line 1.
  3. In block A, replace the single placeholder
 
-        <your-pythonanywhere-domain>
+        joys3.pythonanywhere.com
 
     with the real deployed host, so that data.url reads, for example,
     https://unopsis.pythonanywhere.com/api/insights/items-by-lane/
@@ -69,7 +69,7 @@
   },
   "description": "Bar chart of how many brief items sit in each triage lane. The data is fetched over HTTP from the Unopsis public API; nothing is inlined.",
   "data": {
-    "url": "https://<your-pythonanywhere-domain>/api/insights/items-by-lane/"
+    "url": "https://joys3.pythonanywhere.com/api/insights/items-by-lane/"
   },
   "mark": {"type": "bar", "cornerRadiusEnd": 3, "tooltip": true},
   "encoding": {
