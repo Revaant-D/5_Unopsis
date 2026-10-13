@@ -1674,16 +1674,25 @@ class PublicApiSubmissionTests(TestCase):
         """
         Part 3.2's hard rule: data.url, never a pasted "values" array.
 
-        Also checks that the production block carries a PLACEHOLDER host rather than a real
-        one. No deployed domain may be written into a tracked file in this project -- the
-        hostname lives in .env -- and a .txt with somebody's live URL baked in is exactly the
-        file that quietly becomes wrong when the site moves.
+        The production block must carry a REAL https host, not a placeholder.
+
+        This reverses the rule this test started with. The original said no deployed domain may
+        be written into a tracked file, which is right for application config -- the hostname
+        belongs in .env, and a baked-in URL goes stale when the site moves. But this particular
+        file is not config, it is the submission: the instructor pastes it straight into the
+        Vega-Lite editor, and a spec whose data.url still says <your-pythonanywhere-domain>
+        resolves to nothing and draws an empty chart. The assignment is explicit that the chart
+        must pull from the deployed API, so for this one file a live URL is the requirement
+        rather than the smell. Nothing else in the project hardcodes a hostname.
         """
         production, localhost = self.submitted_specs()
         for spec in (production, localhost):
             self.assertNotIn("values", spec["data"], "inline data is explicitly disallowed")
             self.assertTrue(spec["data"]["url"].endswith(self.PUBLIC_PATH), spec["data"]["url"])
-        self.assertIn("<your-pythonanywhere-domain>", production["data"]["url"])
+        self.assertTrue(production["data"]["url"].startswith("https://"),
+                        "the submitted spec must point at the deployed site over https")
+        self.assertNotIn("<", production["data"]["url"],
+                         "no placeholder may survive into the submitted spec")
         self.assertTrue(localhost["data"]["url"].startswith("http://127.0.0.1:8000"),
                         "the second block must run as-is against a dev server")
 
