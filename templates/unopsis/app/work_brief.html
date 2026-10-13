@@ -1,0 +1,74 @@
+{% extends "unopsis/app/shell.html" %}
+{% load app_ui %}
+{% comment %}
+  Screen 7 (docs/wireframes/v2/07-work-brief.png): today's work brief. Needs-you items in the
+  stored rank order, Moving-without-you as one line each, and everything else folded into a
+  single "N messages needed nothing from you" line with the FYI lane behind "Show anyway".
+{% endcomment %}
+{% block title %}Today's brief{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
+{% block topbar %}
+  {% if brief %}
+    <span class="chip">read time {{ brief.read_seconds }}s</span>
+    <button type="button" class="btn-app btn-app--quiet" data-listen="#brief-body">Listen</button>
+  {% endif %}
+{% endblock %}
+
+{% block app_content %}
+{% if not brief %}
+  <h1 class="page-title">No brief yet.</h1>
+  <p class="page-sub">Nothing has been read for the work side. Load the demo data with
+    <code>python manage.py seed_demo</code>, or start from <a href="{% url 'app-setup-world' %}">setup</a>.</p>
+{% else %}
+  {% for connection in broken %}{% include "unopsis/app/_error_banner.html" %}{% empty %}{% endfor %}
+  <div id="brief-body">
+    <p class="meta">Covers {{ hours }} hours · {{ brief.message_count }} messages · {{ source_count }} sources</p>
+    <h1 class="page-title">{{ brief.headline|default:"Here is your brief." }}{% if moving %}<br>Everything else is moving on its own.{% endif %}</h1>
+    <hr>
+
+    {% for item in needs %}
+      <article class="mb-4">
+        <h2 class="h5"><span class="num">{{ forloop.counter }}</span> {{ item.title }}</h2>
+        <p class="mb-2" style="max-width: 44rem">{{ item.summary }}</p>
+        <p class="d-flex flex-wrap gap-2 mb-2">
+          {% for chip in item.chips %}<span class="chip">{{ chip.label }} · {{ chip.count }}</span>{% empty %}<span class="meta">no receipts cited</span>{% endfor %}
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn-app {% if forloop.first %}btn-app--primary{% endif %}" href="{% url 'app-work-focus' item.pk %}">Handle this →</a>
+          {% if forloop.first %}
+            <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
+              <input type="hidden" name="action" value="snooze">
+              <input type="hidden" name="return_to" value="brief">
+              <button class="btn-app btn-app--quiet" type="submit">Snooze to {{ snooze_to|time:"g:i A" }}</button>
+            </form>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <p class="hint">Nothing needs you right now. <a href="{% url 'app-work-handled' %}">See what you handled today</a>.</p>
+    {% endfor %}
+
+    {% if moving %}
+      <hr>
+      <h2 class="h6">Moving without you</h2>
+      {% for item in moving %}
+        <div class="list-row">
+          <span class="tile">{% if item.primary_message %}{{ item.primary_message.connection|provider_letter }}{% else %}·{% endif %}</span>
+          <span>{{ item.title }}</span>
+          {% if item.primary_message %}<time datetime="{{ item.primary_message.sent_at|date:'c' }}">{{ item.primary_message.sent_at|time:"g:i" }}</time>{% endif %}
+        </div>
+      {% empty %}{% endfor %}
+    {% endif %}
+  </div>
+
+  <details class="hint mt-4">
+    <summary class="d-flex justify-content-between align-items-center">
+      <span>{{ quiet_count }} message{{ quiet_count|pluralize }} needed nothing from you.</span>
+      <span class="btn-app btn-app--quiet">Show anyway</span>
+    </summary>
+    {% for item in fyi %}<p class="mt-3 mb-0"><strong>{{ item.title }}</strong> — {{ item.summary }}</p>
+    {% empty %}<p class="mt-3 mb-0">Nothing else was worth a line.</p>{% endfor %}
+  </details>
+{% endif %}
+{% endblock %}

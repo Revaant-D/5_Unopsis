@@ -240,15 +240,24 @@ class NavigationAndUrlTests(SignedInClientMixin, TestCase):
         cls.item = _build_demo_rows()
 
     def test_root_url_is_a_real_page_not_a_404(self):
-        response = self.client.get("/")
+        # Still a real page, and still unopsis/home.html -- that template now serves two
+        # audiences, the visitor landing at "/" and the dashboard at /under-the-hood/.
+        # A visitor -- this class's client is signed in, and "/" forwards those to the app.
+        visitor = Client()
+        response = visitor.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "unopsis/home.html")
+        # And the dashboard half of that same template still renders for a signed-in account.
+        self.assertEqual(self.client.get(reverse("under-the-hood")).status_code, 200)
 
     def test_home_is_reachable_by_its_route_name(self):
         self.assertEqual(reverse("home"), "/")
 
     def test_navigation_links_to_at_least_three_named_routes(self):
-        html = self.client.get(reverse("home")).content.decode()
+        # A5 + the landing-page change: "/" is now the product page and redirects a
+        # signed-in user to the app, so the dashboard and the full nav live at
+        # /under-the-hood/. This check wants the page a signed-in user actually sees.
+        html = self.client.get(reverse("under-the-hood")).content.decode()
         for name in ("home", "brief-list", "item-list-cbv-generic", "insights", "api-items"):
             with self.subTest(route=name):
                 self.assertIn(f'href="{reverse(name)}"', html)
@@ -560,7 +569,8 @@ class ExportAndReportTests(SignedInClientMixin, TestCase):
         self.assertIn("btn", html)   # they are buttons, not bare links
 
     def test_reports_page_is_reachable_from_the_site_navigation(self):
-        html = self.client.get(reverse("home")).content.decode()
+        # The nav is read off the dashboard: "/" forwards a signed-in user to the app.
+        html = self.client.get(reverse("under-the-hood")).content.decode()
         self.assertIn(f'href="{reverse("reports")}"', html)
 
 
@@ -1068,7 +1078,8 @@ class AuthenticationTests(TestCase):
 
     def test_the_nav_shows_them_after_login_with_the_username_and_a_logout_control(self):
         self.client.force_login(self.user)
-        html = self.client.get(reverse("home")).content.decode()
+        # "/" forwards a signed-in user to the app, so the full nav is read off the dashboard.
+        html = self.client.get(reverse("under-the-hood")).content.decode()
         for name in ("brief-list", "item-list-cbv-generic", "insights", "reports", "api-items"):
             with self.subTest(route=name):
                 self.assertIn(f'href="{reverse(name)}"', html)
@@ -1109,7 +1120,7 @@ class AuthenticationTests(TestCase):
         response = self.client.post(
             reverse("login"), {"username": TEST_USERNAME, "password": TEST_PASSWORD}
         )
-        self.assertRedirects(response, reverse("home"))
+        self.assertRedirects(response, reverse("home"), target_status_code=302)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
 
     def test_a_wrong_password_does_not(self):
@@ -1136,7 +1147,7 @@ class AuthenticationTests(TestCase):
             {"username": "brand-new-person", "email": "new@example.invalid",
              "password1": TEST_PASSWORD, "password2": TEST_PASSWORD},
         )
-        self.assertRedirects(response, reverse("home"))
+        self.assertRedirects(response, reverse("home"), target_status_code=302)
         created = User.objects.get(username="brand-new-person")
         self.assertEqual(created.email, "new@example.invalid")
         self.assertEqual(int(self.client.session["_auth_user_id"]), created.pk)
@@ -1165,6 +1176,8 @@ class AuthenticationTests(TestCase):
         self.assertIn("_auth_user_id", self.client.session)
 
         response = self.client.post(reverse("logout"), follow=True)
+        # Unlike the login case, "/" answers 200 here: the session is gone, so the landing
+        # page has nobody to forward to the app.
         self.assertRedirects(response, reverse("home"))
         self.assertNotIn("_auth_user_id", self.client.session)
         # The confirmation has to be added AFTER logout() flushes the session, or it is thrown
@@ -1277,7 +1290,9 @@ class TenantIsolationTests(TestCase):
         adding the assertion the same action.
         """
         urls = [
-            reverse("home"),
+            # "/" is the visitor landing page and forwards a signed-in account onward, so the
+            # dashboard is the route that actually renders this account's numbers.
+            reverse("under-the-hood"),
             reverse("brief-list"),
             reverse("brief-detail", args=[self.brief.pk]),
             reverse("item-detail", args=[self.item.pk]),
@@ -1352,7 +1367,7 @@ class TenantIsolationTests(TestCase):
         A count is still a disclosure. "You have 0 items" next to a site that has 400 of them
         says how busy somebody else is, and the home page used to print exactly that.
         """
-        totals = dict(self.client.get(reverse("home")).context["totals"])
+        totals = dict(self.client.get(reverse("under-the-hood")).context["totals"])
         mine = Brief.objects.filter(space__user=self.intruder).count()
         everyone = Brief.objects.count()
         self.assertEqual(totals["Briefs"], mine)
@@ -1490,7 +1505,7 @@ class NewAccountSeedingTests(TestCase):
             {"username": "unseeded", "email": "unseeded@example.invalid",
              "password1": TEST_PASSWORD, "password2": TEST_PASSWORD},
         )
-        self.assertRedirects(response, reverse("home"))
+        self.assertRedirects(response, reverse("home"), target_status_code=302)
         unseeded = User.objects.get(username="unseeded")
         self.assertFalse(Space.objects.filter(user=unseeded).exists())
         # Signed in, and the site works -- it is simply empty, which is the whole point.

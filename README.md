@@ -10,6 +10,12 @@
 - The site is navigable from the home page at `/`: briefs, brief items, a search-and-insights
   page with live matplotlib and Vega-Lite charts, a reports page with CSV/JSON exports, and a
   public JSON API that also checks deadlines against a live public-holiday calendar.
+- `/` is the product page for a visitor (a signed-in user goes straight to `/work/brief/`); the
+  course dashboard that used to be the home page is at `/under-the-hood/`. A visitor's only way
+  into the app is **Sign in** or **Create account**: the "Open the app" shortcuts appear only
+  once signed in.
+- **The app itself** -- the screens from the wireframes -- starts at `/work/brief/`; `/journey/`
+  links every screen in order. See **The app (wireframe UI)** below.
 
 ---
 
@@ -124,6 +130,41 @@ Secrets are read from `.env` (see `.env.example` for every variable):
 `ALLOWED_HOSTS` alone, and the Google redirect URI is built by allauth from the incoming request.
 One line in the server's `.env` moves the site to a new domain.
 
+## The app (wireframe UI)
+
+The thirteen screens of the wireframes (`docs/wireframes/v2/`) are built as real pages that read
+the same database: a four-step setup, today's work brief, a one-decision focus view, the thread
+with its receipts and a copyable reply draft, a wrap-up with Undo, and the personal catch-up. They
+live in their own files (`unopsis/app_views.py`, `unopsis/app_urls.py`, `unopsis/ui.py`,
+`templates/unopsis/app/`, `static/css/app.css`, `static/js/app.js`), so none of the course code
+above changed.
+
+Two limits until Assignment 5: **there is no login yet** (the pages show the first work and
+personal space in the database, and `/signup/` and `/login/` submit nothing), and **nothing is
+ever sent anywhere** -- buttons that would act outside Unopsis are disabled, and replies are copied
+to the clipboard and finished in the original app. Run it the usual way and open `/journey/`.
+
+| URL | Route name | Screen |
+|---|---|---|
+| `/` | `app-landing` (and `home`) | Product page for a visitor; a signed-in user is redirected to `/work/brief/` |
+| `/under-the-hood/` | `under-the-hood` | The course dashboard (`views.home`, unchanged): totals, latest briefs, the four view kinds |
+| `/signup/`, `/login/` | `app-signup`, `app-login` | Create account / sign in (static until A5) |
+| `/setup/world/` | `app-setup-world` | Setup 1: work, personal or both |
+| `/setup/sources/` | `app-setup-sources` | Setup 2: the connected accounts |
+| `/setup/scope/` | `app-setup-scope` | Setup 3: the channels and labels that are read |
+| `/setup/tuning/` | `app-setup-tuning` | Setup 4: always/never rules, schedule, quiet hours |
+| `/work/brief/building/` | `app-work-building` | First run: the stored generation steps, replayed |
+| `/work/brief/` | `app-work-brief` | Today's brief (with the sync-error banner when a source fails) |
+| `/work/brief/item/<id>/` | `app-work-focus` | One decision at a time; keys J/K move, E done, S snooze |
+| `/work/needs-you/` | `app-work-needs-you` | Redirects to the first open item |
+| `/work/thread/<id>/`, `/personal/thread/<id>/` | `app-thread` | Receipts in order and the reply draft |
+| `/work/handled/` | `app-work-handled` | What is left, what was handled today, Undo |
+| `/personal/catchup/building/` | `app-personal-building` | Personal first run |
+| `/personal/catchup/` | `app-personal-catchup` | "You were gone N hours." |
+| `/personal/caught-up/` | `app-personal-caught-up` | "That was everything." |
+| `/app/items/<id>/action/` | `app-item-action` | POST only: handle / snooze / dismiss / reopen |
+| `/journey/` | `app-journey` | Every screen in order |
+
 ## URL map
 
 Every route has a `name=`, so templates link with `{% url 'name' %}` and models reverse their own
@@ -131,7 +172,8 @@ address in `get_absolute_url()`. Nothing in this project hard-codes a path.
 
 | URL | Route name | View | What it is |
 |---|---|---|---|
-| `/` | `home` | `home` (FBV) | Home page. Totals, the latest briefs and the three items that need you |
+| `/` | `home` | `app_views.landing` (FBV) | The product page (see **The app**). `reverse("home")` is still `/` |
+| `/under-the-hood/` | `under-the-hood` | `home` (FBV) | The course dashboard: totals, the latest briefs and the three items that need you |
 | `/briefs/` | `brief-list` | `BriefListView` (ListView) | Every brief, with its item count annotated in the database |
 | `/briefs/<id>/` | `brief-detail` | `BriefDetailView` (DetailView) | One brief by **primary key**, plus the POST form that creates an item |
 | `/items/manual/` | `item-list-manual` | `item_list_manual` (FBV, `HttpResponse`) | The four view kinds from the previous assignment: same list, four ways |
@@ -162,7 +204,7 @@ reverses the named route, so templates write `{{ item.get_absolute_url }}` inste
 `{% url 'item-detail' item.pk %}`, the admin's *View on site* button works, and `redirect(item)`
 after a POST needs no `success_url`.
 
-**End-to-end flow**, all visible on the home page: `models.py` (the data and its own URL) →
+**End-to-end flow**, all visible on the dashboard at `/under-the-hood/`: `models.py` (the data and its own URL) →
 `urls.py` (the address and its name) → `views.py` (the query and the context) → `templates/`
 (the rendering and the links onward).
 
@@ -251,15 +293,18 @@ not a fact about anybody.
 
 | | |
 |---|---|
-| Layout | one project-level `static/` folder (`static/css/unopsis.css`, `static/img/unopsis-logo.svg`, `static/js/vega-charts.js`) |
+| Layout | one project-level `static/` folder (`static/css/unopsis.css`, `static/css/app.css`, `static/img/unopsis-logo.svg`, `static/js/vega-charts.js`, `static/js/app.js`) |
 | Settings | `STATICFILES_DIRS` and `STATIC_ROOT` in `inboxtriage/settings/base.py` |
 | Templates | `{% load static %}` at the top of `base.html`, then `{% static 'css/unopsis.css' %}` |
 | Cache busting | `ManifestStaticFilesStorage`, subclassed in `inboxtriage/staticfiles_storage.py`, wired up in `inboxtriage/settings/production.py` |
 
-The stylesheet is layered on top of Bootstrap rather than replacing it: a warm paper background,
-a serif display face (Fraunces) against a humanist sans (Source Sans 3), a slate/amber header
-with the Unopsis logo, stat tiles, and the three lane colours (red / blue / green) used
-consistently on every card in the product.
+The stylesheet is layered on top of Bootstrap rather than replacing it. Since the wireframe UI
+landed, the whole site uses the wireframe's palette -- warm paper, black for "selected", one blue
+accent -- with a serif display face (Fraunces) for the course pages' titles against a humanist sans
+(Source Sans 3), the Unopsis logo in the header (served through `{% static %}`), stat tiles, and the
+three lane colours (red / blue / green) used consistently on every card. The app screens add
+`static/css/app.css` (loaded only by `templates/unopsis/app/shell.html`): the left rail, the
+Work/Personal switch, pills, dashed asides and a layout that stacks on phone-width screens.
 
 Cache busting: `collectstatic` hashes each file's contents and writes
 `css/unopsis.33e154d07268.css` next to it, recording the mapping in `staticfiles.json`. The
@@ -505,7 +550,25 @@ for the run, so the committed `db.sqlite3` is never read or written by the tests
 
 ## Screenshots
 
-**This assignment**
+**The app (wireframe UI)**
+
+| | |
+|---|---|
+| **Landing page** (`/`) | ![Landing page](docs/screenshots/37_landing_page.png) |
+| **Under the hood** (`/under-the-hood/`) | ![Under the hood](docs/screenshots/38_under_the_hood.png) |
+| **Sign up** (`/signup/`) | ![Sign up](docs/screenshots/22_app_signup.png) |
+| **Sign in** (`/login/`) | ![Sign in](docs/screenshots/23_app_login.png) |
+| **Setup 1-4** | ![World](docs/screenshots/24_app_setup_world.png) ![Sources](docs/screenshots/25_app_setup_sources.png) ![Scope](docs/screenshots/26_app_setup_scope.png) ![Tuning](docs/screenshots/27_app_setup_tuning.png) |
+| **First run** (`/work/brief/building/`) | ![Building](docs/screenshots/28_app_work_building.png) |
+| **Today's brief** (`/work/brief/`) | ![Brief](docs/screenshots/29_app_work_brief.png) |
+| **Focus** (`/work/brief/item/<id>/`) | ![Focus](docs/screenshots/30_app_work_focus.png) |
+| **Thread** (`/work/thread/<id>/`) | ![Thread](docs/screenshots/31_app_work_thread.png) |
+| **Handled today**, with Undo | ![Handled](docs/screenshots/32_app_work_handled.png) |
+| **Personal first run and catch-up** | ![Personal building](docs/screenshots/33_app_personal_building.png) ![Catch-up](docs/screenshots/34_app_personal_catchup.png) |
+| **Caught up** | ![Caught up](docs/screenshots/35_app_personal_caught_up.png) |
+| **The whole journey** (`/journey/`) | ![Journey](docs/screenshots/36_app_journey.png) |
+
+**Assignment 4 and earlier**
 
 | | |
 |---|---|
@@ -543,9 +606,10 @@ The home, briefs and detail screenshots also show the custom CSS, the logo and t
 | Folder | Contents |
 |---|---|
 | `docs/wireframes/v1/` | Wireframes from the previous assignment |
+| `docs/wireframes/v2/` | All 13 wireframe screens, the screen -> route -> data map and the design rationale |
 | `docs/branching_strategy/` | How this team uses Git branches (write-up and diagram) |
 | `docs/notes/notes.txt` | Weekly progress, view inventory, reminders and challenges |
 | `docs/screenshots/` | Browser screenshots of every page, the charts and the JSON output |
-| `docs/design/` | Data-model design decisions (`DESIGN.md`), the ER diagram workbook, and the Part 4 README |
+| `docs/design/` | Data-model design decisions (`DESIGN.md`), the ER diagram as an image (`unopsis-erd.png`) and as the original workbook, and the Part 4 README |
 | `static/` | The project's own stylesheet, logo and Vega-Lite embed script (see **Static files and the UI**) |
 | `unopsis/vega_lite/` | The two Vega-Lite specs (see **Vega-Lite charts**) |

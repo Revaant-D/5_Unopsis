@@ -11,19 +11,22 @@
    ======================================================================================= */
 
 /* ---- 1. Tokens: the palette and the type scale, named once -------------------------- */
+/* Moved to the wireframe's palette (docs/wireframes/v2) so the course pages and the app read
+   as one product: warm paper, black for "selected", one blue accent. The token NAMES are
+   unchanged, so no rule below and no template had to change -- only what they resolve to. */
 :root {
-  --paper:      #f6f3ee;   /* page background: warm, not white */
-  --ink:        #1d2733;   /* body text */
-  --ink-soft:   #5d6b7a;   /* secondary text */
-  --slate:      #2f4858;   /* header, footer, primary actions */
-  --slate-deep: #22323d;
-  --amber:      #d98324;   /* the one accent; used sparingly on purpose */
-  --line:       #e3ddd3;   /* hairlines and card borders */
-  --needs-you:  #c44536;   /* lane colours, the same three everywhere in the product */
+  --paper:      #fbfaf7;   /* page background: the wireframe's warm paper */
+  --ink:        #1b1b1b;   /* body text */
+  --ink-soft:   #6b665e;   /* secondary text */
+  --slate:      #1b1b1b;   /* primary actions and the active nav pill: black, as in the wireframe */
+  --slate-deep: #111111;
+  --amber:      #2b7bd8;   /* the one accent, now the wireframe's blue */
+  --line:       #e4dfd6;   /* hairlines and card borders */
+  --needs-you:  #c44536;   /* lane colours, unchanged: the same three everywhere in the product */
   --moving:     #33658a;
   --fyi:        #758e4f;
-  --radius:     14px;
-  --shadow:     0 1px 2px rgba(29, 39, 51, .06), 0 8px 24px rgba(29, 39, 51, .06);
+  --radius:     12px;
+  --shadow:     0 1px 2px rgba(27, 27, 27, .05);
 }
 
 /* ---- 2. Base typography and layout -------------------------------------------------- */
@@ -48,13 +51,13 @@ code { color: var(--slate); background: #ece7df; padding: .05em .35em; border-ra
 
 /* ---- 3. Header and the logo --------------------------------------------------------- */
 .site-header {
-  background: linear-gradient(120deg, var(--slate-deep) 0%, var(--slate) 55%, #3c5f70 100%);
-  color: #fff;
-  border-bottom: 3px solid var(--amber);
+  background: var(--paper);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
 }
-.site-header h1, .site-header .brand-mark { color: #fff; }
+.site-header h1, .site-header .brand-mark { color: var(--ink); }
 .site-logo { width: 42px; height: 42px; flex: 0 0 auto; }
-.site-tagline { color: rgba(255, 255, 255, .72); }
+.site-tagline { color: var(--ink-soft); }
 
 /* ---- 4. Navigation ------------------------------------------------------------------ */
 .site-nav { border-bottom: 1px solid var(--line); background: #fffdfa; }
@@ -67,6 +70,9 @@ code { color: var(--slate); background: #ece7df; padding: .05em .35em; border-ra
 }
 .site-nav .nav-link:hover { background: #eee9e0; color: var(--slate-deep); }
 .site-nav .nav-link.active { background: var(--slate); color: #fff; }
+/* "Open the app" -- the one blue pill in the bar, because it leaves the course pages. */
+.site-nav .nav-link--app { background: var(--amber); color: #fff; }
+.site-nav .nav-link--app:hover { background: #1f63b4; color: #fff; }
 
 /* ---- 5. Cards and the lane accent --------------------------------------------------- */
 .card {
@@ -136,7 +142,7 @@ code { color: var(--slate); background: #ece7df; padding: .05em .35em; border-ra
 }
 .btn-primary:hover, .btn-primary:focus { background: var(--slate-deep); border-color: var(--slate-deep); }
 .btn-accent { background: var(--amber); border-color: var(--amber); color: #fff; }
-.btn-accent:hover { background: #bf7220; border-color: #bf7220; color: #fff; }
+.btn-accent:hover { background: #1f63b4; border-color: #1f63b4; color: #fff; }
 
 .table-tight th {
   font-size: .78rem;
@@ -148,9 +154,9 @@ code { color: var(--slate); background: #ece7df; padding: .05em .35em; border-ra
 
 /* ---- 7. Footer ---------------------------------------------------------------------- */
 .site-footer {
-  background: var(--slate-deep);
-  color: rgba(255, 255, 255, .6);
-  border-top: 3px solid var(--amber);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-top: 1px solid var(--line);
 }
 
 /* ---- 8. Small screens ---------------------------------------------------------------- */

@@ -1,0 +1,79 @@
+{% extends "unopsis/app/shell.html" %}
+{% load app_ui %}
+{% comment %}
+  Screen 12 (docs/wireframes/v2/12-personal-catchup.png): the personal catch-up. The lead card
+  is the first open Needs-you item; the rest follow as short paragraphs; places with nothing
+  for the user are folded into one line each, and the quiet ones into one closing sentence.
+{% endcomment %}
+{% block title %}Catch up{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}
+  <p class="hint small mb-0">{{ quiet_places|length }} place{{ quiet_places|length|pluralize }} {{ quiet_places|length|pluralize:"was,were" }} quiet — summarized in one line, not one card each.</p>
+{% endblock %}
+{% block topbar %}{% if brief %}<span class="chip">Personal · {{ hours }}h away</span>{% endif %}{% endblock %}
+
+{% block app_content %}
+{% if not brief %}
+  <h1 class="page-title">Nothing to catch up on yet.</h1>
+  <p class="page-sub">There is no personal catch-up yet. Load the demo data with <code>python manage.py seed_demo</code>.</p>
+{% else %}
+  {% for connection in broken %}{% include "unopsis/app/_error_banner.html" %}{% empty %}{% endfor %}
+  <h1 class="page-title">You were gone {{ hours }} hours.<br>Here's the short version.</h1>
+  <p class="meta">{{ brief.message_count }} messages · {{ place_count }} place{{ place_count|pluralize }} · {{ want_reply }} want a reply</p>
+
+  {% if lead %}
+    <div class="app-card app-card--selected my-3">
+      <p class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <span class="chip chip--on">needs a reply</span>
+        {% for chip in lead.chips %}<span class="meta">{{ chip.label }} · {{ chip.count }}</span>{% empty %}{% endfor %}
+      </p>
+      <p class="mb-1"><strong>{{ lead.title }}</strong></p>
+      <p>{{ lead.summary }}</p>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn-app btn-app--primary" href="{% url 'app-thread' 'personal' lead.pk %}">{{ lead.primary.label|default:"Reply in thread" }}</a>
+        <a class="btn-app" href="{% url 'app-thread' 'personal' lead.pk %}?show=all">Read the {{ lead.messages.all|length }} message{{ lead.messages.all|length|pluralize }}</a>
+        <form method="post" action="{% url 'app-item-action' lead.pk %}">{% csrf_token %}
+          <input type="hidden" name="action" value="dismiss">
+          <input type="hidden" name="return_to" value="catchup">
+          <button class="btn-app btn-app--quiet" type="submit">Ignore</button>
+        </form>
+      </div>
+    </div>
+  {% else %}
+    <p class="hint my-3">Nothing wants a reply. <a href="{% url 'app-personal-caught-up' %}">See what you did</a>.</p>
+  {% endif %}
+
+  {% for item in rest %}
+    <div class="d-flex gap-3 py-3" style="border-bottom: 1px solid var(--app-line)">
+      <span class="avatar">{{ item.title|initials }}</span>
+      <div>
+        <p class="mb-1"><strong>{{ item.title }}</strong>
+          {% for chip in item.chips %}<span class="meta ms-2">{{ chip.label }} · {{ chip.count }}</span>{% empty %}{% endfor %}</p>
+        <p class="mb-2">{{ item.summary }}</p>
+        <div class="d-flex flex-wrap gap-2">
+          <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
+            <input type="hidden" name="action" value="handle">
+            <input type="hidden" name="return_to" value="catchup">
+            <button class="btn-app btn-app--primary" type="submit" title="Marks this handled in Unopsis — nothing is sent anywhere">{{ item.primary.label|default:"Done" }}</button>
+          </form>
+          {% if item.deadline_at %}<button type="button" class="btn-app" disabled title="Unopsis is read-only — nothing is added on your behalf">Add to calendar</button>{% endif %}
+          <a class="meta align-self-center" href="{% url 'app-thread' 'personal' item.pk %}">see how it changed</a>
+        </div>
+      </div>
+    </div>
+  {% empty %}{% endfor %}
+
+  {% for place in quiet_places %}
+    <div class="list-row">
+      <span class="avatar">{{ place.name|initials }}</span>
+      <strong>{{ place.name }}</strong>
+      <span class="meta">{{ place.provider }} · {{ place.messages }} msg{{ place.messages|pluralize }} — nothing for you</span>
+    </div>
+  {% empty %}{% endfor %}
+
+  <div class="hint d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4">
+    <span>Nothing else needed you. {{ quiet_places|length }} place{{ quiet_places|length|pluralize }} {{ quiet_places|length|pluralize:"was,were" }} quiet.</span>
+    <a class="btn-app" href="{% url 'app-personal-caught-up' %}">Mark me caught up →</a>
+  </div>
+{% endif %}
+{% endblock %}

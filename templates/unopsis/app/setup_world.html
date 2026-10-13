@@ -1,0 +1,40 @@
+{% extends "unopsis/app/setup_base.html" %}
+{% load app_ui %}
+{% block title %}Setup · Your world{% endblock %}
+
+{% block setup_content %}
+  <h1 class="page-title">Which inbox life should I keep on top of?</h1>
+  <p class="page-sub">The two never get mixed into one summary — different sources, different ranking, different tone.</p>
+
+  <div class="row g-3 my-3">
+    <div class="col-md-6">
+      <div class="app-card h-100 {% if work %}app-card--selected{% endif %}">
+        <h2 class="h5 mb-2">Work</h2>
+        {% if work %}<span class="chip chip--on">selected</span>{% else %}<span class="chip">Add too</span>{% endif %}
+        <p class="d-flex gap-2 my-3">
+          {% for connection in work.connections.all %}<span class="tile" title="{{ connection.get_provider_display }}">{{ connection|provider_letter }}</span>{% empty %}<span class="meta">No sources linked yet</span>{% endfor %}
+        </p>
+        <p class="meta mb-2">{% for connection in work.connections.all %}{{ connection.get_provider_display }}{% if not forloop.last %}, {% endif %}{% empty %}Gmail, Outlook, Slack, WhatsApp Business{% endfor %}</p>
+        <p class="mb-0">Ranked by who is blocked and what has a deadline.</p>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="app-card h-100 {% if personal %}app-card--selected{% endif %}">
+        <h2 class="h5 mb-2">Personal</h2>
+        {% if personal %}<span class="chip chip--on">selected</span>{% else %}<span class="chip">Add too</span>{% endif %}
+        <p class="d-flex gap-2 my-3">
+          {% for connection in personal.connections.all %}<span class="tile" title="{{ connection.get_provider_display }}">{{ connection|provider_letter }}</span>{% empty %}<span class="meta">No sources linked yet</span>{% endfor %}
+        </p>
+        <p class="meta mb-2">{% for connection in personal.connections.all %}{{ connection.get_provider_display }}{% if not forloop.last %}, {% endif %}{% empty %}Discord, WhatsApp, group DMs{% endfor %}</p>
+        <p class="mb-0">Ranked by mentions and by plans that changed.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">You can run both and switch between them later — same account, two front pages, one sidebar that changes with the world you're in.</p>
+{% endblock %}
+
+{% block setup_footer %}
+  <span class="meta">Takes about 2 minutes</span>
+  <a class="btn-app btn-app--primary" href="{% url 'app-setup-sources' %}">Continue → connect sources</a>
+{% endblock %}

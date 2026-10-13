@@ -1,0 +1,75 @@
+{% extends "unopsis/app/shell.html" %}
+{% load app_ui %}
+{% comment %}
+  Screen 10 (docs/wireframes/v2/10-work-handled.png): the wrap-up. The brief shrinks as the
+  user works and never refills mid-morning. The wireframe's "sent" banner says "marked handled"
+  here, because Unopsis never sends anything; its Undo is a real POST that reopens the item.
+{% endcomment %}
+{% block title %}Handled today{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
+{% block topbar %}<span class="chip">{{ today|time:"g:i A" }}</span>{% endblock %}
+
+{% block app_content %}
+{% if not brief %}
+  <h1 class="page-title">Nothing to wrap up.</h1>
+  <p class="page-sub">There is no work brief yet. Load the demo data with <code>python manage.py seed_demo</code>.</p>
+{% else %}
+  {% if just_done %}
+    <div class="d-flex flex-wrap align-items-center gap-2 pb-3 mb-3" style="border-bottom: 1px solid var(--app-line)">
+      <span class="num" style="width:auto;padding:0 .4rem">✓</span>
+      <span>{{ just_done.title }} — marked handled.</span>
+      <form method="post" action="{% url 'app-item-action' just_done.pk %}" class="ms-auto">{% csrf_token %}
+        <input type="hidden" name="action" value="reopen">
+        <input type="hidden" name="return_to" value="handled">
+        <button class="btn-app btn-app--quiet" type="submit">Undo</button>
+      </form>
+    </div>
+  {% endif %}
+
+  <h1 class="page-title">{% if still %}{{ still|length }} thing{{ still|length|pluralize }} left. About {{ minutes }} minutes.{% else %}Nothing left.{% endif %}</h1>
+  <p class="page-sub">The brief shrinks as you work — it never refills mid-morning.</p>
+
+  <table class="table-app my-4">
+    <caption>Still needs you <span class="float-end">{{ still|length }}</span></caption>
+    <tbody>
+      {% for item in still %}
+        <tr>
+          <td class="px-3 py-2" style="width: 4rem"><span class="chip chip--on">{% if item.deadline_at %}{{ item.deadline_at|date:"D" }}{% else %}now{% endif %}</span></td>
+          <td class="py-2" style="width: 2.5rem"><span class="tile">{% if item.primary_message %}{{ item.primary_message.connection|provider_letter }}{% else %}·{% endif %}</span></td>
+          <td class="py-2"><a href="{% url 'app-work-focus' item.pk %}">{{ item.title }}</a></td>
+          <td class="px-3 py-2 text-end">
+            <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
+              <input type="hidden" name="action" value="handle">
+              <input type="hidden" name="return_to" value="handled">
+              <button class="btn-app btn-app--primary" type="submit" title="Marks this handled in Unopsis — nothing is sent anywhere">{{ item.primary.label|default:"Mark handled" }}</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td class="px-3 py-3 meta">Nothing is waiting on you.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="table-app mb-4">
+    <caption>Handled today <span class="float-end">{{ done_today|length }}</span></caption>
+    <tbody>
+      {% for item in done_today %}
+        <tr>
+          <td class="px-3 py-2" style="width: 4rem"><span class="check">✓</span></td>
+          <td class="py-2" style="width: 2.5rem"><span class="tile">{% if item.primary_message %}{{ item.primary_message.connection|provider_letter }}{% else %}·{% endif %}</span></td>
+          <td class="py-2 meta">{{ item.title }} — handled {{ item.handled_at|time:"g:i" }}</td>
+          <td class="px-3 py-2 text-end"><a class="meta" href="{% url 'app-thread' 'work' item.pk %}">view</a></td>
+        </tr>
+      {% empty %}
+        <tr><td class="px-3 py-3 meta">Nothing closed yet today.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="hint">
+    {% if new_since %}{{ new_since }} new message{{ new_since|pluralize }} since {{ since|time:"g:i" }} — folded into the {% if next_digest %}{{ next_digest|time:"g:i A" }}{% else %}next{% endif %} brief.{% else %}New since {{ since|time:"g:i" }} — nothing that needs you.{% endif %}
+  </p>
+{% endif %}
+{% endblock %}

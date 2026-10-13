@@ -1,0 +1,66 @@
+{% extends "unopsis/app/setup_base.html" %}
+{% block title %}Setup · What matters{% endblock %}
+
+{% block setup_content %}
+  <h1 class="page-title">What does "needs you" mean for you?</h1>
+  <p class="page-sub">This is the ranking rule. Without it everything comes back equally important — the thing you don't want.</p>
+
+  <div class="row g-4 my-2">
+    <div class="col-md-6">
+      <h2 class="h6">Always surface</h2>
+      <p class="d-flex flex-wrap gap-2">
+        {% for rule in always %}<span class="chip chip--on" title="{{ rule.target }}">{{ rule.value }}</span>{% empty %}<span class="meta">No always-rules yet.</span>{% endfor %}
+        <span class="chip chip--add">+ person or word</span>
+      </p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="h6">Never surface</h2>
+      <p class="d-flex flex-wrap gap-2">
+        {% for rule in never %}<span class="chip" title="{{ rule.target }}">{{ rule.value }}</span>{% empty %}<span class="meta">No never-rules yet.</span>{% endfor %}
+        <span class="chip chip--add">+ add</span>
+      </p>
+    </div>
+  </div>
+  <hr>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <label class="h6 mb-0" for="detail-level">How much detail?</label>
+    <span class="meta">one line</span>
+    <input id="detail-level" class="form-range flex-grow-1" style="max-width: 60%" type="range" min="1" max="5"
+           value="{{ work.detail_level|default:3 }}" disabled aria-label="Detail level">
+    <span class="meta">full recap</span>
+  </div>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <span class="h6 mb-0">When do you want it?</span>
+    <span class="d-flex flex-wrap gap-2">
+      {% for slot in digest_times %}<span class="chip chip--on">{{ slot|time:"g:i A" }}</span>{% empty %}<span class="meta">no schedule</span>{% endfor %}
+      <span class="chip">on demand</span>
+    </span>
+  </div>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <span class="h6 mb-0">Quiet hours</span>
+    {% if work.quiet_start and work.quiet_end %}
+      <span class="chip">{{ work.quiet_start|time:"g:i A" }} – {{ work.quiet_end|time:"g:i A" }} · urgent only</span>
+    {% else %}
+      <span class="meta">none set</span>
+    {% endif %}
+  </div>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <span class="h6 mb-0">Where it arrives</span>
+    <span class="d-flex flex-wrap gap-2">
+      <span class="chip {% if work.deliver_in_app %}chip--on{% endif %}">In app</span>
+      <span class="chip {% if work.deliver_email %}chip--on{% endif %}">Email</span>
+      <span class="chip {% if work.deliver_chat_dm %}chip--on{% endif %}">Slack DM</span>
+    </span>
+  </div>
+
+  <p class="meta">These are the settings stored for your work space. Editing them here arrives in a later version.</p>
+{% endblock %}
+
+{% block setup_footer %}
+  <span class="meta">It keeps learning from what you open and skip</span>
+  <a class="btn-app btn-app--primary" href="{% url 'app-work-building' %}">Build my first brief</a>
+{% endblock %}

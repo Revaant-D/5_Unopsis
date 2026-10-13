@@ -1,0 +1,74 @@
+{% extends "unopsis/app/shell.html" %}
+{% comment %}
+  Screen 1 of the wireframe, served as TWO pages -- /signup/ (mode "signup") and /login/
+  (mode "login") -- because Assignment 5 asks for separate custom login and signup pages.
+
+  The fields follow Django's own forms (AuthenticationForm: username + password;
+  UserCreationForm: username + password + confirmation, plus an email), not the wireframe's
+  "Work email", because A5 asks for username/password login. Until A5 nothing here is
+  submitted: the inputs have no name and there is no <form>, so A5 only has to add the names,
+  method="post" and {% templatetag openblock %} csrf_token {% templatetag closeblock %}.
+{% endcomment %}
+
+{% block title %}{% if mode == 'login' %}Sign in{% else %}Create account{% endif %}{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_auth.html" %}{% endblock %}
+{% block rail_foot %}
+  <p class="hint small mb-0">Read-only access, revocable per source from your account at any time. Nothing is ever sent on your behalf.</p>
+{% endblock %}
+
+{% block app_content %}
+  {% if mode == 'login' %}
+    <h1 class="page-title">Welcome back.</h1>
+    <p class="page-sub">Sign in to open today's brief.</p>
+  {% else %}
+    <h1 class="page-title">Know what happened, in one page a day.</h1>
+    <p class="page-sub">Create the account first. Platforms get connected on the next screen, one at a time, read-only.</p>
+  {% endif %}
+
+  <div class="app-card my-4" style="max-width: 460px">
+    <nav class="segmented mb-3" aria-label="Account">
+      <a href="{% url 'app-signup' %}" class="{% if mode != 'login' %}is-on{% endif %}"{% if mode != 'login' %} aria-current="page"{% endif %}>Create account</a>
+      <a href="{% url 'app-login' %}" class="{% if mode == 'login' %}is-on{% endif %}"{% if mode == 'login' %} aria-current="page"{% endif %}>Sign in</a>
+    </nav>
+
+    <div class="mb-3">
+      <label class="form-label" for="auth-username">Username</label>
+      <input class="form-control" id="auth-username" type="text" autocomplete="off">
+    </div>
+    {% if mode != 'login' %}
+      <div class="mb-3">
+        <label class="form-label" for="auth-email">Email</label>
+        <input class="form-control" id="auth-email" type="email" placeholder="you@example.com" autocomplete="off">
+      </div>
+    {% endif %}
+    <div class="mb-3">
+      <label class="form-label" for="auth-password">Password</label>
+      <input class="form-control" id="auth-password" type="password" placeholder="••••••••" autocomplete="off">
+    </div>
+    {% if mode != 'login' %}
+      <div class="mb-3">
+        <label class="form-label" for="auth-password2">Confirm password</label>
+        <input class="form-control" id="auth-password2" type="password" placeholder="••••••••" autocomplete="off">
+      </div>
+    {% endif %}
+
+    {% if mode == 'login' %}
+      <a class="btn-app btn-app--primary w-100" href="{% url 'app-work-brief' %}">Sign in →</a>
+    {% else %}
+      <a class="btn-app btn-app--primary w-100" href="{% url 'app-setup-world' %}">Create account →</a>
+    {% endif %}
+
+    <p class="meta text-center my-2">or</p>
+    <button type="button" class="btn-app w-100" disabled title="Google sign-in arrives in Assignment 5">Continue with Google</button>
+    <p class="meta small mt-3 mb-0">Signing in with Google does not connect Gmail — sources are chosen deliberately on the next page.</p>
+  </div>
+
+  {% if mode == 'login' %}
+    <p class="meta">New here? <a class="btn-app btn-app--quiet" href="{% url 'app-signup' %}">Create account</a></p>
+  {% else %}
+    <p class="meta">Already have an account? <a class="btn-app btn-app--quiet" href="{% url 'app-login' %}">Sign in</a></p>
+  {% endif %}
+
+  <p class="hint" style="max-width: 640px">Two accounts in one: a work brief and a personal catch-up live under this login, each with their own sources, ranking and schedule — and they are never summarized together.</p>
+  <p class="meta">Demo only — accounts arrive in Assignment 5. Nothing on this page is submitted.</p>
+{% endblock %}

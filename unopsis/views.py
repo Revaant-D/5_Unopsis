@@ -377,6 +377,12 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
 # ======================================================================================
 # PART B -- SECTION 1: the home page and the brief pages (URL linking and navigation)
 # ======================================================================================
+# A5 note: this view used to serve "/" and was deliberately left open, because it was the
+# front door that carried the Log in and Sign up buttons. It now serves /under-the-hood/ --
+# "/" is app_views.landing -- so it is no longer a front door, it is the course dashboard
+# behind the product. Left open it rendered a page of zeros to a visitor, which looks like a
+# broken deployment rather than a closed one, so it takes the decorator with everything else.
+@login_required
 def home(request):
     """
     The home page, wired to "" in unopsis/urls.py so the root address is a real page instead

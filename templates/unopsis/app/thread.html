@@ -1,0 +1,85 @@
+{% extends "unopsis/app/shell.html" %}
+{% load app_ui %}
+{% comment %}
+  Screen 9 (docs/wireframes/v2/09-work-thread.png): one topic in full. The receipts are
+  BriefItem.messages in the order they were sent; the reply is item.draft_body, copied to the
+  clipboard and finished in the original app, because Unopsis never sends anything.
+{% endcomment %}
+{% block title %}{{ item.title }}{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
+{% block topbar %}<span class="chip">{{ total }} message{{ total|pluralize }} · {{ chips|length }} source{{ chips|length|pluralize }}</span>{% endblock %}
+
+{% block app_content %}
+  <p class="d-flex flex-wrap align-items-center gap-2">
+    {% if world == 'work' %}
+      <a class="btn-app btn-app--quiet" href="{% url 'app-work-focus' item.pk %}">← focus</a>
+    {% else %}
+      <a class="btn-app btn-app--quiet" href="{% url 'app-personal-catchup' %}">← catch-up</a>
+    {% endif %}
+    {% for chip in chips %}<span class="chip">{{ chip.label }} · {{ chip.count }}</span>{% empty %}{% endfor %}
+    <span class="meta">{{ people|length }} {{ people|length|pluralize:"person,people" }}{% if receipts %} · since {{ receipts.0.sent_at|date:"l" }}{% endif %}</span>
+  </p>
+  <h1 class="page-title">{{ item.title }}</h1>
+
+  <div class="row g-4 mt-1">
+    <div class="col-lg-8">
+      <div class="app-card mb-3">
+        <small class="meta">What happened, in order</small>
+        <p class="mb-2">{{ item.summary }}</p>
+        {% if item.deadline_at %}<span class="chip chip--on">due {{ item.deadline_at|date:"D g:i A" }}</span>{% endif %}
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Receipts</h2>
+        <span class="d-flex gap-2">
+          <a class="chip {% if show_all %}chip--on{% endif %}" href="?show=all">All {{ total }}</a>
+          <a class="chip {% if not show_all %}chip--on{% endif %}" href="?">Only what matters</a>
+        </span>
+      </div>
+      {% for message in receipts %}
+        <div class="d-flex gap-3 mb-2">
+          <span class="avatar" title="{{ message.author.display_name }}">{{ message.author.display_name|initials }}</span>
+          <div class="app-card flex-grow-1 py-2">
+            <small class="meta">{{ message.author.display_name }} · {{ message.connection.get_provider_display }}{% if message.scope_name %} {{ message.scope_name }}{% endif %} · {{ message.sent_at|date:"D g:i A" }}</small>
+            <p class="mb-0">“{{ message.body }}”</p>
+          </div>
+        </div>
+      {% empty %}
+        <p class="meta">No messages are cited for this item.</p>
+      {% endfor %}
+      {% if hidden and not show_all %}
+        <p class="meta">{{ hidden }} message{{ hidden|pluralize }} hidden — noise and pleasantries · <a href="?show=all">show</a></p>
+      {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+      <div class="app-card">
+        <h2 class="h6">Needs a decision</h2>
+        {% if decision %}<p>{{ decision.label }}</p>{% else %}<p class="meta">Nothing to decide — read and close.</p>{% endif %}
+        {% if item.draft_body %}
+          <small class="meta">Suggested wording · yours to use</small>
+          <div class="hint my-2" id="draft">{{ item.draft_body }}</div>
+          {% if open_url %}
+            <button type="button" class="btn-app btn-app--primary w-100 mb-2" data-copy="#draft" data-open="{{ open_url }}">Copy &amp; open in {{ open_label }}</button>
+          {% endif %}
+          <button type="button" class="btn-app w-100 mb-2" data-copy="#draft">Copy text</button>
+        {% endif %}
+        {% for action in secondary %}
+          <button type="button" class="btn-app w-100 mb-2" disabled title="Unopsis is read-only — nothing is sent on your behalf">{{ action.label }}</button>
+        {% empty %}{% endfor %}
+        <p class="meta small">Read-only access — nothing is sent from here. You reply in {{ open_label|default:"the original app" }} and the item closes when you mark it handled.</p>
+        <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
+          <input type="hidden" name="action" value="handle">
+          <input type="hidden" name="return_to" value="{% if world == 'work' %}handled{% else %}catchup{% endif %}">
+          <button class="btn-app w-100" type="submit">Mark handled</button>
+        </form>
+        <hr>
+        <small class="meta">People here</small>
+        <p class="d-flex gap-2 mt-2 mb-0">
+          {% for person in people %}<span class="avatar" title="{{ person.display_name }}">{{ person.display_name|initials }}</span>{% empty %}<span class="meta">nobody cited</span>{% endfor %}
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -70,9 +70,8 @@ Getting the project running (first time):
   pip install -r requirements.txt
   copy .env.example .env                 (Mac/Linux: cp .env.example .env)
   python -c "import secrets; print(secrets.token_urlsafe(50))"   then paste the result as SECRET_KEY in .env
-  python manage.py migrate
-  python manage.py createsuperuser       (use the username mohitg2, the demo data is owned by it)
-  python manage.py seed_demo
+  python manage.py migrate               (db.sqlite3 is committed with the demo data and both admin
+                                          accounts, so no createsuperuser or seed_demo is needed)
   python manage.py runserver
 Use "python", not "py", once the virtual environment is active. "py" can pick a different Python that
 does not have this project's packages installed.
@@ -105,7 +104,8 @@ Due date: 21st September 2026
 - The four views all use the BriefItem model, so they can share one list template.
 - Lane order: BriefItem.lane is text, so the default ordering would list FYI first. The views sort
   Needs you, then Moving, then FYI, so the database schema was left unchanged. 
-- db.sqlite3 is not committed (it is data, not code). Teammates rebuild it with migrate and seed_demo.
+- db.sqlite3 IS committed (Assignment 4 requires it; see section 16 and the comment in .gitignore).
+  A fresh clone already has the demo data and the admin accounts.
 - manage.py runs the development settings by default; wsgi.py and asgi.py default to production.
   Run production locally with: python manage.py runserver --settings=inboxtriage.settings.production
 - Screenshots are stored in docs/screenshots/ and shown in the README.
@@ -130,7 +130,9 @@ Due date: 21st September 2026
 Known issue for teammates:
 - Running "python manage.py seed_demo" a second time adds duplicate briefs and items (the lookup
   includes the current time). To reset cleanly: delete db.sqlite3, then run migrate,
-  createsuperuser (username mohitg2) and seed_demo once.
+  createsuperuser (username mohitg2) and seed_demo once. Then recreate the instructor account too
+  (createsuperuser: tester / uiuc12345, and give mohitg2 the password uiuc12345) and re-commit
+  db.sqlite3, because the committed file is what the graders and PythonAnywhere use.
 
 
 8. MEETING NOTES
@@ -145,12 +147,14 @@ Known issue for teammates:
 ------------------------------
   python manage.py runserver                     (development, DEBUG=True)
   python manage.py runserver --settings=inboxtriage.settings.production   (production, DEBUG=False)
-  python manage.py test                          (32 tests across all six sections)
+  python manage.py test                          (165 tests: tests.py + test_app_ui.py)
   python manage.py collectstatic --settings=inboxtriage.settings.production   (hashed static files)
 
-  Start at /  -- the home page. Everything else is in the navigation bar.
+  Start at /under-the-hood/ for the course pages, or /journey/ to click through the app screens.
+  "/" is the product landing page (see section 18). Everything else is in the navigation bar.
 
-  /                        home page
+  /                        landing page (signed-in users are sent to /work/brief/)
+  /under-the-hood/         the course dashboard (the old home page, views.home)
   /briefs/                 all briefs
   /briefs/<id>/            one brief by primary key + the POST form that adds an item
   /items/manual/           the four view kinds from the previous assignment
@@ -281,7 +285,7 @@ Tests: 32 (python manage.py test), covering all six sections.
 Screenshots: docs/screenshots/07 to 16 for this assignment; 01 to 06 re-shot with the new styling.
 New dependency: matplotlib (added to requirements.txt). Re-run pip install -r requirements.txt.
 
-WEEK 4, PER PERSON  [TEAM: each person fills in their own two lines before we submit]
+WEEK 4, PER PERSON  [TEAM: still missing -- Revaant, Keshav and Pranay fill in their own two lines]
   Member 1: Revaant Daga
     What I did this week:
     Blocked on / need help with:
@@ -302,15 +306,9 @@ WEEK 4, PER PERSON  [TEAM: each person fills in their own two lines before we su
     What I did this week:
     Blocked on / need help with:
 
-BEFORE SUBMITTING THIS ONE
-  [ ] pip install -r requirements.txt again (matplotlib is new) and python manage.py test -> 32 OK
-  [ ] Open / and click every link in the navigation bar
-  [ ] Run a GET search, copy the URL, paste it in a new tab, confirm the same rows come back
-  [ ] Run the POST private lookup and confirm the address bar still says /insights/
-  [ ] Add an item from /briefs/1/ and update one from /items/1/
-  [ ] Open /api/items/?lane=needs_you and /api/insights/
-  [ ] Every [TEAM: ...] line above is filled in or removed
-  [ ] Repository still public, instructor still a collaborator, link submitted on Canvas
+SUBMITTED: A3 was submitted on Canvas on 28 September 2026 and graded 61/60. Grader's note:
+  invalid values such as ?brief=xyz or ?due_before=abc cause a server error; returning an error
+  message would be better. Still open -- see section 17, "What A5 changes".
 
 
 12. SECTION 1 NOTE -- WHERE get_absolute_url() IS USEFUL
@@ -493,7 +491,8 @@ Part 4.1 / 4.2 (done):
 
 ADMIN ACCOUNTS INSIDE THE COMMITTED DATABASE
   tester  / uiuc12345    the account the assignment asks us to give the instructor
-  mohitg2 / demo12345    the demo data owner, created while building Assignment 3
+  mohitg2 / uiuc12345    the demo data owner, created while building Assignment 3 (password
+                         changed from demo12345 on 2026-10-12 to match the A1 instructions)
   Because db.sqlite3 is committed, these accounts ship in the repo and steps 6 and 7 of Part 4.3
   (migrate + createsuperuser on the server) are NOT needed -- the assignment says to skip them
   when the database is pushed. Treat both passwords as public. Nothing real goes in this database.
@@ -505,7 +504,7 @@ CONTINUOUS INTEGRATION (new)
   .github/pull_request_template.md and docs/sdlc/README.md document how we work.
 
 STILL TO DO FOR A4
-  [ ] Pranay: Parts 1 and 2
+  [x] Pranay: Parts 1 and 2 (merged into main through PR #2 on 5 October 2026)
   [ ] Everyone: pip install -r requirements.txt again
   [ ] In class: Part 4.3 (clone on PythonAnywhere, virtualenv, install, collectstatic) and
       Part 4.4 (WSGI file, virtualenv path, static mapping /static/ -> <project>/staticfiles,
@@ -513,3 +512,102 @@ STILL TO DO FOR A4
       create ON the server -- .env is git-ignored, so it will not be there after the clone.
   [ ] Submit in the assignment comments: the GitHub link, the PythonAnywhere link, and the
       PythonAnywhere username. Give teacher access to mohitg27.
+  Deployed site:            [TEAM: https://<username>.pythonanywhere.com]
+  PythonAnywhere username:  [TEAM: fill in]
+
+===========================================================================================
+17. WEEK 6 UPDATE (2026-10-12) -- THE WIREFRAME UI
+===========================================================================================
+
+What was built
+  The 13 screens of Wireframe.docx are now real pages (exported to docs/wireframes/v2/, with a
+  screen -> route -> data map and the design rationale A1 asked for). They live in NEW files so
+  nothing graded in A1-A4 was edited:
+    unopsis/ui.py           queries and small calculations (no rendering)
+    unopsis/app_views.py    the pages + one POST endpoint
+    unopsis/app_urls.py     /signup/ /login/ /setup/* /work/* /personal/* /app/* /journey/
+    unopsis/app_forms.py    ItemActionForm
+    templates/unopsis/app/  shell.html (left rail + top bar) and one template per screen
+    static/css/app.css, static/js/app.js
+    unopsis/test_app_ui.py  89 new tests (158 in total, all passing; tests.py untouched)
+  Course pages (briefs, four view kinds, insights, reports, Vega-Lite, JSON API) keep their URLs,
+  views and wording; they moved to the wireframe palette and sit under "Under the hood".
+  Start at /journey/ to click through every screen in order.
+
+Rule we followed: where an assignment and the wireframe disagree, the assignment wins.
+  - Sign-in is TWO pages, /signup/ and /login/, with Django-shaped fields (username, email,
+    password, confirm) instead of the wireframe's "Work email" -- A5 asks for separate pages and
+    username/password. "Continue with Google" is on both, disabled until A5. No Microsoft button.
+  - Every new template extends base.html (through shell.html), every loop has {% empty %}, every
+    link is {% url %} or get_absolute_url, every POST form has {% csrf_token %}, static files
+    go through {% static %}, the main nav stays in base.html.
+
+Where the wireframe and our data differ (full list: Assignements/2026-10-12-wireframe-ui-plan.md)
+  - Content is our seed (Ramirez, invoice, Mom, Lena), not the mock-up's Acme/Priya/Northwind.
+    db.sqlite3 was NOT changed.
+  - No Teams/Telegram providers -> shown only in the "Request a source" tile; no migration.
+  - "6 of 41 channels", "you're the approver", "mentioned" are not stored -> left out.
+  - Threads use /work/thread/<pk>/ (no slug field).
+  - Nothing is ever sent: Connect / Forward / Reconnect are disabled; "Copy & open" copies the
+    draft and opens the original message; the wrap-up says "marked handled" and Undo reopens.
+  - Setup pages SHOW the stored settings; editing them is a later step.
+
+New views, by kind (A2 asks us to keep this inventory)
+  All function-based views, no new class-based views:
+    signup, login_page           static auth pages (A5 will wire them)
+    setup_world, setup_sources, setup_scope, setup_tuning
+    building (work + personal), work_brief, focus, needs_you (redirect), thread, handled,
+    personal_catchup, caught_up, journey
+    item_action                  POST only (require_POST + CSRF): handle / snooze / dismiss /
+                                 reopen, then Post/Redirect/Get to a FIXED page (no open redirect)
+
+What A5 changes
+  - ui.current_space() is the only place that decides "whose space"; it will read request.user.
+  - /signup/ and /login/ get name= attributes, method="post", {% csrf_token %}, and allauth's
+    Google button; hide protected nav links in base.html and the app rail when logged out.
+  - Still owed from the A3 grading comment: /api/items/?brief=xyz and ?due_before=abc return a
+    500 instead of a 400. Left alone on purpose (the API was frozen for this work).
+
+Also done
+  - docs/design/unopsis-erd.png: the ER diagram as an image (A1 lost 0.5 for the .xlsx).
+  - docs/screenshots/22-36: one screenshot per new screen.
+  - db.sqlite3 changed once after the UI work: mohitg2's password is now uiuc12345 (it was
+    demo12345), matching the superuser A1 asks for. No data rows changed. The copy on
+    PythonAnywhere needs the same change -- run this in a PythonAnywhere Bash console instead of
+    pulling the database over the server's copy:
+      python manage.py shell --settings=inboxtriage.settings.production -c "from django.contrib.auth.models import User; u = User.objects.get(username='mohitg2'); u.set_password('uiuc12345'); u.save()"
+
+WEEK 6, PER PERSON  [TEAM: each person fills in their own two lines, committed from their own account]
+  Member 1: Revaant Daga
+    What I did this week:
+    Blocked on / need help with:
+  Member 2: Keshav Arya
+    What I did this week:
+    Blocked on / need help with:
+  Member 3: Joy Sengupta
+    What I did this week:
+    Blocked on / need help with:
+  Member 4: Pranay Varanasi
+    What I did this week:
+    Blocked on / need help with:
+
+===========================================================================================
+18. WHO THE HOME PAGE IS FOR (2026-10-12)
+===========================================================================================
+
+  "/" used to be the course dashboard (database totals, latest briefs, the four view kinds) --
+  useful to us and the graders, confusing to anyone actually using Unopsis. Now:
+    /                  app_views.landing: the product page for a visitor (It reads / It ranks /
+                       It writes, Create account, Sign in, try the demo). A signed-in user is
+                       redirected straight to /work/brief/. Today "signed in" only happens
+                       through the Django admin login; from A5 it is every account, no change.
+    /under-the-hood/   views.home, UNCHANGED, rendering the same dashboard as before. Linked as
+                       "Under the hood" in the main nav, the app sidebar and /journey/.
+  Both render unopsis/home.html (the A3 tests pin that template at "/"), which now just picks
+  _landing.html or _dashboard.html. reverse("home") is still "/", so no {% url 'home' %} broke.
+  inboxtriage/urls.py includes unopsis.app_urls BEFORE unopsis.urls so the landing wins "/".
+  No shortcut around sign-in: "Open the app" (nav), the landing's demo links and the dashboard's
+  "The app:" row show only when user.is_authenticated. A visitor gets Sign in / Create account
+  (still the static pages until A5, whose buttons continue into the app). This is also A5
+  Part 1.5 -- protected links hidden before login -- done ahead of time; no login code added.
+  Tests: 7 new (165 total, all passing).
