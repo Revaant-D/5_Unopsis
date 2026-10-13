@@ -1,15 +1,15 @@
-$ export UNOPSIS_API=http://127.0.0.1:8899     # the local dev server; drop this line to use the default http://127.0.0.1:8000
+$ export UNOPSIS_API=https://joys3.pythonanywhere.com
 $ python 02_csv_for_spreadsheets.py
 
-Fetched  http://127.0.0.1:8899/api/insights/items-by-lane/
-Wrote    unopsis_lane_counts.csv  (3 data rows + 1 header, as of 2026-10-12 19:11 UTC)
+Fetched  https://joys3.pythonanywhere.com/api/insights/items-by-lane/
+Wrote    unopsis_lane_counts.csv  (3 data rows + 1 header, as of 2026-10-13 03:48 UTC)
 
 File contents:
 ----------------------------------------------
 lane,label,total
-needs_you,Needs you,5
-moving,Moving without you,1
-fyi,FYI,1
+needs_you,Needs you,10
+moving,Moving without you,2
+fyi,FYI,2
 ----------------------------------------------
 
 1. EXCEL / NUMBERS -- open the file directly.
@@ -34,4 +34,5 @@ fyi,FYI,1
    Apps Script above for live data, or File > Import > Upload this .csv for a frozen
    snapshot.
 
-[exit status: 0]
+$ echo $?
+0

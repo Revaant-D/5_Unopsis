@@ -611,3 +611,55 @@ WEEK 6, PER PERSON  [TEAM: each person fills in their own two lines, committed f
   (still the static pages until A5, whose buttons continue into the app). This is also A5
   Part 1.5 -- protected links hidden before login -- done ahead of time; no login code added.
   Tests: 7 new (165 total, all passing).
+
+
+17. DEPLOYMENT AND A5 STATUS (updated 13 October 2026)
+-------------------------------------------------------
+LIVE:  https://joys3.pythonanywhere.com      PythonAnywhere account: joys3
+Admin for the instructor: tester / uiuc12345   (ships inside the committed db.sqlite3)
+
+Verified against the DEPLOYED site, not just locally:
+  /                            200   landing page
+  /accounts/login/ /signup/    200   A5 Part 1, our own pages
+  /api/insights/items-by-lane/ 200   application/json, the one public feed (A5 Part 3.1)
+  /reports/ /briefs/ /api/items/  302 -> login when signed out, 200 with a session
+  /export/brief-items.{csv,json}   timestamped filenames, real rows, JSON metadata
+  /api/deadlines/holidays/     200   the Nager.Date call DOES work through the free-tier
+                                     proxy -- we had flagged this as a risk; it is not one
+  Google OAuth                 the handshake reaches accounts.google.com with the right
+                               client_id and redirect_uri, and Google raises no
+                               redirect_uri_mismatch. The final click-through needs a human.
+
+THINGS THAT BIT US, SO NOBODY REPEATS THEM
+  - Disk quota. The free tier gives 512 MB and this project needs ~262 MB of virtualenv
+    (vl-convert 66, Django 39, numpy 34, matplotlib 33). The first install died on
+    "Disk quota exceeded" because pip's wheel CACHE filled the rest. Use
+    pip install --no-cache-dir, and rm -rf ~/.cache/pip afterwards.
+  - The instructor's account saw an EMPTY SITE. A5 scopes every query to the owning
+    account, and the seed data belongs to mohitg2; tester was made by createsuperuser long
+    before the auto-seeding existed, so it owned nothing. Fixed by seeding it. If another
+    account is ever added by hand, seed it too:
+        python manage.py shell --settings=inboxtriage.settings.production -c "
+        from django.contrib.auth.models import User
+        from unopsis.onboarding import seed_new_account
+        seed_new_account(User.objects.get(username='NAME'))"
+  - .env does NOT come down with the clone (it is git-ignored). It has to be written on the
+    server, and the deployed hostname must be in ALLOWED_HOSTS or every page 400s.
+  - The django_site row shipped saying example.com. allauth matches the OAuth callback
+    against it, so it must say the deployed domain or Google login fails ONLY in production.
+  - Do NOT run migrate or createsuperuser on the server. db.sqlite3 is committed, already
+    migrated (allauth included) and already carries tester.
+
+ADMIN NOTE: the free web app EXPIRES 2026-11-13. It needs a renewal click on the Web tab
+each month or the site goes dark. Check this before any demo or grading deadline.
+
+STILL TO DO
+  [ ] Click through Continue with Google once in a browser, on the deployed site.
+      Add the instructor's Google address under Audience -> Test users first, or it fails
+      for the one person who has to see it work.
+  [ ] The 16 screenshots in docs/a5/screenshots/README.md. Most need a visible URL bar,
+      so they have to be taken in a real browser by a person.
+  [ ] Rotate the Google client secret and revoke the PythonAnywhere API token used to
+      deploy; both were handled outside the repo and should not outlive the assignment.
+  [ ] Submit: the GitHub link, https://joys3.pythonanywhere.com, and the PythonAnywhere
+      username joys3 in the assignment comments. Give teacher access to mohitg27.

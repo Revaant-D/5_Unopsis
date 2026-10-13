@@ -1,17 +1,18 @@
-$ export UNOPSIS_API=http://127.0.0.1:8899     # the local dev server; drop this line to use the default http://127.0.0.1:8000
+$ export UNOPSIS_API=https://joys3.pythonanywhere.com
 $ python 01_python_aggregation.py
 
 Unopsis brief items by lane
-Source: http://127.0.0.1:8899/api/insights/items-by-lane/
+Source: https://joys3.pythonanywhere.com/api/insights/items-by-lane/
 
  #  Lane                  Items   Share  Distribution
 -----------------------------------------------------
- 1  Needs you                 5   71.4%  ##################
- 2  Moving without you        1   14.3%  ####
- 3  FYI                       1   14.3%  ####
+ 1  Needs you                10   71.4%  ##################
+ 2  Moving without you        2   14.3%  ####
+ 3  FYI                       2   14.3%  ####
 -----------------------------------------------------
-    TOTAL                     7  100.0%
+    TOTAL                    14  100.0%
 
-Waiting on a human: 5 of 7 items (71.4% of the backlog).
+Waiting on a human: 10 of 14 items (71.4% of the backlog).
 
-[exit status: 0]
+$ echo $?
+0
