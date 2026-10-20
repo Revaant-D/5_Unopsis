@@ -358,3 +358,29 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# ---------------------------------------------------------------------------------------
+# Assignment 6: AI features (see README_AI.md and unopsis/ai/)
+# ---------------------------------------------------------------------------------------
+# Feature 1, local: a Hugging Face model run with `transformers`. The weights are downloaded
+# automatically into the Hugging Face cache the first time the AI lab is used, never into the
+# repository. The default is the size-vs-quality "sweet spot" from llm-test/ai_prototype.ipynb.
+AI_LOCAL_MODEL = env('AI_LOCAL_MODEL', default='Qwen/Qwen2.5-1.5B-Instruct')
+# False skips the local model entirely (the rule-based triage answers instead). Set it to
+# False on PythonAnywhere, whose free plan cannot install torch.
+AI_LOCAL_ENABLED = env.bool('AI_LOCAL_ENABLED', default=True)
+AI_LOCAL_MAX_NEW_TOKENS = env.int('AI_LOCAL_MAX_NEW_TOKENS', default=80)
+# How many worked examples go into the triage prompt: 0 zero-shot, 1 one-shot, 4 few-shot,
+# 8 many-shot. Few-shot won the notebook's Route A comparison.
+AI_TRIAGE_SHOTS = env.int('AI_TRIAGE_SHOTS', default=4)
+# The hybrid pipeline triages at most this many messages per brief (CPU time per request).
+AI_PIPELINE_MAX_MESSAGES = env.int('AI_PIPELINE_MAX_MESSAGES', default=12)
+
+# Feature 2, external: Groq's OpenAI-compatible API (free tier). Key from console.groq.com/keys.
+GROQ_API_KEY = env('GROQ_API_KEY', default='')
+GROQ_MODEL = env('GROQ_MODEL', default='openai/gpt-oss-20b')
+GROQ_TIMEOUT_SECONDS = env.int('GROQ_TIMEOUT_SECONDS', default=20)
+
+# Guardrail: model runs per signed-in account per minute, across both features.
+AI_REQUESTS_PER_MINUTE = env.int('AI_REQUESTS_PER_MINUTE', default=10)

@@ -111,6 +111,11 @@
           <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
              href="{% url 'api-items' %}">JSON API</a>
         </li>
+        <li class="nav-item">
+          {# Assignment 6: the AI features (local Hugging Face model + Groq). #}
+          <a class="nav-link {% if current|slice:':3' == 'ai-' %}active{% endif %}"
+             href="{% url 'ai-lab' %}">AI lab</a>
+        </li>
         {% endif %}
 
         {% if user.is_authenticated %}

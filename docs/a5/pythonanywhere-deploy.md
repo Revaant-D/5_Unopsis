@@ -36,8 +36,12 @@ The repository is public, so no credentials are needed.
 
 ```bash
 mkvirtualenv --python=/usr/bin/python3.10 unopsis     # auto-activates; later use: workon unopsis
-pip install -r requirements.txt
+pip install -r requirements-production.txt
 ```
+
+`requirements-production.txt` is `requirements.txt` without the Assignment 6 AI libraries:
+torch alone is bigger than the free plan's 512 MB quota. The server therefore runs with
+`AI_LOCAL_ENABLED=False` (below), and the AI lab's triage uses the rule-based fallback there.
 
 This takes a few minutes — matplotlib and vl-convert are large. Any Python **3.10 or newer**
 available on your account works; Django 5.2 requires at least 3.10.
@@ -58,6 +62,8 @@ ALLOWED_HOSTS=localhost,127.0.0.1,<you>.pythonanywhere.com
 OPENAI_API_KEY=dummy-key-not-real
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
+AI_LOCAL_ENABLED=False
+GROQ_API_KEY=
 ```
 
 Save with `Ctrl-O`, `Enter`, then `Ctrl-X`.

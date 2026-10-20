@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% comment %}
+  Assignment 6: the result of the hybrid pipeline for one brief (ai_views.ai_brief_write).
+{% endcomment %}
+
+{% block title %}AI brief{% endblock %}
+
+{% block content %}
+
+  <p class="mb-2">
+    <a href="{% url 'ai-lab' %}">&larr; Back to the AI lab</a>
+    &middot; <a href="{{ brief.get_absolute_url }}">the original brief</a>
+  </p>
+
+  {% if limited %}
+    <div class="alert alert-warning">Too many AI requests this minute. Wait a moment and try again.</div>
+  {% else %}
+
+    <div class="panel mb-4">
+      <div class="small text-muted mb-1">
+        {{ brief.space.get_kind_display }} brief &middot; written by
+        {% if outcome.writer == 'groq' %}Groq ({{ outcome.groq_model }}){% else %}the template writer{% endif %}
+        &middot; {{ outcome.total_ms }} ms in total
+      </div>
+      <h2 class="h3">{{ outcome.draft.headline }}</h2>
+      <p class="lead mb-0" style="white-space: pre-line">{{ outcome.draft.body }}</p>
+      {% if outcome.writer_note %}<p class="small text-muted mt-2 mb-0">{{ outcome.writer_note }}</p>{% endif %}
+    </div>
+
+    <h3 class="h5">Pipeline</h3>
+    <ol class="list-group list-group-numbered mb-4">
+      {% for step in outcome.steps %}
+        <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+          <span>
+            {{ step.label }}
+            {% if step.detail %}<div class="small text-muted">{{ step.detail }}</div>{% endif %}
+          </span>
+          <span class="badge {% if step.status == 'done' %}text-bg-success{% else %}text-bg-warning{% endif %}">{{ step.status }} &middot; {{ step.ms }} ms</span>
+        </li>
+      {% endfor %}
+    </ol>
+
+    {% if outcome.usage %}
+      <p class="small text-muted">
+        Tokens sent to Groq: {{ outcome.usage.prompt_tokens|default:"?" }} in,
+        {{ outcome.usage.completion_tokens|default:"?" }} out.
+      </p>
+    {% endif %}
+
+    <h3 class="h5">What the local model sent on</h3>
+    <ul class="list-group mb-4">
+      {% for row in outcome.rows %}
+        <li class="list-group-item">
+          <span class="badge {% if row.lane == 'needs_you' %}text-bg-danger{% elif row.lane == 'moving' %}text-bg-secondary{% else %}text-bg-info{% endif %}">{{ row.lane }}</span>
+          <strong>{{ row.who }}</strong> <span class="small text-muted">({{ row.where }})</span>:
+          {{ row.summary }}
+          {% if row.deadline %}<span class="badge text-bg-warning">{{ row.deadline }}</span>{% endif %}
+          {% if row.source == 'rules' %}<span class="badge text-bg-light border">rules</span>{% endif %}
+        </li>
+      {% empty %}
+        <li class="list-group-item text-muted">Nothing survived triage.</li>
+      {% endfor %}
+    </ul>
+
+    {% if outcome.held %}
+      <h3 class="h5">Held for review (possible prompt injection, never sent to a model)</h3>
+      <ul class="list-group mb-4">
+        {% for row in outcome.held %}
+          <li class="list-group-item"><strong>{{ row.who }}</strong>: {{ row.text }}
+            <div class="small text-danger">{{ row.reasons|join:"; " }}</div></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+  {% endif %}
+
+{% endblock %}

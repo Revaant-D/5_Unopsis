@@ -16,6 +16,10 @@
   once signed in.
 - **The app itself** -- the screens from the wireframes -- starts at `/work/brief/`; `/journey/`
   links every screen in order. See **The app (wireframe UI)** below.
+- **AI (Assignment 6)**: message triage with a local Hugging Face model and brief writing with
+  the Groq API, at `/ai/` (**AI lab** in the navigation once signed in). The workflow,
+  preprocessing and guardrails are in [`README_AI.md`](README_AI.md); the 15-model benchmark is
+  [`llm-test/ai_prototype.ipynb`](llm-test/ai_prototype.ipynb).
 
 ---
 

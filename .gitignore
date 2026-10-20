@@ -80,3 +80,22 @@ htmlcov/
 # Jupyter
 # ================================
 .ipynb_checkpoints/
+
+# ================================
+# Assignment 6: model weights and caches -- NEVER commit these
+# ================================
+# transformers downloads weights into the Hugging Face cache (outside the repo) by default;
+# these patterns also stop a copy saved inside the project from being pushed by accident.
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.onnx
+*.h5
+*.msgpack
+llm-test/models/
+llm-test/hf_cache/
+.cache/
+offload/
