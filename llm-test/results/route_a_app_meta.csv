@@ -1,0 +1,5 @@
+model_id,mode,shots,device,prompt_tokens,status
+ibm-granite/granite-3.3-2b-instruct,zero,0,cpu,165,ok
+ibm-granite/granite-3.3-2b-instruct,one,1,cpu,226,ok
+ibm-granite/granite-3.3-2b-instruct,few,4,cpu,387,ok
+ibm-granite/granite-3.3-2b-instruct,many,8,cpu,618,ok

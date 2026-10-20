@@ -62,7 +62,7 @@ def template_brief(rows):
 
 def window_messages(brief):
     """The messages in the brief's Space and time window, newest first, capped."""
-    limit = getattr(settings, "AI_PIPELINE_MAX_MESSAGES", 12)
+    limit = getattr(settings, "AI_PIPELINE_MAX_MESSAGES", 6)
     return list(
         Message.objects.filter(
             connection__space=brief.space,

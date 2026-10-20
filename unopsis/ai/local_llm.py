@@ -1,8 +1,8 @@
 """
 The local Hugging Face model (AI feature 1: message triage).
 
-The model named by settings.AI_LOCAL_MODEL (default Qwen/Qwen2.5-1.5B-Instruct, the "sweet
-spot" from llm-test/ai_prototype.ipynb) is loaded with `transformers` the first time a request
+The model named by settings.AI_LOCAL_MODEL (default ibm-granite/granite-3.3-2b-instruct, the
+"sweet spot" from llm-test/ai_prototype.ipynb) is loaded with `transformers` the first time a request
 needs it. The first load DOWNLOADS the weights from the Hugging Face Hub into the local cache
 (~/.cache/huggingface on Mac/Linux, C:\\Users\\<you>\\.cache\\huggingface on Windows); later
 loads read that cache. Nothing is committed to git -- *.safetensors / *.bin are in .gitignore.
@@ -33,7 +33,7 @@ _loaded = {}  # {"name": str, "tokenizer": ..., "model": ..., "device": str}
 
 
 def model_name():
-    return getattr(settings, "AI_LOCAL_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+    return getattr(settings, "AI_LOCAL_MODEL", "ibm-granite/granite-3.3-2b-instruct")
 
 
 def is_loaded():
@@ -58,8 +58,10 @@ def _load():
 
         name = model_name()
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        # float16 halves memory on a GPU; on CPU float32 is the safe, fast default.
-        dtype = torch.float16 if device == "cuda" else torch.float32
+        # float16 on a GPU. On CPU, settings.AI_LOCAL_CPU_DTYPE: bfloat16 by default (~5 GB of RAM
+        # for the default model, as in the notebook's laptop run); float32 doubles that.
+        cpu_dtype = getattr(torch, getattr(settings, "AI_LOCAL_CPU_DTYPE", "bfloat16"), torch.bfloat16)
+        dtype = torch.float16 if device == "cuda" else cpu_dtype
         try:
             tokenizer = AutoTokenizer.from_pretrained(name)
             model = AutoModelForCausalLM.from_pretrained(name, torch_dtype=dtype)
@@ -107,7 +109,7 @@ def triage(text):
     started = time.perf_counter()
     raw, note = "", ""
     try:
-        chat = prompts.build_triage_messages(cleaned, shots=getattr(settings, "AI_TRIAGE_SHOTS", 4))
+        chat = prompts.build_triage_messages(cleaned, shots=getattr(settings, "AI_TRIAGE_SHOTS", 0))
         raw = generate(chat)
         result = guardrails.validate_triage(guardrails.parse_json_object(raw))
         if result is None:

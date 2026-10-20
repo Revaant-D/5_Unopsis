@@ -666,20 +666,23 @@ STILL TO DO
 
 
 ===========================================================================================
-19. ASSIGNMENT 6 -- AI: LOCAL HUGGING FACE MODEL + EXTERNAL API (updated 19 October 2026)
+19. ASSIGNMENT 6 -- AI: LOCAL HUGGING FACE MODEL + EXTERNAL API (updated 20 October 2026)
 ===========================================================================================
 
 WHAT WAS BUILT
-  Part 1  llm-test/ai_prototype.ipynb. Top cell downloads the weights. 15 models in 5 size
-          categories (3 each, different families), one matrix test of 14 fixed Unopsis
-          messages, then Route A (prompt engineering): zero / one / few / many-shot on the top
-          3 models. Results land in llm-test/results/ (CSVs, two charts, summary.md).
+  Part 1  llm-test/ai_prototype.ipynb, run on a Colab T4 with all outputs. Top cell
+          downloads the weights. 15 models in 5 size categories (3 each, different
+          families), one matrix test of 14 fixed Unopsis messages, then Route A (prompt
+          engineering): zero / one / few / many-shot on the top models, plus Step 3b on the
+          model the app runs (laptop CPU). Results in llm-test/results/ (CSVs, charts,
+          summary.md).
   Part 2  README_AI.md. Feature 1 = message triage with a LOCAL model (transformers,
-          default Qwen/Qwen2.5-1.5B-Instruct) at /ai/. Feature 2 = brief writing with the
-          Groq API (openai/gpt-oss-20b) at /ai/briefs/<pk>/write/, as a hybrid pipeline:
-          the local model filters and labels, Groq only sees one short line per kept message.
-          Guardrails: cleaning + PII redaction, prompt-injection screen, JSON validation with
-          rule/template fallbacks, login + ownership, 10 runs/min per account.
+          ibm-granite/granite-3.3-2b-instruct, zero-shot -- both chosen by the notebook) at
+          /ai/. Feature 2 = brief writing with the Groq API (openai/gpt-oss-20b) at
+          /ai/briefs/<pk>/write/, as a hybrid pipeline: the local model filters and labels,
+          Groq only sees one short line per kept message. Guardrails: cleaning + PII
+          redaction, prompt-injection screen, JSON validation with rule/template
+          fallbacks, login + ownership, 10 runs/min per account.
   Part 3  this section.
 
   TASK: one message in, {"lane": needs_you|moving|fyi|noise, "summary", "deadline"} out.
@@ -694,56 +697,85 @@ WHAT WAS BUILT
     Groq openai/gpt-oss-20b    $0.075 per 1M input tokens, $0.30 per 1M output tokens
     Groq openai/gpt-oss-120b   $0.15  per 1M input tokens, $0.60 per 1M output tokens
     Groq free plan (gpt-oss)   30 requests/min, 1,000 requests/day, 200K tokens/day
-  Token counts of OUR prompts: triage few-shot ~430 tokens in, ~35 out; zero-shot ~190 in.
+  Token counts of OUR prompts (measured, granite-3.3-2b tokenizer): triage zero-shot 165
+  tokens in, ~28 out; one-shot 226; few-shot 387; many-shot 618.
   Brief writer for a 25-message window ~950 tokens in, ~300 out.
 
 -------------------------------------------------------------------------------------------
 Q1. THE SIZE vs QUALITY TRADE-OFF
 -------------------------------------------------------------------------------------------
-  TODO(team): paste the "By size category" and "Matrix test" tables from
-  llm-test/results/summary.md here after running the notebook, then fix the sentences
-  marked [check] so they match YOUR numbers.
+  Results from llm-test/ai_prototype.ipynb (Colab Tesla T4, 2026-10-20; 14 fixed Unopsis
+  messages, zero-shot, greedy decoding). Lane accuracy is over the 13 messages with a right
+  answer, so ONE message = 7.7 points; the 14th is the prompt-injection attack.
 
-  Category              Models                         Lane acc  Valid JSON  s/msg  Mem GB
-  1 Ultra-light <1B     SmolLM2-360M, Qwen2.5-0.5B,    ____      ____        ____   ____
-                        Qwen3-0.6B
-  2 Small 1-2B          Qwen2.5-1.5B, SmolLM2-1.7B,    ____      ____        ____   ____
-                        Qwen3-1.7B
-  3 Medium 2-4B         Granite-3.3-2B, Qwen2.5-3B,    ____      ____        ____   ____
-                        Phi-4-mini (3.8B)
-  4 Large 7-9B          OLMo-2-7B, Qwen2.5-7B,         ____      ____        ____   ____
-                        Granite-3.3-8B (4-bit on T4)
-  5 X-Large 12-15B      OLMo-2-13B, Qwen2.5-14B,       ____      ____        ____   ____
-                        Phi-4 14.7B (4-bit on T4)
+  Category            Models                              Lane acc  Valid JSON  s/msg  Mem GB
+  1 Ultra-light <1B   SmolLM2-360M, Qwen2.5-0.5B, Qwen3-0.6B   0.256     0.690   1.88    1.00
+  2 Small 1-2B        Qwen2.5-1.5B, SmolLM2-1.7B, Qwen3-1.7B   0.462     1.000   1.19    3.36
+  3 Medium 2-4B       Granite-3.3-2B, Qwen2.5-3B, Phi-4-mini   0.667     1.000   1.49    6.35
+  4 Large 7-9B        OLMo-2-7B, Qwen2.5-7B, Granite-3.3-8B    0.769     0.952   2.29    5.54*
+  5 X-Large 12-15B    OLMo-2-13B, Qwen2.5-14B, Phi-4           0.795     1.000   3.54   10.16*
+  * 4-bit on the T4, which is why the 7-9B row uses less memory than the 2-4B row.
 
-  Sweet spot: the 1-2B category [check]. Triage is a short classification + a 15-word
-  summary; it does not need world knowledge or long reasoning, which is what extra
-  parameters mostly buy. What separates models on this task is INSTRUCTION ADHERENCE --
-  returning exactly one JSON object with an allowed lane. The sub-1B models are the ones
-  that break format (prose instead of JSON, invented lanes like "urgent") and confuse
-  moving/fyi [check]; from ~1.5B up the format is reliable, especially with few-shot
-  examples. The default app model, Qwen2.5-1.5B-Instruct, is from this category.
+  Best model per category (lane accuracy, valid JSON, s/msg on the T4):
+    <1B    Qwen3-0.6B         0.385  1.00  1.32     2-4B    Granite-3.3-2B  0.692  1.00  1.71
+    1-2B   Qwen3-1.7B         0.615  1.00  1.34             Phi-4-mini      0.692  1.00  1.43
+    7-9B   OLMo-2-7B          0.769  1.00  2.05     12-15B  Qwen2.5-14B     0.846  1.00  3.52
+  Every model resisted the injection message except SmolLM2-360M, which also returned
+  valid JSON for only 1 of 14 messages.
 
-  Was a massive model significantly better? Only marginally [check]: the best 7-15B model
-  gained ____ points of lane accuracy over the best 1-2B model, while costing ~5-10x the
-  memory and ~__x the latency per message. The cases the big models fixed were the
-  genuinely ambiguous ones (e.g. "did everyone see the rubric got updated?" -- fyi or
-  needs_you?), where a human would also hesitate. That gain is not worth the price for a
-  step that runs on EVERY message, and the brief writer (the step where language quality
-  shows) already uses a 20B-class model through the API.
+  Sweet spot: the MEDIUM 2-4B category. It is the biggest jump in the table (+21 points of
+  lane accuracy over 1-2B), every model in it returned valid JSON 14 times out of 14, and
+  it still runs in ~1.5 s per message on a T4 GPU in 5-8 GB. Past 4B the gains shrink to
+  +10 points (7-9B) and +13 points (12-15B) while latency rises 1.5x and 2.4x and the
+  models no longer fit a 16 GB GPU without 4-bit quantisation.
 
-  Expected cost to run each category on a server (24/7, one replica, fp16 weights unless
-  noted; the notebook's usd_per_1k_msgs column converts measured latency into $ at $0.526/h):
+  The small models failed in an instructive way: Qwen2.5-1.5B (the app's first default)
+  and Qwen3-0.6B answered "needs_you" for every message but one, and Qwen2.5-0.5B nearly
+  as often. Their 0.385 is exactly 5 of 13 -- the share of needs_you messages -- so they
+  did no better than always guessing the most common lane. Format was never the problem
+  from 0.5B up (valid JSON 14/14); JUDGEMENT was.
 
-  Category      Weights fp16   Smallest machine that fits           $/hour   $/month
-  <1B           ~1-1.5 GB      4 vCPU / 16 GB CPU server (no GPU)   ~0.20    ~$146
-  1-2B          ~3-3.5 GB      T4 16 GB  (g4dn.xlarge)               0.526     $384
-                               (CPU works, but 1-3 s per message)
-  2-4B          ~5-8 GB        T4 16 GB  (g4dn.xlarge)               0.526     $384
-  7-9B          ~15-17 GB      L4 24 GB  (g6.xlarge) fp16,           0.805     $588
-                               or T4 in 4-bit (~6 GB)                0.526     $384
-  12-15B        ~28-30 GB      4-bit on L4/A10G 24 GB (~10 GB)       0.805     $588
-                               fp16 needs >24 GB: g5.12xlarge 4xA10G  5.672   $4,141
+  App model: ibm-granite/granite-3.3-2b-instruct. It ties the category's best lane accuracy
+  (0.692) at the smallest size (2.5B, ~5 GB vs Phi-4-mini's ~7.7 GB, which matters on a
+  CPU), and its mistakes are in the safe direction: it never filed a real message as
+  noise (the failure our evaluation weights most). Its 4 misses: two automated
+  notifications called fyi instead of noise, the rubric update called needs_you, and the
+  flight-booking request called moving -- that one still appears in the brief.
+
+  Was a massive model significantly better? Better, but not by enough to pay for it on
+  this task. The best 12-15B model (Qwen2.5-14B, 0.846 = 11/13) beat the best 2-4B model
+  (0.692 = 9/13) by TWO messages, at 2x the latency, 2x the memory even in 4-bit, and 2x
+  the cost per message. The messages every size struggled with are genuinely ambiguous:
+  "Your order has shipped!" (noise or fyi? 27% of the 15 models right), "You left
+  something in your cart" (33%) and "did everyone see the rubric got updated?" (fyi or
+  needs_you? 20%). A human would hesitate on those too. Triage runs on EVERY message, so
+  it gets the cheapest model that clears the bar; the step where language quality shows,
+  writing the brief, already uses a 20B-class model through the API.
+  Caveat: 13 scored messages is a small test. Differences of one message (~8 points) are
+  noise; the size trend across categories is the robust result.
+
+  Expected cost to run each model on a server. The $/1k column is the notebook's measured
+  T4 latency x $0.526/h, one message at a time; the monthly figure is one machine 24/7.
+
+  Model             Params  fp16 GB  T4 GB  s/msg  $/1k msgs  Smallest server (24/7)      $/month
+  SmolLM2-360M        0.36     0.7    0.75   3.18     0.465   CPU 4 vCPU/16 GB (~$0.20/h)    ~146
+  Qwen2.5-0.5B        0.49     1.0    1.01   1.14     0.166   CPU 4 vCPU/16 GB               ~146
+  Qwen3-0.6B          0.60     1.2    1.24   1.32     0.193   CPU 4 vCPU/16 GB               ~146
+  Qwen2.5-1.5B        1.54     3.1    3.11   1.28     0.187   T4 16 GB (g4dn.xlarge)          384
+  SmolLM2-1.7B        1.71     3.4    3.48   0.95     0.139   T4 16 GB                        384
+  Qwen3-1.7B          1.72     3.4    3.49   1.34     0.196   T4 16 GB                        384
+  Granite-3.3-2B      2.53     5.1    5.11   1.71     0.250   T4 16 GB                        384
+  Qwen2.5-3B          3.09     6.2    6.20   1.33     0.195   T4 16 GB                        384
+  Phi-4-mini          3.84     7.7    7.73   1.43     0.209   T4 16 GB                        384
+  OLMo-2-7B           7.30    14.6    5.51*  2.05     0.299   T4 4-bit; fp16: L4 24 GB    384 / 588
+  Qwen2.5-7B          7.62    15.2    6.03*  2.13     0.312   T4 4-bit; fp16: L4 24 GB    384 / 588
+  Granite-3.3-8B      8.17    16.3    5.08*  2.70     0.394   T4 4-bit; fp16: L4 24 GB    384 / 588
+  OLMo-2-13B         13.72    27.4    9.54*  3.23     0.472   T4 4-bit; fp16: 4xA10G    384 / 4,141
+  Qwen2.5-14B        14.77    29.5   10.78*  3.52     0.514   T4 4-bit; fp16: 4xA10G    384 / 4,141
+  Phi-4              14.66    29.3   10.17*  3.86     0.564   T4 4-bit; fp16: 4xA10G    384 / 4,141
+  (* = 4-bit. The sub-1B models also run on a GPU-less server; 1-4B do too, but slowly:
+  our laptop CPU took ~20-35 s per message for Granite-3.3-2B -- ~$1.5-3.3 per 1,000
+  messages at $0.20/h, 6-13x the T4's $0.25. On CPU, per-message cost favours a GPU.)
 
 -------------------------------------------------------------------------------------------
 Q2. COST & SCALING: 10,000 DAILY USERS
@@ -751,37 +783,48 @@ Q2. COST & SCALING: 10,000 DAILY USERS
   Assumptions: each user receives ~150 messages/day and gets 2 briefs/day.
     -> 1,500,000 triage calls/day (17 per second on average, ~50/s at the morning peak)
     ->    20,000 brief-writing calls/day
+  Measured per triage call (notebook Step 3b, granite-3.3-2b, zero-shot): 165 prompt tokens
+  in, ~28 tokens out. Few-shot would be 387 in, many-shot 618 -- Route A showed they buy
+  no accuracy, so zero-shot is also the cheapest choice.
 
   Option A -- everything through the API (Groq gpt-oss-20b):
-    triage  1.5M x (430 in x $0.075/M + 35 out x $0.30/M) = 1.5M x $0.0000428 = $64/day
-    briefs  20K  x (950 in x $0.075/M + 300 out x $0.30/M) = 20K x $0.000161 = $3/day
-    total ~ $67/day ~ $2,020/month (a 120B-class API model doubles it: ~$4,040/month).
+    triage  1.5M x (165 in x $0.075/M + 28 out x $0.30/M) = 1.5M x $0.0000208 = $31/day
+    briefs  20K  x (950 in x $0.075/M + 300 out x $0.30/M) = 20K x $0.000161 =  $3/day
+    total ~ $34/day ~ $1,030/month. Caveat: gpt-oss is a reasoning model and bills its
+    reasoning as output; ~50 reasoning tokens per triage would raise triage to $0.0000358
+    a call and the total to ~$1,710/month. A 120B-class model doubles either figure.
     Far above the free plan (1,000 requests/day), so a paid plan is required.
 
-  Option B -- everything local, the way our Django view runs today:
-    One request at a time through transformers.generate(), ~1 s per message for 1.5B on a
-    T4 [check: notebook latency_s]. 17 messages/s on average needs ~17+ GPUs, ~50 at peak:
-    17 x $384 = $6,500+/month before redundancy -- and the brief writer would need a big
-    model on a 24 GB+ GPU too. The naive local integration does NOT scale.
+  Option B -- everything local, the way our Django view runs today (one request at a time
+  through transformers.generate()):
+                        s/message (measured)   messages/s per machine   machines for 17/s
+    T4 GPU, fp16        1.71 (notebook Step 2)         0.58                  ~30 x $384
+    laptop-class CPU    ~20-35 (Step 3b)               ~0.03-0.05            ~400 (!)
+    ~30 T4s = ~$11,500/month for the AVERAGE load (~86 GPUs at the peak). The naive
+    in-Django integration does NOT scale: it runs one message at a time per process.
 
   Option C -- local model on a proper inference server (vLLM / TGI with batching):
-    Batching is what makes a GPU cheap: a 1.5B model on one L4 processes dozens of
-    requests in parallel, comfortably 50+ messages/s. Two g6.xlarge for peak + failover:
-    2 x $588 = $1,175/month for triage. Plus the API for briefs: $97/month.
-    Total ~ $1,270/month vs ~$2,020 for API-only.
+    Batching is what makes a GPU cheap: a 2.5B model on one L4 processes dozens of
+    requests in parallel, comfortably 50+ messages/s [estimate, not measured by us]. Two
+    g6.xlarge for peak + failover: 2 x $588 = $1,175/month for triage, plus the API for
+    briefs: $97/month. Total ~$1,270/month.
 
-  Break-even for triage: one g6.xlarge costs $588/month; the API costs $0.0000428 per
-  triage, so the GPU only wins if it handles more than 588 / 0.0000428 = 13.7M messages a
-  month = ~458,000 a day = 5.3 messages/s, around the clock. At 10,000 users we are at
-  1.5M/day, so with batching the local model wins; at 1,000 users (150K/day) it does not.
+  Break-even for triage: one g6.xlarge costs $588/month.
+    API at $0.0000208/call: 588 / 0.0000208 = 28M calls/month = ~940K/day = ~6,300 users
+    API at $0.0000358/call (with reasoning tokens): ~550K/day = ~3,700 users
+    With two GPUs for redundancy, double those: ~7,300 to ~12,600 users.
+  So 10,000 daily users sits right ON the break-even: the API costs $1,030-1,710/month,
+  the batched local setup ~$1,270/month.
 
-  Decision: at 10,000 daily users we would keep the LOCAL model for triage, but move it off
-  Django into a batched inference service (Django calls it over HTTP, exactly as it calls
-  Groq today), and keep the API for brief writing. We would NOT move entirely to the API:
-  triage is high-volume and low-difficulty, which is exactly the workload where paying per
-  token is most expensive relative to what a small model needs. We would not run everything
-  locally either: briefs are low-volume and quality-sensitive, which is where the API wins.
-  Below ~3,000 daily users the API-only setup is cheaper and needs no GPU operations.
+  Decision: we would NOT stay with the local model inside Django (Option B is ~9x the
+  cost), and we would NOT move entirely to the API either. At 10,000 users cost is a draw,
+  so the deciding factors are the other ones: the API's bill grows with every new user
+  (~$0.09-0.16 per user per month for triage) while a batched GPU's is flat up to its
+  capacity; raw message bodies would stay on our servers; and no provider rate limit can
+  stop triage. So: triage on a batched local GPU service that Django calls over HTTP
+  (exactly as it calls Groq today), brief writing on the API (low volume, quality-
+  sensitive). Below ~7,000 users (the low end of the two-GPU break-even) we would use the
+  API for both -- no GPU to operate.
 
 -------------------------------------------------------------------------------------------
 Q3. HYBRID POTENTIAL
@@ -810,25 +853,33 @@ Q4. COST COMPARISON: A 16-CORE CPU / 16 GB-CLASS GPU / 64 GB RAM / 1 TB SERVER
   Closest cloud equivalent: AWS g5.4xlarge (16 vCPU, 64 GB RAM, one A10G with 24 GB) at
   ~$1.62/h = ~$1,186/month, plus 1 TB of gp3 storage ~$80 = ~$1,266/month, paid whether
   it is busy or idle. What it can host: any model up to ~8B parameters in fp16, or up to
-  ~30B in 4-bit; 1 TB holds dozens of models' weights. A 1.5B triage model uses a few GB
-  of the 24 GB, so the same box could also run a 7-8B model for brief writing.
+  ~30B in 4-bit (our 12-15B models used ~10-11 GB in 4-bit); 1 TB holds every model we
+  tested (~165 GB together) several times over. Our 2.5B triage model uses ~5 GB of the
+  24 GB, so the same box could also run a 7-8B model for brief writing.
 
-  Break-even against a comparable-size API model (20B class at $0.075/$0.30 per M tokens):
-  $1,266 / $0.0000428 per triage call = 29.6M calls/month = ~990,000 a day = ~11.4 calls
-  per second, sustained 24/7.
+  Break-even against a comparable API (gpt-oss-20b at $0.075/$0.30 per M tokens, using our
+  measured zero-shot triage call of 165 tokens in and ~28 out = $0.0000208):
+    $1,266 / $0.0000208 = 61M calls/month = ~2.0M a day = ~23.5 calls/s, sustained 24/7
+    (~1.2M a day if the API model also bills ~50 reasoning tokens per call, see Q2).
+  One A10G with a batching server (vLLM/TGI) can serve a 2.5B model well above that rate,
+  so the hardware is not the limit -- utilisation is.
+
+  The 16-core CPU on its own is NOT a serving option for these models: our laptop needed
+  ~20-35 s per message for the 2.5B model (Step 3b), i.e. a few thousand messages a day
+  per machine. CPU-only is fine for a demo or a class project, nothing more.
 
   Running the pre-trained model on our own server is acceptable when:
-    - sustained volume is above that break-even (here ~1M requests/day) and steady, so the
-      GPU is busy most hours (high utilisation is the whole game);
+    - sustained volume is above that break-even (here ~1-2M requests/day) and steady, so
+      the GPU is busy most hours (high utilisation is the whole game);
     - the model fits the hardware (<= ~8B fp16 / ~30B 4-bit on 24 GB) and is good enough --
-      true for triage, per Q1;
+      true for triage, per Q1 (the 2-4B category is the sweet spot);
     - data must not leave our infrastructure (student e-mail and messages: privacy, FERPA,
       provider terms) or we need offline / predictable latency without rate limits;
     - we want control: pinned model version (a brief must read the same tomorrow),
       fine-tuning, and no provider deprecating the model under us.
 
   Switching to a paid API is better when:
-    - traffic is low or spiky (a class project, a launch): $1,266/month buys ~30M API
+    - traffic is low or spiky (a class project, a launch): $1,266/month buys ~61M API
       triage calls, far more than we use, and an idle GPU still costs the same;
     - we need quality a 24 GB GPU cannot hold (70B-120B models): self-hosting those means
       multi-GPU machines like g5.12xlarge at $4,141/month, while gpt-oss-120b on Groq is
@@ -836,15 +887,16 @@ Q4. COST COMPARISON: A 16-CORE CPU / 16 GB-CLASS GPU / 64 GB RAM / 1 TB SERVER
     - we have no one to run GPU servers (drivers, CUDA, batching, monitoring, failover);
     - we need to scale up or down within minutes.
 
-  For Unopsis today: API (free tier) for briefs + local small model for triage on our own
-  machines; switch triage to a batched GPU server only once sustained volume passes the
+  For Unopsis today: API (free tier) for briefs + the local 2.5B model for triage on our
+  own machines; move triage to a batched GPU server only once sustained volume passes the
   break-even above.
 
 STILL TO DO (A6)
-  [ ] Run llm-test/ai_prototype.ipynb (Colab T4 for categories 4-5), commit the notebook
-      WITH outputs and llm-test/results/, and fill in the TODO(team)/[check] parts of Q1/Q2.
-  [ ] If the notebook's winner or best shot mode differs, set AI_LOCAL_MODEL /
-      AI_TRIAGE_SHOTS in .env.example and settings/base.py.
+  [x] Notebook run on a Colab T4 (all 15 models ok) and committed WITH outputs, plus
+      llm-test/results/. Route A on the app's model added as Step 3b (laptop CPU).
+  [x] App switched to the notebook's choice: granite-3.3-2b-instruct, zero-shot.
   [ ] Each teammate: create a free Groq key at console.groq.com/keys and put it in .env as
-      GROQ_API_KEY (never commit it).
+      GROQ_API_KEY (never commit it). Without it feature 2 uses the template writer, so
+      take the "Write with AI" screenshot with a key set.
+  [ ] Screenshots of /ai/ (a triage result, the refused injection) and of a written brief.
   [ ] Run python manage.py test, then python manage.py scrub_db --apply before committing.
