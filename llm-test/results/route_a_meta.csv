@@ -1,0 +1,9 @@
+model_id,mode,shots,prompt_tokens,status
+Qwen/Qwen2.5-14B-Instruct,zero,0,158,ok
+Qwen/Qwen2.5-14B-Instruct,one,1,213,ok
+Qwen/Qwen2.5-14B-Instruct,few,4,367,ok
+Qwen/Qwen2.5-14B-Instruct,many,8,586,ok
+microsoft/Phi-4-mini-instruct,zero,0,149,ok
+microsoft/Phi-4-mini-instruct,one,1,198,ok
+microsoft/Phi-4-mini-instruct,few,4,331,ok
+microsoft/Phi-4-mini-instruct,many,8,524,ok

@@ -366,16 +366,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Feature 1, local: a Hugging Face model run with `transformers`. The weights are downloaded
 # automatically into the Hugging Face cache the first time the AI lab is used, never into the
 # repository. The default is the size-vs-quality "sweet spot" from llm-test/ai_prototype.ipynb.
-AI_LOCAL_MODEL = env('AI_LOCAL_MODEL', default='Qwen/Qwen2.5-1.5B-Instruct')
+AI_LOCAL_MODEL = env('AI_LOCAL_MODEL', default='ibm-granite/granite-3.3-2b-instruct')
 # False skips the local model entirely (the rule-based triage answers instead). Set it to
 # False on PythonAnywhere, whose free plan cannot install torch.
 AI_LOCAL_ENABLED = env.bool('AI_LOCAL_ENABLED', default=True)
 AI_LOCAL_MAX_NEW_TOKENS = env.int('AI_LOCAL_MAX_NEW_TOKENS', default=80)
+# Precision on a machine without a GPU. bfloat16 keeps the default model at ~5 GB of RAM; float32
+# needs ~10 GB, which made a 16 GB laptop page to disk in our test. Use float32 only with RAM to spare.
+AI_LOCAL_CPU_DTYPE = env('AI_LOCAL_CPU_DTYPE', default='bfloat16')
 # How many worked examples go into the triage prompt: 0 zero-shot, 1 one-shot, 4 few-shot,
-# 8 many-shot. Few-shot won the notebook's Route A comparison.
-AI_TRIAGE_SHOTS = env.int('AI_TRIAGE_SHOTS', default=4)
-# The hybrid pipeline triages at most this many messages per brief (CPU time per request).
-AI_PIPELINE_MAX_MESSAGES = env.int('AI_PIPELINE_MAX_MESSAGES', default=12)
+# 8 many-shot. Zero-shot: in the notebook's Route A run on this model, examples did not raise
+# lane accuracy (0.692 for zero, few and many; 0.615 one-shot) and more than doubled the prompt.
+AI_TRIAGE_SHOTS = env.int('AI_TRIAGE_SHOTS', default=0)
+# The hybrid pipeline triages at most this many messages per brief. On a laptop CPU one message
+# takes ~20-35 s (notebook Step 3b), so 6 keeps a brief to ~2-3 minutes; on a GPU it is seconds.
+AI_PIPELINE_MAX_MESSAGES = env.int('AI_PIPELINE_MAX_MESSAGES', default=6)
 
 # Feature 2, external: Groq's OpenAI-compatible API (free tier). Key from console.groq.com/keys.
 GROQ_API_KEY = env('GROQ_API_KEY', default='')

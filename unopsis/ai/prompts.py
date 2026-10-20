@@ -10,7 +10,8 @@ TRIAGE (local model). Each incoming message is placed in one lane and summarised
 
 The examples are the "shots". llm-test/ai_prototype.ipynb compared zero-, one-, few- (4) and
 many-shot (8) prompting with these same examples; settings.AI_TRIAGE_SHOTS picks how many the
-app uses (default 4, few-shot). None of the examples is one of the notebook's test messages.
+app uses (default 0, zero-shot: on the app's model the examples did not improve accuracy and
+more than doubled the prompt). None of the examples is one of the notebook's test messages.
 
 BRIEF (external API). The kept, triaged messages are written up as the twice-a-day brief.
 """
@@ -59,7 +60,7 @@ def _wrap(message_text):
     return f"Message:\n<<<\n{message_text}\n>>>"
 
 
-def build_triage_messages(message_text, shots=4):
+def build_triage_messages(message_text, shots=0):
     """Chat messages for one triage call, with the first `shots` examples as prior turns."""
     import json
 

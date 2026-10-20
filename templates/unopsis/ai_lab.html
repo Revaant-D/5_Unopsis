@@ -21,7 +21,10 @@
       Local model: {{ status.local_model }}
       {% if not status.local_enabled %}(switched off: rules only){% elif status.local_loaded %}(loaded){% else %}(loads on first use){% endif %}
     </span>
-    <span class="badge text-bg-light border">Prompting: {{ status.shots }}-shot</span>
+    <span class="badge text-bg-light border">
+      Prompting: {% if status.shots == 0 %}zero-shot{% elif status.shots == 1 %}one-shot{% elif status.shots <= 4 %}few-shot{% else %}many-shot{% endif %}
+      ({{ status.shots }} example{{ status.shots|pluralize }})
+    </span>
     <span class="badge {% if status.groq_configured %}text-bg-light border{% else %}text-bg-warning{% endif %}">
       External API: Groq {{ status.groq_model }}{% if not status.groq_configured %} (no GROQ_API_KEY: template writer){% endif %}
     </span>
@@ -32,7 +35,8 @@
     <p class="small text-muted">
       The text is cleaned (markup, e-mail addresses, phone numbers and links removed), screened
       for prompt injection, and then labelled with a lane, a short summary and any deadline.
-      The first run downloads the model weights, which can take a few minutes.
+      The first run downloads the model weights (~5 GB), which can take a few minutes. After that,
+      one message takes ~20-35 seconds on a laptop CPU and 1-2 seconds on a GPU.
     </p>
     <form method="post" action="{% url 'ai-lab' %}">
       {% csrf_token %}
@@ -78,6 +82,7 @@
     <p class="small text-muted">
       The local model triages every message in the brief's window and drops the noise; only
       the short triaged lines go to Groq, which writes the brief. Nothing is saved or sent anywhere else.
+      At most {{ status.max_messages }} messages are triaged per run: about 2-3 minutes on a laptop CPU.
     </p>
     <ul class="list-group">
       {% for brief in briefs %}

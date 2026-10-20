@@ -58,7 +58,8 @@ def _status():
         "local_loaded": local_llm.is_loaded(),
         "groq_configured": groq_client.is_configured(),
         "groq_model": getattr(settings, "GROQ_MODEL", ""),
-        "shots": getattr(settings, "AI_TRIAGE_SHOTS", 4),
+        "shots": getattr(settings, "AI_TRIAGE_SHOTS", 0),
+        "max_messages": getattr(settings, "AI_PIPELINE_MAX_MESSAGES", 6),
     }
 
 
