@@ -35,6 +35,10 @@ it in get_absolute_url(). The address can then change here without touching a si
     /vega-lite/<chart>.json  vega-chart-spec       that chart's spec, data.url made absolute
     /vega-lite/<chart>.png   vega-chart-png        that chart rendered to PNG on the server
                              (<chart> is chart1 or chart2; anything else is a 404)
+    /ai/                     ai-lab                Assignment 6: triage a message with the local
+                                                    Hugging Face model (ai_views.py)
+    /ai/briefs/<pk>/write/   ai-brief-write        Assignment 6: POST-only hybrid pipeline -- local
+                                                    model filters, Groq writes the brief
 
 Assignment 5 note on the /accounts/ prefix. The three authentication routes are written out
 one by one instead of include("django.contrib.auth.urls"), for two reasons. That include also
@@ -54,7 +58,7 @@ the converter becomes <slug:...>.
 
 from django.urls import path
 
-from . import auth_views, views
+from . import ai_views, auth_views, views
 
 urlpatterns = [
     # ---- Section 1: home and the brief pages ----
@@ -118,4 +122,8 @@ urlpatterns = [
     path("vega-lite/<str:chart>/", views.vega_chart_page, name="vega-chart-page"),
     path("vega-lite/<str:chart>.json", views.vega_chart_spec, name="vega-chart-spec"),
     path("vega-lite/<str:chart>.png", views.vega_chart_png, name="vega-chart-png"),
+
+    # ---- Assignment 6: the AI features (local Hugging Face model + Groq API) ----
+    path("ai/", ai_views.ai_lab, name="ai-lab"),
+    path("ai/briefs/<int:pk>/write/", ai_views.ai_brief_write, name="ai-brief-write"),
 ]

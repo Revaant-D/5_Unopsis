@@ -53,7 +53,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          # Assignment 6 added torch. The extra index serves the CPU-only build (~200 MB)
+          # instead of the default Linux wheel with CUDA (several GB); the tests mock the
+          # model, so CI never downloads weights or needs a GPU.
+          pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
       # -------------------------------------------------------------------------------
       # 2. Repository hygiene gates
@@ -106,6 +109,9 @@ jobs:
             echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(50))')"
             echo "OPENAI_API_KEY=dummy-key-not-real"
             echo "ALLOWED_HOSTS=localhost,127.0.0.1"
+            # Assignment 6: never download model weights on the CI runner. The AI tests mock
+            # the model; this is the safety net if one ever forgets to.
+            echo "AI_LOCAL_ENABLED=False"
           } > .env
           # Print the keys but never the values, so the log proves the file was written
           # without putting the generated key into a public build log.

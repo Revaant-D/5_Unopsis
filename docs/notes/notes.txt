@@ -663,3 +663,188 @@ STILL TO DO
       deploy; both were handled outside the repo and should not outlive the assignment.
   [ ] Submit: the GitHub link, https://joys3.pythonanywhere.com, and the PythonAnywhere
       username joys3 in the assignment comments. Give teacher access to mohitg27.
+
+
+===========================================================================================
+19. ASSIGNMENT 6 -- AI: LOCAL HUGGING FACE MODEL + EXTERNAL API (updated 19 October 2026)
+===========================================================================================
+
+WHAT WAS BUILT
+  Part 1  llm-test/ai_prototype.ipynb. Top cell downloads the weights. 15 models in 5 size
+          categories (3 each, different families), one matrix test of 14 fixed Unopsis
+          messages, then Route A (prompt engineering): zero / one / few / many-shot on the top
+          3 models. Results land in llm-test/results/ (CSVs, two charts, summary.md).
+  Part 2  README_AI.md. Feature 1 = message triage with a LOCAL model (transformers,
+          default Qwen/Qwen2.5-1.5B-Instruct) at /ai/. Feature 2 = brief writing with the
+          Groq API (openai/gpt-oss-20b) at /ai/briefs/<pk>/write/, as a hybrid pipeline:
+          the local model filters and labels, Groq only sees one short line per kept message.
+          Guardrails: cleaning + PII redaction, prompt-injection screen, JSON validation with
+          rule/template fallbacks, login + ownership, 10 runs/min per account.
+  Part 3  this section.
+
+  TASK: one message in, {"lane": needs_you|moving|fyi|noise, "summary", "deadline"} out.
+
+  Prices used below (checked October 2026; AWS us-east-1 on-demand; 1 month = 730 hours):
+    AWS g4dn.xlarge   1x T4 16 GB,    4 vCPU, 16 GB RAM   $0.526/h   =   $384/month
+    AWS g6.xlarge     1x L4 24 GB,    4 vCPU, 16 GB RAM   $0.8048/h  =   $588/month
+    AWS g5.xlarge     1x A10G 24 GB,  4 vCPU, 16 GB RAM   $1.006/h   =   $734/month
+    AWS g5.4xlarge    1x A10G 24 GB, 16 vCPU, 64 GB RAM   ~$1.62/h   = ~$1,186/month
+    AWS g5.12xlarge   4x A10G 24 GB, 48 vCPU, 192 GB RAM  $5.672/h   = $4,141/month
+    AWS EBS gp3 storage                                    ~$0.08 per GB-month (1 TB ~ $80)
+    Groq openai/gpt-oss-20b    $0.075 per 1M input tokens, $0.30 per 1M output tokens
+    Groq openai/gpt-oss-120b   $0.15  per 1M input tokens, $0.60 per 1M output tokens
+    Groq free plan (gpt-oss)   30 requests/min, 1,000 requests/day, 200K tokens/day
+  Token counts of OUR prompts: triage few-shot ~430 tokens in, ~35 out; zero-shot ~190 in.
+  Brief writer for a 25-message window ~950 tokens in, ~300 out.
+
+-------------------------------------------------------------------------------------------
+Q1. THE SIZE vs QUALITY TRADE-OFF
+-------------------------------------------------------------------------------------------
+  TODO(team): paste the "By size category" and "Matrix test" tables from
+  llm-test/results/summary.md here after running the notebook, then fix the sentences
+  marked [check] so they match YOUR numbers.
+
+  Category              Models                         Lane acc  Valid JSON  s/msg  Mem GB
+  1 Ultra-light <1B     SmolLM2-360M, Qwen2.5-0.5B,    ____      ____        ____   ____
+                        Qwen3-0.6B
+  2 Small 1-2B          Qwen2.5-1.5B, SmolLM2-1.7B,    ____      ____        ____   ____
+                        Qwen3-1.7B
+  3 Medium 2-4B         Granite-3.3-2B, Qwen2.5-3B,    ____      ____        ____   ____
+                        Phi-4-mini (3.8B)
+  4 Large 7-9B          OLMo-2-7B, Qwen2.5-7B,         ____      ____        ____   ____
+                        Granite-3.3-8B (4-bit on T4)
+  5 X-Large 12-15B      OLMo-2-13B, Qwen2.5-14B,       ____      ____        ____   ____
+                        Phi-4 14.7B (4-bit on T4)
+
+  Sweet spot: the 1-2B category [check]. Triage is a short classification + a 15-word
+  summary; it does not need world knowledge or long reasoning, which is what extra
+  parameters mostly buy. What separates models on this task is INSTRUCTION ADHERENCE --
+  returning exactly one JSON object with an allowed lane. The sub-1B models are the ones
+  that break format (prose instead of JSON, invented lanes like "urgent") and confuse
+  moving/fyi [check]; from ~1.5B up the format is reliable, especially with few-shot
+  examples. The default app model, Qwen2.5-1.5B-Instruct, is from this category.
+
+  Was a massive model significantly better? Only marginally [check]: the best 7-15B model
+  gained ____ points of lane accuracy over the best 1-2B model, while costing ~5-10x the
+  memory and ~__x the latency per message. The cases the big models fixed were the
+  genuinely ambiguous ones (e.g. "did everyone see the rubric got updated?" -- fyi or
+  needs_you?), where a human would also hesitate. That gain is not worth the price for a
+  step that runs on EVERY message, and the brief writer (the step where language quality
+  shows) already uses a 20B-class model through the API.
+
+  Expected cost to run each category on a server (24/7, one replica, fp16 weights unless
+  noted; the notebook's usd_per_1k_msgs column converts measured latency into $ at $0.526/h):
+
+  Category      Weights fp16   Smallest machine that fits           $/hour   $/month
+  <1B           ~1-1.5 GB      4 vCPU / 16 GB CPU server (no GPU)   ~0.20    ~$146
+  1-2B          ~3-3.5 GB      T4 16 GB  (g4dn.xlarge)               0.526     $384
+                               (CPU works, but 1-3 s per message)
+  2-4B          ~5-8 GB        T4 16 GB  (g4dn.xlarge)               0.526     $384
+  7-9B          ~15-17 GB      L4 24 GB  (g6.xlarge) fp16,           0.805     $588
+                               or T4 in 4-bit (~6 GB)                0.526     $384
+  12-15B        ~28-30 GB      4-bit on L4/A10G 24 GB (~10 GB)       0.805     $588
+                               fp16 needs >24 GB: g5.12xlarge 4xA10G  5.672   $4,141
+
+-------------------------------------------------------------------------------------------
+Q2. COST & SCALING: 10,000 DAILY USERS
+-------------------------------------------------------------------------------------------
+  Assumptions: each user receives ~150 messages/day and gets 2 briefs/day.
+    -> 1,500,000 triage calls/day (17 per second on average, ~50/s at the morning peak)
+    ->    20,000 brief-writing calls/day
+
+  Option A -- everything through the API (Groq gpt-oss-20b):
+    triage  1.5M x (430 in x $0.075/M + 35 out x $0.30/M) = 1.5M x $0.0000428 = $64/day
+    briefs  20K  x (950 in x $0.075/M + 300 out x $0.30/M) = 20K x $0.000161 = $3/day
+    total ~ $67/day ~ $2,020/month (a 120B-class API model doubles it: ~$4,040/month).
+    Far above the free plan (1,000 requests/day), so a paid plan is required.
+
+  Option B -- everything local, the way our Django view runs today:
+    One request at a time through transformers.generate(), ~1 s per message for 1.5B on a
+    T4 [check: notebook latency_s]. 17 messages/s on average needs ~17+ GPUs, ~50 at peak:
+    17 x $384 = $6,500+/month before redundancy -- and the brief writer would need a big
+    model on a 24 GB+ GPU too. The naive local integration does NOT scale.
+
+  Option C -- local model on a proper inference server (vLLM / TGI with batching):
+    Batching is what makes a GPU cheap: a 1.5B model on one L4 processes dozens of
+    requests in parallel, comfortably 50+ messages/s. Two g6.xlarge for peak + failover:
+    2 x $588 = $1,175/month for triage. Plus the API for briefs: $97/month.
+    Total ~ $1,270/month vs ~$2,020 for API-only.
+
+  Break-even for triage: one g6.xlarge costs $588/month; the API costs $0.0000428 per
+  triage, so the GPU only wins if it handles more than 588 / 0.0000428 = 13.7M messages a
+  month = ~458,000 a day = 5.3 messages/s, around the clock. At 10,000 users we are at
+  1.5M/day, so with batching the local model wins; at 1,000 users (150K/day) it does not.
+
+  Decision: at 10,000 daily users we would keep the LOCAL model for triage, but move it off
+  Django into a batched inference service (Django calls it over HTTP, exactly as it calls
+  Groq today), and keep the API for brief writing. We would NOT move entirely to the API:
+  triage is high-volume and low-difficulty, which is exactly the workload where paying per
+  token is most expensive relative to what a small model needs. We would not run everything
+  locally either: briefs are low-volume and quality-sensitive, which is where the API wins.
+  Below ~3,000 daily users the API-only setup is cheaper and needs no GPU operations.
+
+-------------------------------------------------------------------------------------------
+Q3. HYBRID POTENTIAL
+-------------------------------------------------------------------------------------------
+  This is what pipeline.py already does, and how it would grow:
+  1. Filter before you pay. Ingest flags (is_noise) and the local model's "noise" lane drop
+     promotions and automated mail before the API is ever called. In the demo data 2 of 22
+     messages are dropped this way; in a real inbox, where promotions and notifications are
+     often half the volume, that is half the API bill gone.
+  2. Compress before you pay. The API receives ~25 tokens per message (the local summary)
+     instead of the full body (often 100-500 tokens for e-mail). For a 25-message window
+     that is ~950 input tokens instead of ~5,000-10,000.
+  3. Route by difficulty. The local model answers the easy majority; only low-confidence
+     cases (invalid JSON, or the lane flips between zero- and few-shot) are escalated to the
+     API for a second opinion. Cost scales with the hard cases, not the inbox.
+  4. Cache. A brief is stored (Brief.headline / BriefItem rows), so it is written once,
+     not on every page view; identical newsletters are triaged once per sender per day.
+  5. Fallbacks both ways. If the API is down or rate-limited, the template writer produces
+     a plain brief from the local triage; if the local model is unavailable, the rules
+     triage and the API still writes. Neither failure takes the product down.
+  6. Privacy. Raw bodies stay on our server; PII is redacted before anything leaves.
+
+-------------------------------------------------------------------------------------------
+Q4. COST COMPARISON: A 16-CORE CPU / 16 GB-CLASS GPU / 64 GB RAM / 1 TB SERVER
+-------------------------------------------------------------------------------------------
+  Closest cloud equivalent: AWS g5.4xlarge (16 vCPU, 64 GB RAM, one A10G with 24 GB) at
+  ~$1.62/h = ~$1,186/month, plus 1 TB of gp3 storage ~$80 = ~$1,266/month, paid whether
+  it is busy or idle. What it can host: any model up to ~8B parameters in fp16, or up to
+  ~30B in 4-bit; 1 TB holds dozens of models' weights. A 1.5B triage model uses a few GB
+  of the 24 GB, so the same box could also run a 7-8B model for brief writing.
+
+  Break-even against a comparable-size API model (20B class at $0.075/$0.30 per M tokens):
+  $1,266 / $0.0000428 per triage call = 29.6M calls/month = ~990,000 a day = ~11.4 calls
+  per second, sustained 24/7.
+
+  Running the pre-trained model on our own server is acceptable when:
+    - sustained volume is above that break-even (here ~1M requests/day) and steady, so the
+      GPU is busy most hours (high utilisation is the whole game);
+    - the model fits the hardware (<= ~8B fp16 / ~30B 4-bit on 24 GB) and is good enough --
+      true for triage, per Q1;
+    - data must not leave our infrastructure (student e-mail and messages: privacy, FERPA,
+      provider terms) or we need offline / predictable latency without rate limits;
+    - we want control: pinned model version (a brief must read the same tomorrow),
+      fine-tuning, and no provider deprecating the model under us.
+
+  Switching to a paid API is better when:
+    - traffic is low or spiky (a class project, a launch): $1,266/month buys ~30M API
+      triage calls, far more than we use, and an idle GPU still costs the same;
+    - we need quality a 24 GB GPU cannot hold (70B-120B models): self-hosting those means
+      multi-GPU machines like g5.12xlarge at $4,141/month, while gpt-oss-120b on Groq is
+      $0.15/$0.60 per M tokens;
+    - we have no one to run GPU servers (drivers, CUDA, batching, monitoring, failover);
+    - we need to scale up or down within minutes.
+
+  For Unopsis today: API (free tier) for briefs + local small model for triage on our own
+  machines; switch triage to a batched GPU server only once sustained volume passes the
+  break-even above.
+
+STILL TO DO (A6)
+  [ ] Run llm-test/ai_prototype.ipynb (Colab T4 for categories 4-5), commit the notebook
+      WITH outputs and llm-test/results/, and fill in the TODO(team)/[check] parts of Q1/Q2.
+  [ ] If the notebook's winner or best shot mode differs, set AI_LOCAL_MODEL /
+      AI_TRIAGE_SHOTS in .env.example and settings/base.py.
+  [ ] Each teammate: create a free Groq key at console.groq.com/keys and put it in .env as
+      GROQ_API_KEY (never commit it).
+  [ ] Run python manage.py test, then python manage.py scrub_db --apply before committing.

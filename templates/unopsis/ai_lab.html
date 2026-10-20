@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% comment %}
+  Assignment 6: the AI lab (ai_views.ai_lab).
+  Feature 1 -- paste one message, the LOCAL Hugging Face model triages it.
+  Feature 2 -- pick one of your briefs, the HYBRID pipeline rewrites it (local model + Groq).
+{% endcomment %}
+
+{% block title %}AI lab{% endblock %}
+
+{% block content %}
+
+  <h2 class="h3 mb-1">AI lab</h2>
+  <p class="text-muted mb-3">
+    Two AI features. Triage runs on a Hugging Face model on this server; the brief writer
+    sends a short, already-triaged list to an external API.
+  </p>
+
+  <div class="d-flex flex-wrap gap-2 mb-4 small">
+    <span class="badge text-bg-light border">
+      Local model: {{ status.local_model }}
+      {% if not status.local_enabled %}(switched off: rules only){% elif status.local_loaded %}(loaded){% else %}(loads on first use){% endif %}
+    </span>
+    <span class="badge text-bg-light border">Prompting: {{ status.shots }}-shot</span>
+    <span class="badge {% if status.groq_configured %}text-bg-light border{% else %}text-bg-warning{% endif %}">
+      External API: Groq {{ status.groq_model }}{% if not status.groq_configured %} (no GROQ_API_KEY: template writer){% endif %}
+    </span>
+  </div>
+
+  <div class="panel mb-4">
+    <h3 class="h5 mb-1">1. Triage a message <span class="badge text-bg-secondary">local model</span></h3>
+    <p class="small text-muted">
+      The text is cleaned (markup, e-mail addresses, phone numbers and links removed), screened
+      for prompt injection, and then labelled with a lane, a short summary and any deadline.
+      The first run downloads the model weights, which can take a few minutes.
+    </p>
+    <form method="post" action="{% url 'ai-lab' %}">
+      {% csrf_token %}
+      {% for error in form.non_field_errors %}<div class="alert alert-warning py-2">{{ error }}</div>{% endfor %}
+      <label class="form-label small mb-1" for="{{ form.text.id_for_label }}">{{ form.text.label }}</label>
+      {{ form.text }}
+      {% for error in form.text.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+      <button class="btn btn-primary btn-sm mt-2" type="submit">Triage</button>
+    </form>
+
+    {% if refused %}
+      <div class="alert alert-danger mt-3 mb-0">
+        <strong>Not sent to the model.</strong> This text looks like a prompt-injection attempt:
+        {{ refused|join:"; " }}.
+      </div>
+    {% endif %}
+
+    {% if result %}
+      <div class="mt-3 border rounded p-3">
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <span class="badge {% if result.lane == 'needs_you' %}text-bg-danger{% elif result.lane == 'moving' %}text-bg-secondary{% elif result.lane == 'fyi' %}text-bg-info{% else %}text-bg-light border{% endif %}">
+            {{ result.lane }}
+          </span>
+          {% if result.deadline %}<span class="badge text-bg-warning">Deadline: {{ result.deadline }}</span>{% endif %}
+          <span class="badge text-bg-light border">
+            {% if result.source == 'local' %}by {{ result.model }}{% else %}by the rule-based fallback{% endif %}
+            &middot; {{ result.ms }} ms
+          </span>
+        </div>
+        <p class="mb-1">{{ result.summary }}</p>
+        {% if result.note %}<p class="small text-muted mb-1">{{ result.note }}</p>{% endif %}
+        <details class="small text-muted">
+          <summary>What the model saw and said</summary>
+          <div class="mt-1"><strong>Cleaned input:</strong> {{ result.cleaned }}</div>
+          <div><strong>Raw output:</strong> <code>{{ result.raw|default:"(none)" }}</code></div>
+        </details>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="panel mb-4">
+    <h3 class="h5 mb-1">2. Rewrite a brief <span class="badge text-bg-secondary">local model + Groq</span></h3>
+    <p class="small text-muted">
+      The local model triages every message in the brief's window and drops the noise; only
+      the short triaged lines go to Groq, which writes the brief. Nothing is saved or sent anywhere else.
+    </p>
+    <ul class="list-group">
+      {% for brief in briefs %}
+        <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span>
+            <a href="{{ brief.get_absolute_url }}">{{ brief.headline|default:brief }}</a>
+            <span class="small text-muted">&middot; {{ brief.space.get_kind_display }} &middot; to {{ brief.window_end|date:"M j, g:i A" }}</span>
+          </span>
+          <form method="post" action="{% url 'ai-brief-write' brief.pk %}" class="m-0">
+            {% csrf_token %}
+            <button class="btn btn-outline-primary btn-sm" type="submit">Write with AI</button>
+          </form>
+        </li>
+      {% empty %}
+        <li class="list-group-item text-muted">You have no briefs yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+{% endblock %}

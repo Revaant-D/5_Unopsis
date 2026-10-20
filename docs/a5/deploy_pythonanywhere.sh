@@ -55,7 +55,9 @@ echo "    using $PYBIN"
 source "${VENV}/bin/activate"
 python -m pip install --quiet --upgrade pip
 echo "    installing requirements (a few minutes: matplotlib and vl-convert are large)"
-python -m pip install --quiet -r requirements.txt
+# requirements-production.txt = requirements.txt minus torch/transformers (A6), which do not
+# fit in the free plan's 512 MB quota.
+python -m pip install --quiet -r requirements-production.txt
 echo "    done: $(du -sh "$VENV" | cut -f1) in $VENV"
 
 # ---------------------------------------------------------------- 3. .env
@@ -71,6 +73,8 @@ ALLOWED_HOSTS=localhost,127.0.0.1,${DOMAIN}
 OPENAI_API_KEY=dummy-key-not-real
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
+AI_LOCAL_ENABLED=False
+GROQ_API_KEY=
 ENV
   chmod 600 .env
   echo "    created with a fresh SECRET_KEY and ALLOWED_HOSTS=...,${DOMAIN}"

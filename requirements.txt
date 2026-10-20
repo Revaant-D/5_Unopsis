@@ -1,5 +1,6 @@
 # Third-party packages this project needs. Install with:  pip install -r requirements.txt
-# Every line below is something the code actually imports.
+# Every line below is something the code (or llm-test/ai_prototype.ipynb) actually imports.
+# Deploying to PythonAnywhere? Use requirements-production.txt there (no torch -- see that file).
 
 # The web framework itself. Pinned below 6 so a major release cannot land on us mid-semester.
 Django>=5.2,<6
@@ -30,3 +31,18 @@ vl-convert-python>=1.9
 # surprise on deployment day. 65.19 is the floor because the ACCOUNT_LOGIN_METHODS /
 # ACCOUNT_SIGNUP_FIELDS settings used in settings/base.py replaced the older names in 65.x.
 django-allauth[socialaccount]>=65.19,<66
+
+# ---- Assignment 6: AI features ------------------------------------------------------------
+# The local Hugging Face model (unopsis/ai/local_llm.py). transformers downloads the model
+# weights automatically into the Hugging Face cache on first use -- they are never committed
+# (see .gitignore). 4.51 is the first release that knows the Qwen3 models the notebook tests.
+torch>=2.2
+transformers>=4.51
+# Lets transformers place large models across GPU/CPU (device_map="auto" in the notebook).
+accelerate>=0.30
+# The notebook reads an optional HF_TOKEN from .env with python-dotenv. (Django itself reads
+# .env through django-environ, above.)
+python-dotenv>=1.0
+# Results tables in llm-test/ai_prototype.ipynb.
+pandas>=2.0
+# The external API (Groq) is called with `requests`, already listed above -- no SDK needed.

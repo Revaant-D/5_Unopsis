@@ -1,0 +1,37 @@
+# PRODUCTION (PythonAnywhere) requirements: everything in requirements.txt EXCEPT the
+# Assignment 6 AI libraries. Install on the server with:  pip install -r requirements-production.txt
+#
+# Why a second file: torch alone is far larger than the free plan's 512 MB disk quota, so the
+# deployed site runs with AI_LOCAL_ENABLED=False and the rule-based triage stands in for the
+# local model (unopsis/ai/ imports torch lazily, so nothing breaks without it). Locally, and on
+# the instructor's machine, use requirements.txt, which includes torch and transformers.
+
+# The web framework itself. Pinned below 6 so a major release cannot land on us mid-semester.
+Django>=5.2,<6
+
+# Reads .env into the environment; imported as `environ` by inboxtriage/secrets_environment.py.
+# The distribution name and the import name differ, which is why this line does not say "environ".
+django-environ>=0.14
+
+# Draws the PNG charts served by /insights/lanes.png and /insights/providers.png
+# (unopsis/views.py, with the headless Agg backend).
+matplotlib>=3.8
+
+# The HTTP client behind the external public-holiday integration (Part 2).
+requests>=2.31
+
+# Renders the Vega-Lite specs to PNG on the server for /vega-lite/<chart>.png (Part 1).
+# Self-contained (no Node.js needed), about 80 MB installed -- still well inside PythonAnywhere's
+# 512 MB quota alongside everything above.
+vl-convert-python>=1.9
+
+# Google sign-in (Assignment 5, Part 2). The [socialaccount] extra is not optional for this
+# project: without it allauth has no oauthlib to drive the OAuth2 handshake and no
+# pyjwt[crypto] to verify the signature on the id_token Google returns, so the Google button
+# fails at the last step with an import error rather than at install time. The extra pulls in
+# oauthlib, PyJWT and cryptography (~20 MB together -- still well inside PythonAnywhere's
+# 512 MB quota next to matplotlib and vl-convert-python).
+# Pinned below 66 for the same reason as Django: a major release should be a decision, not a
+# surprise on deployment day. 65.19 is the floor because the ACCOUNT_LOGIN_METHODS /
+# ACCOUNT_SIGNUP_FIELDS settings used in settings/base.py replaced the older names in 65.x.
+django-allauth[socialaccount]>=65.19,<66
