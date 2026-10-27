@@ -34,7 +34,7 @@ drives every decision below.
         ┌────────▼───────┐    ┌─────────▼────────┐    ┌──────────▼───────────┐
         │ Tier 0: rules  │    │ Tier 1: small    │    │ Tier 2: medium local │
         │ keyword lanes  │    │ SmolLM2-1.7B     │    │ Qwen2.5-7B (4-bit)   │
-        │ ~0 ms, $0      │    │ 0.58 s, 9.32/10  │    │ 1.38 s, 9.91/10      │
+        │ ~0 ms, $0      │    │ 0.61 s, 9.32/10  │    │ 1.28 s, 9.91/10      │
         └────────────────┘    └──────────────────┘    └──────────────────────┘
                                                       ┌──────────────────────┐
                                                       │ Tier 3: HF Inference │
@@ -60,11 +60,11 @@ cheapest tier that is good enough, and moves work between tiers when conditions 
 
 | Category | Mean score | Tokens/sec | Latency (s) | Best model in category |
 |---|---|---|---|---|
-| 1 Ultra-Light (< 1B) | 8.45 | 22.80 | 1.22 | Qwen2.5-0.5B-Instruct (9.38) |
-| 2 Small (1–2B) | 9.47 | **27.68** | **0.84** | Qwen3-1.7B (9.74) |
-| 3 Medium (2–4B) | 9.65 | 17.59 | 1.42 | Granite-3.3-2B-Instruct (9.76) |
-| 4 Large (7–9B) | **9.69** | 11.25 | 1.75 | **Qwen2.5-7B-Instruct (9.91)** |
-| 5 Very Large (12–15B) | 9.43 | 8.38 | 2.43 | Qwen2.5-14B-Instruct (9.77) |
+| 1 Ultra-Light (< 1B) | 8.45 | 21.04 | 1.33 | Qwen2.5-0.5B-Instruct (9.38) |
+| 2 Small (1–2B) | 9.47 | **26.28** | **0.86** | Qwen3-1.7B (9.74) |
+| 3 Medium (2–4B) | 9.65 | 18.20 | 1.23 | Granite-3.3-2B-Instruct (9.76) |
+| 4 Large (7–9B) | **9.69** | 11.58 | 1.71 | **Qwen2.5-7B-Instruct (9.91)** |
+| 5 Very Large (12–15B) | 9.43 | 8.43 | 2.40 | Qwen2.5-14B-Instruct (9.77) |
 
 ### 3.2 By category × prompt type
 
@@ -89,7 +89,7 @@ cheapest tier that is good enough, and moves work between tiers when conditions 
 * **Below 1B quality drops sharply** (8.45, and SmolLM2-360M at 7.13): these models break the JSON
   format and get urgency wrong (prediction 7.55).
 * **Best speed/quality balance: SmolLM2-1.7B-Instruct.** It scored 9.32, the fastest of all 15 at
-  38.71 tokens/s and 0.58 s per answer, using 3.5 GB. **Granite-3.3-2B** (9.76 at 16.9 tok/s) is
+  36.19 tokens/s and 0.61 s per answer, using 3.5 GB. **Granite-3.3-2B** (9.76 at 16.8 tok/s) is
   the best choice when quality matters slightly more than speed.
 * Caveat: scores cluster between 9 and 10 because our rubric checks objective things (format,
   required facts, length). It separates broken from working outputs well; it separates
@@ -137,30 +137,30 @@ cheapest tier that is good enough, and moves work between tiers when conditions 
 
 | Category | | Prototype | Early Startup | Growing | Large | Mass | Global |
 |---|---|---|---|---|---|---|---|
-| Ultra-Light | local | 38.98 | 311.81 | 3,053 | 30,388 | 303,701 | 3,036,737 |
+| Ultra-Light | local | 51.97 | 350.78 | 3,313 | 32,974 | 329,490 | 3,294,706 |
 | | API | **2.62** | **17.20** | **163** | **1,624** | **16,245** | **162,449** |
-| Small | local | 38.98 | 285.82 | 2,572 | 25,659 | 256,423 | 2,563,997 |
+| Small | local | 38.98 | 285.82 | 2,702 | 26,893 | 268,882 | 2,688,616 |
 | | API | **2.62** | **17.20** | **163** | **1,624** | **16,245** | **162,449** |
-| Medium | local | 51.97 | 389.76 | 3,781 | 37,742 | 377,340 | 3,773,189 |
+| Medium | local | 51.97 | 389.76 | 3,664 | 36,378 | 363,581 | 3,635,707 |
 | | API | **2.62** | **17.20** | **163** | **1,624** | **16,245** | **162,449** |
-| Large | local | 77.95 | 610.62 | 5,924 | 59,140 | 591,188 | 5,911,711 |
+| Large | local | 77.95 | 597.63 | 5,794 | 57,788 | 577,780 | 5,777,542 |
 | | API | **2.62** | **17.20** | **163** | **1,624** | **16,245** | **162,449** |
-| Very Large | local | 103.94 | 805.50 | 7,938 | 79,238 | 792,174 | 7,921,586 |
+| Very Large | local | 103.94 | 805.50 | 7,899 | 78,719 | 786,977 | 7,869,592 |
 | | API | **6.15** | **52.54** | **516** | **5,158** | **51,580** | **515,799** |
 
 **Local hosting was cheaper for 0 of 15 models at all 6 traffic levels.** At scale the API is
-about **16× cheaper** for Small models, 19× for Ultra-Light, 23× for Medium, 36× for Large and 15× for
+about **17× cheaper** for Small models, 20× for Ultra-Light, 22× for Medium, 36× for Large and 15× for
 Very Large. Both costs grow linearly with users, so the gap does not close by itself as traffic grows.
 
 ### 4.4 Why, and where the break-even is
 
 * **API:** one user costs 66,400 × $0.02/M + 5,850 × $0.05/M = **$0.0016 per day**.
-* **Local:** our fastest model (SmolLM2-1.7B, 38.7 tok/s) serves ≈ 2,290 users per machine, which is
-  **$0.017 per user per day**, about 10× the API.
+* **Local:** our fastest model (SmolLM2-1.7B, 36.2 tok/s) serves ≈ 2,140 users per machine, which is
+  **$0.018 per user per day**, about 11× the API.
 * **Break-even:** a $38.98/day machine must serve 38.98 ÷ 0.0016 ≈ **24,000 users**, which means
   generating **≈ 1,630 output tokens per second, around the clock**. Our best measured
-  throughput is 38.7 tok/s per request × 8 concurrent × 50% utilisation ≈ 155 tok/s on average,
-  about **10× short**.
+  throughput is 36.2 tok/s per request × 8 concurrent × 50% utilisation ≈ 145 tok/s on average,
+  about **11× short**.
   For the 12–15B category (dearer API) the break-even is ≈ 510 tok/s; we reach ≈ 30.
 
 The gap comes from how we serve, not only from the models. Our numbers are Hugging Face
@@ -230,19 +230,19 @@ quality score of 10 (slightly above our best local model), priced at $0.135/$0.4
 
 | Scenario | Avg latency (s) | Avg quality (1–10) | API cost per 10k requests | Rules / small / medium / API |
 |---|---|---|---|---|
-| Normal operation | 1.08 | 9.73 | $0.27 | 0 / 33 / 48 / 19 % |
-| 8am brief rush | **0.61** | 9.35 | $0.09 | 0 / 95 / 0 / 5 % |
-| Cost optimisation | 0.74 | 9.44 | **$0.00** | 0 / 80 / 20 / 0 % |
-| System overload | **0.46** | 8.06 | $0.28 | 42 / 38 / 0 / 20 % |
-| API outage | 0.74 | 9.44 | $0.00 | 0 / 80 / 20 / 0 % |
+| Normal operation | 1.05 | 9.73 | $0.27 | 0 / 33 / 48 / 19 % |
+| 8am brief rush | **0.64** | 9.35 | $0.09 | 0 / 95 / 0 / 5 % |
+| Cost optimisation | 0.75 | 9.44 | **$0.00** | 0 / 80 / 20 / 0 % |
+| System overload | **0.47** | 8.06 | $0.28 | 42 / 38 / 0 / 20 % |
+| API outage | 0.75 | 9.44 | $0.00 | 0 / 80 / 20 / 0 % |
 | *Baseline: all to API* | *1.20* | *10.00* | *$0.75* | *0 / 0 / 0 / 100 %* |
 
-**How it improves latency.** The small model answers in 0.58 s against an assumed 1.2 s for an API
+**How it improves latency.** The small model answers in 0.61 s against an assumed 1.2 s for an API
 round trip, so any request it can handle gets faster. In the brief rush, 95% of requests go to the
-small model and average latency falls from 1.20 s to **0.61 s (−49%)**. Under overload, 42% of
-requests go to the keyword rules (milliseconds), giving the lowest latency of all at **0.46 s
-(−62%)**, at exactly the moment the GPU queue would otherwise make every request slow. Normal
-operation improves less (1.08 s, −10%) because it deliberately sends 48% of traffic to the slower
+small model and average latency falls from 1.20 s to **0.64 s (−47%)**. Under overload, 42% of
+requests go to the keyword rules (milliseconds), giving the lowest latency of all at **0.47 s
+(−61%)**, at exactly the moment the GPU queue would otherwise make every request slow. Normal
+operation improves less (1.05 s, −13%) because it deliberately sends 48% of traffic to the slower
 but stronger 7B model.
 
 **How it reduces cost.** Only requests that need a large model are paid for. API spend per 10,000
