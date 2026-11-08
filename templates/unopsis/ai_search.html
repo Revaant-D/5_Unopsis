@@ -35,7 +35,7 @@
     <div class="form-check mt-2">
       {{ form.ask }}
       <label class="form-check-label small" for="{{ form.ask.id_for_label }}">{{ form.ask.label }}</label>
-      <span class="small text-muted">&mdash; reads the best 3 results; takes ~20-60 s.</span>
+      <span class="small text-muted">&mdash; reads the best 3 results; ~5-10 s (the first answer after starting the server loads the model and takes longer).</span>
     </div>
   </form>
 

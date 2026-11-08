@@ -119,8 +119,11 @@ class Command(BaseCommand):
         }
         out = Path(opts["out"])
         out.mkdir(parents=True, exist_ok=True)
-        (out / "evaluation_results.json").write_text(json.dumps(results, indent=2, default=str))
-        (out / "evaluation_results.md").write_text(self.markdown(results))
+        # encoding="utf-8": the report contains arrows and quotes that Windows' default (cp1252)
+        # cannot store.
+        (out / "evaluation_results.json").write_text(
+            json.dumps(results, indent=2, default=str), encoding="utf-8")
+        (out / "evaluation_results.md").write_text(self.markdown(results), encoding="utf-8")
         self.stdout.write(self.style.SUCCESS(f"\nWrote {out / 'evaluation_results.md'} and .json"))
 
     # ------------------------------------------------------------------ search

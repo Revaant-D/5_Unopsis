@@ -100,9 +100,10 @@ main features.
 3. **Semantic search:** click **Semantic search** in the navigation (`/ai/search/`), type e.g.
    `what did my mom say?` and press *Search*. The first search downloads the embedding model
    (~90 MB, under a minute); after that, searches take milliseconds. Tick *Also answer with the
-   local model* to get an answer built from the results (first time: downloads ~5 GB; then
-   ~20-60 s per answer on a laptop CPU).
-4. **Triage:** click **AI lab** (`/ai/`), paste a message, press *Triage* (~20-35 s on a CPU).
+   local model* to get an answer built from the results (first time: downloads ~5 GB and loads it,
+   which can take a few minutes; then ~5-10 s per answer on a laptop CPU).
+4. **Triage:** click **AI lab** (`/ai/`), paste a message, press *Triage* (~7-35 s per message on
+   a laptop CPU, depending on the machine).
 5. **Optional Groq brief writer:** add `GROQ_API_KEY=...` to `.env` (free key from
    console.groq.com/keys). Without it, *Write with AI* uses the built-in template writer.
 
