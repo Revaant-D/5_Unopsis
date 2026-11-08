@@ -16,6 +16,11 @@
     sends a short, already-triaged list to an external API.
   </p>
 
+  <div class="alert alert-light border py-2 small">
+    New in Assignment 9: <a href="{% url 'ai-search' %}">search your messages by meaning</a>,
+    with an optional answer from the local model built from the messages it finds.
+  </div>
+
   <div class="d-flex flex-wrap gap-2 mb-4 small">
     <span class="badge text-bg-light border">
       Local model: {{ status.local_model }}

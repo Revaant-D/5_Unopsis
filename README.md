@@ -16,10 +16,13 @@
   once signed in.
 - **The app itself** -- the screens from the wireframes -- starts at `/work/brief/`; `/journey/`
   links every screen in order. See **The app (wireframe UI)** below.
-- **AI (Assignment 6)**: message triage with a local Hugging Face model and brief writing with
-  the Groq API, at `/ai/` (**AI lab** in the navigation once signed in). The workflow,
-  preprocessing and guardrails are in [`README_AI.md`](README_AI.md); the 15-model benchmark is
-  [`llm-test/ai_prototype.ipynb`](llm-test/ai_prototype.ipynb).
+- **AI (Assignments 6 and 9)**: all on public Hugging Face models running locally.
+  **Message triage** (`ibm-granite/granite-3.3-2b-instruct`) at `/ai/` (**AI lab**);
+  **semantic search** over your messages (`sentence-transformers/all-MiniLM-L6-v2`) with an
+  optional **grounded answer** from the same local model at `/ai/search/` (**Semantic search**);
+  an optional Groq brief writer. How to run them: **AI features** below. How they work, why these
+  models, evaluation and failure analysis: [`README_AI.md`](README_AI.md). Benchmarks:
+  [`llm-test/`](llm-test/) (A6), [`a7/`](a7/) (A7).
 
 ---
 
@@ -82,6 +85,43 @@ A Django `session_key` *is* the value of the `sessionid` cookie, so a committed 
 a password-free login to the deployed site for anybody who can read the repository. Every
 `runserver` you log into writes one. `manage.py clearsessions` is not a substitute: it removes
 only sessions that have already expired, which is exactly the set that cannot be replayed.
+
+## AI features: setup, first run and demo
+
+The AI runs **on your machine** with public Hugging Face models. No API key is needed for the
+main features.
+
+1. **Install.** `pip install -r requirements.txt` (step 2 above) includes `torch`,
+   `transformers` and `sentence-transformers`, about 1-2 GB of packages. On Windows, plain
+   `pip install` gets the CPU build of torch, which is what a laptop needs.
+2. **Run the server** (`python manage.py runserver`) and sign in at
+   `http://127.0.0.1:8000/accounts/login/`. The demo account `tester` / `uiuc12345` already owns
+   a set of demo messages.
+3. **Semantic search:** click **Semantic search** in the navigation (`/ai/search/`), type e.g.
+   `what did my mom say?` and press *Search*. The first search downloads the embedding model
+   (~90 MB, under a minute); after that, searches take milliseconds. Tick *Also answer with the
+   local model* to get an answer built from the results (first time: downloads ~5 GB; then
+   ~20-60 s per answer on a laptop CPU).
+4. **Triage:** click **AI lab** (`/ai/`), paste a message, press *Triage* (~20-35 s on a CPU).
+5. **Optional Groq brief writer:** add `GROQ_API_KEY=...` to `.env` (free key from
+   console.groq.com/keys). Without it, *Write with AI* uses the built-in template writer.
+
+**Model downloads.** Weights go to the Hugging Face cache (`C:\Users\<you>\.cache\huggingface`
+on Windows, `~/.cache/huggingface` on macOS/Linux), never into this repository: `*.safetensors`,
+`*.bin`, `*.pt` and cache folders are in `.gitignore`. Needs ~6 GB of free disk and, for the
+answers and triage, ~5 GB of free RAM (a 16 GB laptop is fine).
+
+**Evaluate** (A9 Part 3): `python manage.py evaluate_ai` runs the realistic test inputs through the
+app's own AI code and writes `docs/a9/evaluation_results.md`. It uses a throw-away account
+inside a rolled-back transaction, so `db.sqlite3` is not changed. `--skip-answers` makes it faster.
+
+**If something goes wrong:**
+
+| Symptom | Cause and fix |
+|---|---|
+| Search page says "keyword fallback" | `sentence-transformers` isn't installed, or the model couldn't download (offline). Re-run `pip install -r requirements.txt`, check the internet connection, search again. |
+| Answer/triage says the local model is unavailable | torch/transformers missing, or not enough RAM. Close other apps; `AI_LOCAL_CPU_DTYPE=bfloat16` (default) halves memory. |
+| An answer takes over a minute | Expected on an older CPU. Generation stops at `AI_LOCAL_MAX_SECONDS` (90 s); the search results are still shown. |
 
 ## Running: development and production settings
 

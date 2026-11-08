@@ -46,3 +46,8 @@ python-dotenv>=1.0
 # Results tables in llm-test/ai_prototype.ipynb.
 pandas>=2.0
 # The external API (Groq) is called with `requests`, already listed above -- no SDK needed.
+
+# ---- Assignment 9: semantic search ----------------------------------------------------------
+# Embedding model for /ai/search/ (unopsis/ai/semantic_search.py). Downloads its model into the
+# Hugging Face cache on first use; uses the torch installed above. numpy comes with it.
+sentence-transformers>=3.0

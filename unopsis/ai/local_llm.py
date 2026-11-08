@@ -73,8 +73,14 @@ def _load():
         return _loaded
 
 
-def generate(chat, max_new_tokens=None):
-    """Run one chat through the local model and return the reply text (greedy decoding)."""
+def generate(chat, max_new_tokens=None, max_seconds=None):
+    """
+    Run one chat through the local model and return the reply text (greedy decoding).
+
+    max_seconds (default settings.AI_LOCAL_MAX_SECONDS) is a hard time limit: transformers
+    stops generating when it is reached and returns what it has, so a slow CPU can never hang a
+    request. A cut-off answer then fails validation and the caller's fallback takes over.
+    """
     loaded = _load()
     import torch
 
@@ -90,6 +96,7 @@ def generate(chat, max_new_tokens=None):
             **inputs,
             max_new_tokens=max_new_tokens,
             do_sample=False,  # deterministic: the same message triages the same way every time
+            max_time=max_seconds or getattr(settings, "AI_LOCAL_MAX_SECONDS", 90),
             pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
         )
     new_tokens = output[0][inputs["input_ids"].shape[1]:]

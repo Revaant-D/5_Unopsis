@@ -389,3 +389,26 @@ GROQ_TIMEOUT_SECONDS = env.int('GROQ_TIMEOUT_SECONDS', default=20)
 
 # Guardrail: model runs per signed-in account per minute, across both features.
 AI_REQUESTS_PER_MINUTE = env.int('AI_REQUESTS_PER_MINUTE', default=10)
+
+# Hard time limit for one local generation (triage or answer). On a slow CPU transformers stops
+# here and returns what it has; the validation + fallback path then takes over.
+AI_LOCAL_MAX_SECONDS = env.int('AI_LOCAL_MAX_SECONDS', default=90)
+
+# ---------------------------------------------------------------------------------------
+# Assignment 9: semantic search over your messages (unopsis/ai/semantic_search.py, /ai/search/)
+# ---------------------------------------------------------------------------------------
+# A sentence-transformers embedding model, downloaded into the Hugging Face cache on first use
+# (~90 MB for the default). all-MiniLM-L6-v2: 384 dimensions, a few ms per message on a CPU.
+AI_EMBED_MODEL = env('AI_EMBED_MODEL', default='sentence-transformers/all-MiniLM-L6-v2')
+# False = keyword matching only (no model), e.g. on PythonAnywhere's free plan.
+AI_SEARCH_ENABLED = env.bool('AI_SEARCH_ENABLED', default=True)
+AI_SEARCH_TOP_K = env.int('AI_SEARCH_TOP_K', default=5)
+# Cosine similarity below this is "not a match" (A9 improvement: stops unrelated queries
+# returning five random messages).
+AI_SEARCH_MIN_SCORE = env.float('AI_SEARCH_MIN_SCORE', default=0.25)
+# Embed "From Mom (WhatsApp, Family): <body>" instead of the bare body (A9 improvement: makes
+# "what did my mom say" findable).
+AI_SEARCH_INCLUDE_CONTEXT = env.bool('AI_SEARCH_INCLUDE_CONTEXT', default=True)
+AI_SEARCH_MAX_MESSAGES = env.int('AI_SEARCH_MAX_MESSAGES', default=2000)
+# How many of the top results the local model reads when answering a question.
+AI_ANSWER_CONTEXT = env.int('AI_ANSWER_CONTEXT', default=3)

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% comment %}
+  Assignment 9: semantic search over the signed-in user's messages (ai_views.ai_search).
+  Query -> sentence-transformers embedding -> cosine similarity -> top-k messages,
+  and optionally a grounded answer from the local model built from those messages.
+{% endcomment %}
+
+{% block title %}Search your messages{% endblock %}
+
+{% block content %}
+
+  <h2 class="h3 mb-1">Search your messages</h2>
+  <p class="text-muted mb-3">
+    Search by meaning, not exact words: "what did my mom say" finds her messages even when none
+    of them contains "mom". Everything runs on this machine; nothing is sent to an external API.
+  </p>
+
+  <div class="d-flex flex-wrap gap-2 mb-3 small">
+    <span class="badge text-bg-light border text-wrap text-start">
+      Embedding model: {{ status.embed_model }}
+      {% if not status.search_enabled %}(switched off: keyword search){% elif status.embed_loaded %}(loaded){% else %}(loads on first search){% endif %}
+    </span>
+    <span class="badge text-bg-light border text-wrap text-start">Top {{ status.top_k }} · minimum similarity {{ status.min_score }}</span>
+    <span class="badge text-bg-light border text-wrap text-start">Answers: {{ status.local_model }}</span>
+  </div>
+
+  <form method="get" action="{% url 'ai-search' %}" class="panel mb-4">
+    <label class="form-label small mb-1" for="{{ form.q.id_for_label }}">{{ form.q.label }}</label>
+    <div class="d-flex gap-2">
+      {{ form.q }}
+      <button class="btn btn-primary" type="submit">Search</button>
+    </div>
+    {% for e in form.q.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+    <div class="form-check mt-2">
+      {{ form.ask }}
+      <label class="form-check-label small" for="{{ form.ask.id_for_label }}">{{ form.ask.label }}</label>
+      <span class="small text-muted">&mdash; reads the best 3 results; takes ~20-60 s.</span>
+    </div>
+  </form>
+
+  {% if error %}
+    <div class="alert alert-warning">{{ error }}</div>
+  {% endif %}
+
+  {% if outcome %}
+
+    {% if answer %}
+      <div class="panel mb-4">
+        <h3 class="h6 text-muted mb-2">Answer <span class="badge text-bg-secondary">local model</span>
+          {% if answer.ms %}<span class="small fw-normal">&middot; {{ answer.ms }} ms</span>{% endif %}</h3>
+        {% if answer.answer %}
+          <p class="lead mb-1">{{ answer.answer }}</p>
+        {% endif %}
+        {% if answer.status == 'not_found' %}
+          <p class="small text-muted mb-0">The model said the retrieved messages don't answer this.</p>
+        {% endif %}
+        {% if answer.cited %}
+          <p class="small text-muted mb-0">Sources:
+            {% for c in answer.cited %}[{{ c.n }}] {{ c.who }}{% if not forloop.last %}, {% endif %}{% endfor %}
+          </p>
+        {% endif %}
+        {% if answer.note %}
+          <div class="alert {% if answer.status == 'uncited' or answer.status == 'no_context' %}alert-warning{% else %}alert-secondary{% endif %} py-2 mt-2 mb-0 small">{{ answer.note }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-baseline mb-2">
+      <h3 class="h5 mb-0">
+        {{ outcome.results|length }} result{{ outcome.results|length|pluralize }}
+        {% if outcome.mode == 'keyword' %}<span class="badge text-bg-warning">keyword fallback</span>{% endif %}
+      </h3>
+      <span class="small text-muted">
+        {{ outcome.ms }} ms{% if outcome.index_ms %} (incl. {{ outcome.index_ms }} ms to index your messages){% endif %}
+        {% if outcome.dropped %} &middot; {{ outcome.dropped }} weaker match{{ outcome.dropped|pluralize:"es" }} hidden{% endif %}
+      </span>
+    </div>
+    {% if outcome.note %}<div class="alert alert-warning py-2 small">{{ outcome.note }}</div>{% endif %}
+
+    <ol class="list-group list-group-numbered mb-4">
+      {% for r in outcome.results %}
+        <li class="list-group-item d-flex justify-content-between align-items-start gap-3">
+          <div class="ms-1 me-auto">
+            <div class="fw-semibold">{{ r.who }} <span class="small text-muted fw-normal">&middot; {{ r.where }} &middot; {{ r.message.sent_at|date:"M j, g:i A" }}</span>
+              {% if r.noise %}<span class="badge text-bg-light border text-wrap text-start">noise</span>{% endif %}</div>
+            {{ r.text }}
+          </div>
+          {% if r.score is not None %}
+            <span class="badge text-bg-light border" title="cosine similarity">{{ r.score|floatformat:2 }}</span>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li class="list-group-item text-muted">
+          No message is a close enough match{% if outcome.dropped %} (the nearest ones scored below {{ outcome.min_score }}){% endif %}.
+          Try different words, or a name, a place or a topic.
+        </li>
+      {% endfor %}
+    </ol>
+
+  {% endif %}
+
+  <p class="small text-muted">
+    How it works: your messages are cleaned (links, e-mail addresses and phone numbers removed),
+    prefixed with who sent them and where, and turned into vectors once. Each search turns the
+    query into a vector and ranks messages by cosine similarity. More in README_AI.md.
+  </p>
+
+{% endblock %}

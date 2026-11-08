@@ -39,6 +39,8 @@ it in get_absolute_url(). The address can then change here without touching a si
                                                     Hugging Face model (ai_views.py)
     /ai/briefs/<pk>/write/   ai-brief-write        Assignment 6: POST-only hybrid pipeline -- local
                                                     model filters, Groq writes the brief
+    /ai/search/              ai-search             Assignment 9: search your messages by meaning
+                                                    (sentence-transformers) + optional local answer
 
 Assignment 5 note on the /accounts/ prefix. The three authentication routes are written out
 one by one instead of include("django.contrib.auth.urls"), for two reasons. That include also
@@ -126,4 +128,6 @@ urlpatterns = [
     # ---- Assignment 6: the AI features (local Hugging Face model + Groq API) ----
     path("ai/", ai_views.ai_lab, name="ai-lab"),
     path("ai/briefs/<int:pk>/write/", ai_views.ai_brief_write, name="ai-brief-write"),
+    # ---- Assignment 9: semantic search over your messages (+ optional grounded answer) ----
+    path("ai/search/", ai_views.ai_search, name="ai-search"),
 ]
