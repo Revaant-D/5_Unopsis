@@ -1,0 +1,190 @@
+{% load static %}
+{% comment %}
+  base.html: the page frame every other template inherits from.
+  Child templates fill the two named blocks: title and content.
+  Write the header, navigation and footer once here instead of copying them into every page.
+
+  Two things this file demonstrates for the assignment:
+
+  1. {% load static %} at the very top, then {% static 'css/unopsis.css' %} for the stylesheet
+     and {% static 'img/unopsis-logo.svg' %} for the logo. Django builds the address from
+     STATIC_URL, so the path is never hard-coded and the hashed, cache-busted filename is
+     picked up automatically in production (ManifestStaticFilesStorage).
+
+  2. Every navigation link is {% url 'route-name' %}, never "/insights/". The address lives in
+     unopsis/urls.py; this file only knows the name. Change a path there and every link here
+     follows.
+
+  3. Assignment 5: the navigation is split in two by {% if user.is_authenticated %}.
+
+     Logged out, the bar carries Home and nothing else, plus Log in and Sign up on the right.
+     Logged in, every protected section appears, plus the signed-in username and a Log out
+     button. The footer links are inside the same test -- easy to miss, and a footer link to
+     /insights/ on a logged-out page is just as much of a tell as a nav link.
+
+     To be clear about what this is and is not: hiding a link is NOT what protects the page.
+     The protection is @login_required / LoginRequiredMixin in unopsis/views.py, and typing
+     the address by hand still ends at the login page. Hiding the links is about not showing a
+     stranger the shape of a private system, and about not handing a signed-out user a menu of
+     seven things that will all bounce them to a login form.
+
+     `user` is in every template's context for free because of the
+     django.contrib.auth.context_processors.auth entry in settings/base.py. For an anonymous
+     visitor it is an AnonymousUser, whose is_authenticated is False -- not missing, False --
+     which is why the test can be written positively and never needs a {% if user %} guard.
+
+     Log out is a POST form rather than a link because Django 5's LogoutView refuses GET: a
+     GET logout could be fired by any <img src="/accounts/logout/"> on any page on the web.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Unopsis{% endblock %} | Unopsis</title>
+
+  {# Framework first, our own stylesheet second, so ours wins where they disagree. #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&display=swap">
+  <link rel="stylesheet" href="{% static 'css/unopsis.css' %}">
+  {% block extra_css %}{% endblock %}
+  <link rel="icon" href="{% static 'img/unopsis-logo.svg' %}" type="image/svg+xml">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% block body %}
+  <!-- Header -->
+  <header class="site-header py-3">
+    <div class="container d-flex align-items-center gap-3">
+      <img class="site-logo" src="{% static 'img/unopsis-logo.svg' %}"
+           alt="Unopsis logo: many inbound message lines collapsing into three ranked items">
+      <div>
+        <h1 class="h4 mb-0 brand-mark">
+          <a class="text-reset text-decoration-none" href="{% url 'home' %}">Unopsis</a>
+        </h1>
+        <p class="mb-0 small site-tagline">One view of everything that needs you. Team 5, INFO 490.</p>
+      </div>
+    </div>
+  </header>
+
+  {# Main navigation. Every href is looked up by the route's name= in unopsis/urls.py. #}
+  <nav class="site-nav mb-4" aria-label="Main">
+    <div class="container">
+      {% with current=request.resolver_match.url_name %}
+      <ul class="nav flex-wrap gap-1 py-2 align-items-center">
+        {# Home is outside the test on purpose: it is the front door, and it stays public. #}
+        <li class="nav-item">
+          <a class="nav-link {% if current == 'home' or current == 'app-landing' %}active{% endif %}"
+             href="{% url 'home' %}">Home</a>
+        </li>
+
+        {% if user.is_authenticated %}
+        <li class="nav-item">
+          {# The course dashboard that used to be the home page. #}
+          <a class="nav-link {% if current == 'under-the-hood' %}active{% endif %}"
+             href="{% url 'under-the-hood' %}">Under the hood</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if current == 'brief-list' or current == 'brief-detail' %}active{% endif %}"
+             href="{% url 'brief-list' %}">Briefs</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if current == 'item-list-cbv-generic' or current == 'item-detail' %}active{% endif %}"
+             href="{% url 'item-list-cbv-generic' %}">Brief items</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if current == 'insights' %}active{% endif %}"
+             href="{% url 'insights' %}">Search &amp; insights</a>
+        </li>
+        <li class="nav-item">
+          {# "reports" plus the two export-* routes: the page and the files it hands out. #}
+          <a class="nav-link {% if current == 'reports' or current|slice:':7' == 'export-' %}active{% endif %}"
+             href="{% url 'reports' %}">Reports &amp; exports</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if current|slice:':10' == 'vega-chart' %}active{% endif %}"
+             href="{% url 'vega-chart-page' 'chart1' %}">Vega-Lite charts</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
+             href="{% url 'api-items' %}">JSON API</a>
+        </li>
+        <li class="nav-item">
+          {# Assignment 6: the AI features (local Hugging Face model + Groq). #}
+          <a class="nav-link {% if current|slice:':3' == 'ai-' and current != 'ai-search' %}active{% endif %}"
+             href="{% url 'ai-lab' %}">AI lab</a>
+        </li>
+        <li class="nav-item">
+          {# Assignment 9: semantic search over your messages. #}
+          <a class="nav-link {% if current == 'ai-search' %}active{% endif %}"
+             href="{% url 'ai-search' %}">Semantic search</a>
+        </li>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+        <li class="nav-item ms-auto">
+          {# The product itself -- only once signed in. A visitor's way in is Sign in / Create account. #}
+          <a class="nav-link nav-link--app" href="{% url 'app-work-brief' %}">Open the app &rarr;</a>
+        </li>
+        {% endif %}
+
+        {% comment %}
+          The account strip. When signed out it carries ms-auto itself, because the
+          "Open the app" item above it is not rendered for a visitor.
+        {% endcomment %}
+        <li class="nav-item d-flex align-items-center gap-2{% if not user.is_authenticated %} ms-auto{% endif %}">
+          {% if user.is_authenticated %}
+            <span class="small text-muted">
+              Signed in as <strong>{{ user.get_username }}</strong>
+            </span>
+            {# POST, not a link: LogoutView answers 405 to GET. See the note at the top. #}
+            <form method="post" action="{% url 'logout' %}" class="m-0">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-outline-secondary" type="submit">Log out</button>
+            </form>
+          {% else %}
+            <a class="nav-link {% if current == 'login' %}active{% endif %}"
+               href="{% url 'login' %}">Log in</a>
+            <a class="btn btn-sm btn-primary {% if current == 'signup' %}active{% endif %}"
+               href="{% url 'signup' %}">Sign up</a>
+          {% endif %}
+        </li>
+      </ul>
+      {% endwith %}
+    </div>
+  </nav>
+
+  {# Flash messages: what a POST says back to the user after it redirects. #}
+  {% include "unopsis/_messages.html" %}
+
+  <!-- Main content: each page fills this block -->
+  <main class="container mb-5">
+    {% block content %}
+      <p class="text-muted">This is the default content. Pages override this block.</p>
+    {% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer py-3">
+    <div class="container small text-center">
+      5_Unopsis &middot; INFO 490 &middot; Team 5
+      {% if user.is_authenticated %}
+        &middot;
+        <a class="link-secondary" href="{% url 'insights' %}">Insights</a> &middot;
+        <a class="link-secondary" href="{% url 'api-items' %}">API</a>
+      {% else %}
+        {# The one feed that needs no account, so it is the one footer link a stranger gets. #}
+        &middot;
+        <a class="link-secondary" href="{% url 'api-items-by-lane' %}">Public API</a>
+      {% endif %}
+    </div>
+  </footer>
+{% endblock %}
+
+  {# A page-specific script hook, filled in by e.g. insights.html for its Vega-Lite charts; kept empty here so every other page pays nothing for it. #}
+  {% block extra_js %}{% endblock %}
+
+</body>
+</html>
