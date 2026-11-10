@@ -61,7 +61,7 @@ LEGACY_ACCOUNTS = {
 }
 
 
-def _rename_legacy_accounts(owner):
+def rename_legacy_accounts(owner):
     """Swap the old real identifiers on this owner's connections for the persona's."""
     for old, (new, display_name) in LEGACY_ACCOUNTS.items():
         for connection in Connection.objects.filter(space__user=owner, external_account=old):
@@ -125,7 +125,7 @@ def seed_demo_data(owner):
     )
 
     # ---- Connections, with their included scopes ----
-    _rename_legacy_accounts(owner)
+    rename_legacy_accounts(owner)
     conns = {}
     for key, space, provider, account, name, scopes in [
         ("wmail", work, Provider.GMAIL, PERSONA["work_mail"], "University Mail",

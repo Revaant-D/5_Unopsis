@@ -44,6 +44,7 @@ import requests
 from urllib.parse import quote
 
 from django.conf import settings
+from django.db.models import F, Max
 from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
 from django.templatetags.static import static
@@ -1478,6 +1479,135 @@ class DemoPersonaTests(TestCase):
                                       external_id__in=["w-mom1", "w-mom2", "w-mom3"])
         self.assertEqual(moms.count(), 3)
         self.assertEqual({m.author.display_name for m in moms}, {"Mom"})
+
+
+class RefreshDemoTests(TestCase):
+    """D-1: refresh_demo moves an account's rows so its newest brief ended this morning."""
+
+    ANCHOR = timezone.make_aware(datetime(2026, 11, 10, 8, 0))
+
+    def setUp(self):
+        from .management.commands.seed_demo import seed_demo_data
+        self.owner = User.objects.create_user("refresh-owner")
+        self.other = User.objects.create_user("refresh-bystander")
+        seed_demo_data(self.owner)
+        seed_demo_data(self.other)
+        # Age the owner's data by a month, the way a database seeded weeks ago looks.
+        month = timedelta(days=30, hours=3, minutes=17)
+        for model, path, fields in (
+            (Message, "connection__space__user", ["sent_at"]),
+            (Brief, "space__user", ["window_start", "window_end", "generated_at"]),
+            (BriefItem, "brief__space__user", ["deadline_at"]),
+            (Connection, "space__user", ["last_synced_at"]),
+        ):
+            for field in fields:
+                model.objects.filter(**{path: self.owner, f"{field}__isnull": False}).update(
+                    **{field: F(field) - month})
+
+    def _newest_end(self, user):
+        return Brief.objects.filter(space__user=user).aggregate(end=Max("window_end"))["end"]
+
+    def _refresh(self, **kwargs):
+        from .management.commands.refresh_demo import refresh_demo_data
+        return refresh_demo_data(self.owner, self.ANCHOR, **kwargs)
+
+    def test_the_newest_brief_ends_at_the_anchor(self):
+        self._refresh()
+        self.assertEqual(self._newest_end(self.owner), self.ANCHOR)
+
+    def test_gaps_between_rows_are_kept(self):
+        brief = Brief.objects.filter(space__user=self.owner).order_by("-window_end").first()
+        span = brief.window_end - brief.window_start
+        first_msg = Message.objects.filter(connection__space__user=self.owner).order_by("sent_at").first()
+        gap = brief.window_end - first_msg.sent_at
+        self._refresh()
+        brief.refresh_from_db()
+        first_msg.refresh_from_db()
+        self.assertEqual(brief.window_end - brief.window_start, span)
+        self.assertEqual(brief.window_end - first_msg.sent_at, gap)
+
+    def test_deadlines_are_rounded_to_five_pm(self):
+        self._refresh()
+        deadlines = BriefItem.objects.filter(brief__space__user=self.owner,
+                                             deadline_at__isnull=False)
+        self.assertTrue(deadlines.exists())
+        for item in deadlines:
+            local = timezone.localtime(item.deadline_at)
+            self.assertEqual((local.hour, local.minute), (17, 0))
+
+    def test_a_weekday_in_the_title_wins(self):
+        self._refresh()
+        friday = BriefItem.objects.filter(brief__space__user=self.owner,
+                                          title__icontains="due Friday").exclude(deadline_at=None)
+        self.assertTrue(friday.exists())
+        for item in friday:
+            self.assertEqual(timezone.localtime(item.deadline_at).strftime("%A"), "Friday")
+
+    def test_deadline_day(self):
+        from .management.commands.refresh_demo import deadline_day
+        tue = date(2026, 11, 10)
+        self.assertEqual(deadline_day("Revisions due Friday", date(2026, 11, 12), tue), date(2026, 11, 13))
+        self.assertEqual(deadline_day("Call back by tuesday", date(2026, 11, 12), tue), tue)
+        self.assertEqual(deadline_day("Invoice overdue", date(2026, 11, 11), tue), date(2026, 11, 11))
+
+    def test_no_sync_time_lands_in_the_future(self):
+        self._refresh()
+        self.assertFalse(Connection.objects.filter(space__user=self.owner,
+                                                   last_synced_at__gt=self.ANCHOR).exists())
+
+    def test_a_second_run_is_a_no_op(self):
+        self._refresh()
+        self.assertEqual(self._refresh(), timedelta(0))
+        self.assertEqual(self._newest_end(self.owner), self.ANCHOR)
+
+    def test_other_accounts_are_untouched(self):
+        before = self._newest_end(self.other)
+        self._refresh()
+        self.assertEqual(self._newest_end(self.other), before)
+
+    def test_an_account_with_no_briefs_moves_nothing(self):
+        from .management.commands.refresh_demo import refresh_demo_data
+        empty = User.objects.create_user("refresh-empty")
+        self.assertIsNone(refresh_demo_data(empty, self.ANCHOR))
+
+    def test_the_command_runs_and_reports(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        out = io.StringIO()
+        call_command("refresh_demo", "--user", "refresh-owner", "--at", "2026-11-10 08:00",
+                     stdout=out)
+        self.assertIn("Newest brief now ends Tue 10 Nov 08:00", out.getvalue())
+        self.assertEqual(self._newest_end(self.owner), self.ANCHOR)
+        with self.assertRaises(CommandError):
+            call_command("refresh_demo", "--user", "nobody-by-this-name", stdout=io.StringIO())
+        with self.assertRaises(CommandError):
+            call_command("refresh_demo", "--user", "refresh-owner", "--at", "tuesday",
+                         stdout=io.StringIO())
+
+    def test_it_applies_the_persona_without_a_reseed(self):
+        Connection.objects.filter(space__user=self.owner,
+                                  external_account="alex.rivera@university.example").update(
+            external_account="mohitg2@illinois.edu")
+        briefs = Brief.objects.filter(space__user=self.owner).count()
+        self._refresh()
+        accounts = Connection.objects.filter(space__user=self.owner).values_list(
+            "external_account", flat=True)
+        self.assertIn("alex.rivera@university.example", accounts)
+        self.assertNotIn("mohitg2@illinois.edu", accounts)
+        self.assertEqual(Brief.objects.filter(space__user=self.owner).count(), briefs)
+
+    def test_the_shift_is_described_in_words(self):
+        from .management.commands.refresh_demo import describe
+        self.assertEqual(describe(-timedelta(hours=5, minutes=20)), "back 5h 20m")
+        self.assertEqual(describe(timedelta(days=28, hours=4)), "forward 28d 4h 0m")
+        self.assertEqual(describe(timedelta(0)), "not at all (already current)")
+
+    def test_default_anchor_is_eight_this_morning_or_now_if_earlier(self):
+        from .management.commands.refresh_demo import default_anchor
+        afternoon = timezone.make_aware(datetime(2026, 11, 10, 14, 30))
+        dawn = timezone.make_aware(datetime(2026, 11, 10, 6, 15))
+        self.assertEqual(default_anchor(afternoon), self.ANCHOR)
+        self.assertEqual(default_anchor(dawn), dawn)
 
 
 class NewAccountSeedingTests(TestCase):
