@@ -71,6 +71,17 @@ python manage.py seed_demo                 # seeds mohitg2 by default
 python manage.py seed_demo --user somebody # or any other existing account
 ```
 
+**Before a demo, move the demo data to today.** Seeded dates are fixed when the data is created,
+so after a few weeks every card says "4 weeks ago". This shifts all of one account's timestamps so
+its newest brief ended at 8 AM today (deadlines land at 5 PM), and running it twice is harmless:
+
+```bash
+python manage.py refresh_demo --user tester
+```
+
+Use it instead of re-running `seed_demo` on an existing database: `seed_demo` keys its briefs on
+the moment it runs, so on a later day it adds a second set of briefs beside the old ones.
+
 Since A5 the demo data belongs to **one account at a time**, because every queryset is scoped
 to its owner. `seed_demo` gives one user their own set; signing up on the site does the same
 thing automatically for the new account (`SEED_NEW_ACCOUNTS`, see **Environment variables**).
@@ -98,9 +109,12 @@ main features.
 2. **Run the server** (`python manage.py runserver`) and sign in at
    `http://127.0.0.1:8000/accounts/login/`. The demo account `tester` / `uiuc12345` already owns
    a set of demo messages.
-3. **Semantic search:** click **Semantic search** in the navigation (`/ai/search/`), type e.g.
+3. **Semantic search:** in the app, click **Search** in the left rail (`/search/`); or, in the course
+   navigation, **Semantic search** (`/ai/search/`, the same engine with the lab details). Type e.g.
    `what did my mom say?` and press *Search*. The first search downloads the embedding model
-   (~90 MB, under a minute); after that, searches take milliseconds. Tick *Also answer with the
+   (~90 MB, under a minute); after that, searches take milliseconds. Signing in starts loading the
+   search model and indexing your messages in the background (`unopsis/ai/warmup.py`), so wait
+   about a minute after signing in before the first search of a demo. Tick *Also answer with the
    local model* to get an answer built from the results (first time: downloads ~5 GB and loads it,
    which can take a few minutes; then ~5-10 s per answer on a laptop CPU).
 4. **Triage:** click **AI lab** (`/ai/`), paste a message, press *Triage* (~7-35 s per message on
@@ -194,7 +208,7 @@ clipboard and finished in the original app. Run it the usual way, sign in, and o
 |---|---|---|
 | `/` | `app-landing` (and `home`) | Product page for a visitor; a signed-in user is redirected to `/work/brief/` |
 | `/under-the-hood/` | `under-the-hood` | The course dashboard (`views.home`, unchanged): totals, latest briefs, the four view kinds |
-| `/signup/`, `/login/` | `app-signup`, `app-login` | Create account / sign in (static until A5) |
+| `/signup/`, `/login/` | `app-signup`, `app-login` | Redirect to the real pages, `/accounts/signup/` and `/accounts/login/` (keeping `?next=`), so there is one sign-in page |
 | `/setup/world/` | `app-setup-world` | Setup 1: work, personal or both |
 | `/setup/sources/` | `app-setup-sources` | Setup 2: the connected accounts |
 | `/setup/scope/` | `app-setup-scope` | Setup 3: the channels and labels that are read |
@@ -209,6 +223,7 @@ clipboard and finished in the original app. Run it the usual way, sign in, and o
 | `/personal/catchup/` | `app-personal-catchup` | "You were gone N hours." |
 | `/personal/caught-up/` | `app-personal-caught-up` | "That was everything." |
 | `/app/items/<id>/action/` | `app-item-action` | POST only: handle / snooze / dismiss / reopen |
+| `/search/` | `app-search` | Semantic search inside the app: each result opens the thread that cites it; *Also answer* adds a cited answer from the local model |
 | `/journey/` | `app-journey` | Every screen in order |
 
 ## URL map
