@@ -28,9 +28,10 @@
         {% for chip in lead.chips %}<span class="meta">{{ chip.label }} · {{ chip.count }}</span>{% empty %}{% endfor %}
       </p>
       <p class="mb-1"><strong>{{ lead.title }}</strong></p>
-      <p>{{ lead.summary }}</p>
+      <p class="mb-2">{{ lead.summary }}</p>
+      {% if lead.primary.label %}<p class="meta mb-2">Suggested: {{ lead.primary.label|lowerfirst }}</p>{% endif %}
       <div class="d-flex flex-wrap gap-2">
-        <a class="btn-app btn-app--primary" href="{% url 'app-thread' 'personal' lead.pk %}">{{ lead.primary.label|default:"Reply in thread" }}</a>
+        <a class="btn-app btn-app--primary" href="{% url 'app-thread' 'personal' lead.pk %}">Open the thread →</a>
         <a class="btn-app" href="{% url 'app-thread' 'personal' lead.pk %}?show=all">Read the {{ lead.messages.all|length }} message{{ lead.messages.all|length|pluralize }}</a>
         <form method="post" action="{% url 'app-item-action' lead.pk %}">{% csrf_token %}
           <input type="hidden" name="action" value="dismiss">
@@ -54,8 +55,9 @@
           <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
             <input type="hidden" name="action" value="handle">
             <input type="hidden" name="return_to" value="catchup">
-            <button class="btn-app btn-app--primary" type="submit" title="Marks this handled in Unopsis — nothing is sent anywhere">{{ item.primary.label|default:"Done" }}</button>
+            <button class="btn-app btn-app--primary" type="submit" title="Marks this done in Unopsis. Nothing is sent anywhere.">Mark done</button>
           </form>
+          {% if item.primary.label %}<span class="meta align-self-center">Suggested: {{ item.primary.label|lowerfirst }}</span>{% endif %}
           {% if item.deadline_at %}<button type="button" class="btn-app" disabled title="Unopsis is read-only — nothing is added on your behalf">Add to calendar</button>{% endif %}
           <a class="meta align-self-center" href="{% url 'app-thread' 'personal' item.pk %}">see how it changed</a>
         </div>

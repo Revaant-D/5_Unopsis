@@ -39,11 +39,15 @@
           <td class="py-2" style="width: 2.5rem"><span class="tile">{% if item.primary_message %}{{ item.primary_message.connection|provider_letter }}{% else %}·{% endif %}</span></td>
           <td class="py-2"><a href="{% url 'app-work-focus' item.pk %}">{{ item.title }}</a></td>
           <td class="px-3 py-2 text-end">
-            <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
-              <input type="hidden" name="action" value="handle">
-              <input type="hidden" name="return_to" value="handled">
-              <button class="btn-app btn-app--primary" type="submit" title="Marks this handled in Unopsis — nothing is sent anywhere">{{ item.primary.label|default:"Mark handled" }}</button>
-            </form>
+            {# B-3: the button says what it does. The suggested next step is advice, shown as text. #}
+            <div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-2">
+              {% if item.primary.label %}<span class="meta">Suggested: {{ item.primary.label|lowerfirst }}</span>{% endif %}
+              <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
+                <input type="hidden" name="action" value="handle">
+                <input type="hidden" name="return_to" value="handled">
+                <button class="btn-app btn-app--primary" type="submit" title="Marks this done in Unopsis. Nothing is sent anywhere.">Mark done</button>
+              </form>
+            </div>
           </td>
         </tr>
       {% empty %}

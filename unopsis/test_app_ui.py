@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from . import ui
 from .models import Brief, BriefItem, Connection, Message, Person, Space
-from .templatetags.app_ui import initials, provider_letter
+from .templatetags.app_ui import initials, lowerfirst, provider_letter
 
 # Every GET page that takes no pk. Later tasks append their route names here.
 APP_ROUTES = []
@@ -273,6 +273,11 @@ class TemplateFilterTests(TestCase):
         self.assertEqual(initials("Prof. Ramirez"), "PR")
         self.assertEqual(initials("Mom"), "M")
         self.assertEqual(initials(""), "?")
+
+    def test_lowerfirst(self):
+        self.assertEqual(lowerfirst("Approve payment"), "approve payment")
+        self.assertEqual(lowerfirst("Reply to Prof. Ramirez"), "reply to Prof. Ramirez")
+        self.assertEqual(lowerfirst(None), "")
 
     def test_provider_letter(self):
         self.assertEqual(provider_letter(Connection(provider="whatsapp_business")), "W")
@@ -713,8 +718,11 @@ class HandledTests(SignedInAppClient, TestCase):
     def test_counts_what_is_left_and_offers_each_primary_action(self):
         response = self.client.get(self.url)
         self.assertContains(response, "2 things left. About 4 minutes.")
-        self.assertContains(response, "Approve the wording")
-        self.assertContains(response, ">Confirm<")
+        # B-3: the suggestion is text; the button says what it really does.
+        self.assertContains(response, "Suggested: approve the wording")
+        self.assertContains(response, "Suggested: confirm")
+        self.assertContains(response, ">Mark done<", count=2)
+        self.assertNotContains(response, ">Confirm<")
         self.assertContains(response, 'value="handle"')
 
     def test_handled_today_lists_what_was_closed(self):
@@ -765,6 +773,9 @@ class PersonalTests(SignedInAppClient, TestCase):
         self.assertContains(response, "Maya asked for your launch numbers")
         self.assertContains(response, f'href="{reverse("app-thread", args=["personal", self.rows["mention"].pk])}"')
         self.assertContains(response, 'value="dismiss"')        # "Ignore"
+        # B-3: no button promises to reply; the suggestion is shown as text.
+        self.assertContains(response, "Suggested: reply in thread")
+        self.assertNotContains(response, ">Reply in thread<")
 
     def test_rail_ranks_places_and_flags_the_broken_source(self):
         response = self.client.get(reverse("app-personal-catchup"))
