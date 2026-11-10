@@ -186,6 +186,10 @@ hr.rule-double, .rule-double { border: 0; border-top: 3px double var(--line-stro
 
 .list-group { --bs-list-group-bg: var(--surface); --bs-list-group-border-color: var(--line); --bs-list-group-action-hover-bg: var(--selected); --bs-list-group-active-bg: var(--ink); --bs-list-group-active-border-color: var(--ink); }
 .badge { font-family: var(--f-mono); font-weight: 500; letter-spacing: .02em; border-radius: 3px; }
+/* Bootstrap badges never wrap; a long one (the AI lab's model name) pushed phones sideways. */
+.badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+/* Tables of addresses (chart pages, insights) wrap their long URLs instead of overflowing. */
+.table-tight td, .table-tight th, .table-tight code { overflow-wrap: anywhere; }
 
 /* ---- 6. Small reusable pieces ------------------------------------------------------- */
 .stat-tile {
