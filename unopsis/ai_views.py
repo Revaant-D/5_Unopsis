@@ -34,6 +34,7 @@ from django.views.decorators.http import require_POST
 
 from . import ui
 from .ai import ask, groq_client, guardrails, local_llm, pipeline, semantic_search
+from .ai import warmup  # noqa: F401  (connects the login receiver that pre-builds the search index)
 from .models import BriefItem
 from .views import owned_briefs
 
