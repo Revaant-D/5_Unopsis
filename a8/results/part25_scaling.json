@@ -1,0 +1,1847 @@
+[
+  {
+    "n_docs": 2,
+    "n_paragraphs": 8,
+    "n_chunks": 7,
+    "answerable_queries": [
+      "Q6",
+      "H5"
+    ],
+    "rows": [
+      {
+        "query_id": "Q6",
+        "query": "Which connector delivers events by webhook instead of polling?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6506,
+            "words": 100,
+            "text": "Connectors and Integrations. Connectors poll on a schedule rather than holding open sockets, with one exception. Most connectors poll every five minutes on paid plans and every fifteen minutes on the free plan. PagerDuty is the exception: because paging is time critical, PagerDuty events arrive through an inbound webhook and are delivered within a few seconds. The polling interval is the single biggest contributor to perceived latency in Unopsis, and it is the first thing the team adjusts when a user reports that notifications feel slow. Users on paid plans may request a two minute interval for a single connector by contacting support."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 2,
+            "score": 0.4851,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.4594,
+            "words": 103,
+            "text": "Connectors and Integrations. A connector is an authenticated link between Unopsis and one external service. Unopsis currently ships connectors for Gmail, Outlook, Slack, Discord, GitHub, GitLab, Jira, Linear, Notion, Trello, Zendesk, PagerDuty, and Google Calendar. Each connector is implemented against the source service's official API and uses OAuth where the provider supports it, so Unopsis never stores a user's password for a third party service. Adding a connector takes two steps: authorise Unopsis in the provider's consent screen, then choose which event categories from that provider should produce notifications. The second step matters, because most providers emit far more events than any person wants to read."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "PagerDuty delivers events by webhook instead of polling.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0917,
+          "search": 0.01456,
+          "generate": 7.64,
+          "total": 7.75
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 668,
+        "prompt_chars": 3077,
+        "context_words": 388
+      },
+      {
+        "query_id": "H5",
+        "query": "What happens if a connector loses its authorisation?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6161,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 2,
+            "score": 0.351,
+            "words": 103,
+            "text": "Connectors and Integrations. A connector is an authenticated link between Unopsis and one external service. Unopsis currently ships connectors for Gmail, Outlook, Slack, Discord, GitHub, GitLab, Jira, Linear, Notion, Trello, Zendesk, PagerDuty, and Google Calendar. Each connector is implemented against the source service's official API and uses OAuth where the provider supports it, so Unopsis never stores a user's password for a third party service. Adding a connector takes two steps: authorise Unopsis in the provider's consent screen, then choose which event categories from that provider should produce notifications. The second step matters, because most providers emit far more events than any person wants to read."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.3115,
+            "words": 100,
+            "text": "Connectors and Integrations. Connectors poll on a schedule rather than holding open sockets, with one exception. Most connectors poll every five minutes on paid plans and every fifteen minutes on the free plan. PagerDuty is the exception: because paging is time critical, PagerDuty events arrive through an inbound webhook and are delivered within a few seconds. The polling interval is the single biggest contributor to perceived latency in Unopsis, and it is the first thing the team adjusts when a user reports that notifications feel slow. Users on paid plans may request a two minute interval for a single connector by contacting support."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "If a connector loses its authorization, Unopsis marks it as degraded, retains existing notifications, and emails the owner. It is then retried on a backoff schedule for seven days. If it remains degraded after seven days, it moves to a disabled state and stops being retried, but its historical notifications remain readable.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.0838,
+          "search": 5e-05,
+          "generate": 15.47,
+          "total": 15.56
+        },
+        "gen_eval_count": 66,
+        "prompt_tokens": 668,
+        "prompt_chars": 3067,
+        "context_words": 388
+      }
+    ],
+    "mean_context_quality": 5.0,
+    "mean_answer_quality": 5.0,
+    "mean_answer_rank": 1.0,
+    "distractor_slots": 4,
+    "off_doc_chunks_retrieved": 0,
+    "retrieved_slots": 6
+  },
+  {
+    "n_docs": 4,
+    "n_paragraphs": 16,
+    "n_chunks": 12,
+    "answerable_queries": [
+      "Q1",
+      "Q3",
+      "Q6",
+      "Q7",
+      "H1",
+      "H5",
+      "H6"
+    ],
+    "rows": [
+      {
+        "query_id": "Q1",
+        "query": "How much does the Pro plan cost per month?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.7245,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.5997,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.3334,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 2,
+        "context_quality": 5,
+        "answer": "The Pro plan costs eight dollars per month.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0368,
+          "search": 0.00396,
+          "generate": 10.24,
+          "total": 10.28
+        },
+        "gen_eval_count": 11,
+        "prompt_tokens": 665,
+        "prompt_chars": 2870,
+        "context_words": 391
+      },
+      {
+        "query_id": "Q3",
+        "query": "What is the default priority threshold for immediate delivery?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 1,
+            "score": 0.5201,
+            "words": 192,
+            "text": "Filtering and the Priority Score. Every notification entering Unopsis is assigned a priority score between zero and one hundred. The score is computed from four inputs: how directly the event addresses the user, how quickly the user has historically responded to similar events, the source connector's configured weight, and whether the event matches any of the user's keyword rules. A direct mention scores higher than a channel broadcast, and a connector the user opens frequently scores higher than one they routinely ignore. The score is recomputed when a rule changes but is never recomputed retroactively for notifications already delivered. The default priority threshold is forty. Notifications scoring at or above forty are delivered immediately through the user's chosen channels, and notifications scoring below forty are held for the next digest instead. Users may move the threshold anywhere between zero and one hundred. Setting it to zero delivers everything immediately, which some users prefer during an on call rotation, and setting it to one hundred effectively routes everything to digests. The threshold is per space, not per account, so a user may run an aggressive threshold on a noisy project and a permissive one on a quiet project."
+          },
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 2,
+            "score": 0.4106,
+            "words": 98,
+            "text": "Filtering and the Priority Score. Keyword rules let a user override the score directly. A rule consists of a pattern, a scope, and an action. Patterns may be plain substrings or regular expressions. Scope limits the rule to a connector, a space, or the whole account. Actions are boost, suppress, or pin. Boost adds thirty points to the score, suppress subtracts forty, and pin forces immediate delivery regardless of score and marks the notification so it survives the retention window. Rules are evaluated in order of specificity, with connector scoped rules beating space scoped rules and space scoped rules beating account scoped rules. Quiet hours suppress delivery without suppressing collection. By default quiet hours run from ten at night until seven in the morning in the user's time zone. During quiet hours Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. Pinned notifications are the only exception and are delivered during quiet hours. Digest windows are separate from quiet hours and may be set to hourly, daily at eight in the morning, or weekly on Monday morning."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.2707,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          }
+        ],
+        "gold_doc": "04-filtering",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "The default priority threshold for immediate delivery is forty.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0566,
+          "search": 5e-05,
+          "generate": 11.34,
+          "total": 11.39
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 854,
+        "prompt_chars": 4070,
+        "context_words": 471
+      },
+      {
+        "query_id": "Q6",
+        "query": "Which connector delivers events by webhook instead of polling?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6506,
+            "words": 100,
+            "text": "Connectors and Integrations. Connectors poll on a schedule rather than holding open sockets, with one exception. Most connectors poll every five minutes on paid plans and every fifteen minutes on the free plan. PagerDuty is the exception: because paging is time critical, PagerDuty events arrive through an inbound webhook and are delivered within a few seconds. The polling interval is the single biggest contributor to perceived latency in Unopsis, and it is the first thing the team adjusts when a user reports that notifications feel slow. Users on paid plans may request a two minute interval for a single connector by contacting support."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 2,
+            "score": 0.4851,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.4594,
+            "words": 103,
+            "text": "Connectors and Integrations. A connector is an authenticated link between Unopsis and one external service. Unopsis currently ships connectors for Gmail, Outlook, Slack, Discord, GitHub, GitLab, Jira, Linear, Notion, Trello, Zendesk, PagerDuty, and Google Calendar. Each connector is implemented against the source service's official API and uses OAuth where the provider supports it, so Unopsis never stores a user's password for a third party service. Adding a connector takes two steps: authorise Unopsis in the provider's consent screen, then choose which event categories from that provider should produce notifications. The second step matters, because most providers emit far more events than any person wants to read."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "PagerDuty delivers events by webhook instead of polling.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.3218,
+          "search": 6e-05,
+          "generate": 3.57,
+          "total": 3.89
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 668,
+        "prompt_chars": 3077,
+        "context_words": 388
+      },
+      {
+        "query_id": "Q7",
+        "query": "How long is the refund window on a paid plan?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.5577,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.3564,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.288,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0599,
+          "search": 6e-05,
+          "generate": 13.15,
+          "total": 13.21
+        },
+        "gen_eval_count": 42,
+        "prompt_tokens": 666,
+        "prompt_chars": 2873,
+        "context_words": 391
+      },
+      {
+        "query_id": "H1",
+        "query": "If I cancel my subscription, can I get my money back?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.5057,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.2555,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.2366,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. However, annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.0943,
+          "search": 6e-05,
+          "generate": 15.24,
+          "total": 15.34
+        },
+        "gen_eval_count": 77,
+        "prompt_tokens": 772,
+        "prompt_chars": 3482,
+        "context_words": 476
+      },
+      {
+        "query_id": "H5",
+        "query": "What happens if a connector loses its authorisation?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6161,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 2,
+            "score": 0.351,
+            "words": 103,
+            "text": "Connectors and Integrations. A connector is an authenticated link between Unopsis and one external service. Unopsis currently ships connectors for Gmail, Outlook, Slack, Discord, GitHub, GitLab, Jira, Linear, Notion, Trello, Zendesk, PagerDuty, and Google Calendar. Each connector is implemented against the source service's official API and uses OAuth where the provider supports it, so Unopsis never stores a user's password for a third party service. Adding a connector takes two steps: authorise Unopsis in the provider's consent screen, then choose which event categories from that provider should produce notifications. The second step matters, because most providers emit far more events than any person wants to read."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.3115,
+            "words": 100,
+            "text": "Connectors and Integrations. Connectors poll on a schedule rather than holding open sockets, with one exception. Most connectors poll every five minutes on paid plans and every fifteen minutes on the free plan. PagerDuty is the exception: because paging is time critical, PagerDuty events arrive through an inbound webhook and are delivered within a few seconds. The polling interval is the single biggest contributor to perceived latency in Unopsis, and it is the first thing the team adjusts when a user reports that notifications feel slow. Users on paid plans may request a two minute interval for a single connector by contacting support."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "If a connector loses its authorization, Unopsis marks it as degraded, retains existing notifications, and emails the owner. It is then retried on a backoff schedule for seven days. If it remains degraded after seven days, it moves to a disabled state and stops being retried, but its historical notifications remain readable.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.1998,
+          "search": 6e-05,
+          "generate": 10.92,
+          "total": 11.12
+        },
+        "gen_eval_count": 66,
+        "prompt_tokens": 668,
+        "prompt_chars": 3067,
+        "context_words": 388
+      },
+      {
+        "query_id": "H6",
+        "query": "Why would my notifications go silent overnight?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 1,
+            "score": 0.4037,
+            "words": 98,
+            "text": "Filtering and the Priority Score. Keyword rules let a user override the score directly. A rule consists of a pattern, a scope, and an action. Patterns may be plain substrings or regular expressions. Scope limits the rule to a connector, a space, or the whole account. Actions are boost, suppress, or pin. Boost adds thirty points to the score, suppress subtracts forty, and pin forces immediate delivery regardless of score and marks the notification so it survives the retention window. Rules are evaluated in order of specificity, with connector scoped rules beating space scoped rules and space scoped rules beating account scoped rules. Quiet hours suppress delivery without suppressing collection. By default quiet hours run from ten at night until seven in the morning in the user's time zone. During quiet hours Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. Pinned notifications are the only exception and are delivered during quiet hours. Digest windows are separate from quiet hours and may be set to hourly, daily at eight in the morning, or weekly on Monday morning."
+          },
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 2,
+            "score": 0.3473,
+            "words": 192,
+            "text": "Filtering and the Priority Score. Every notification entering Unopsis is assigned a priority score between zero and one hundred. The score is computed from four inputs: how directly the event addresses the user, how quickly the user has historically responded to similar events, the source connector's configured weight, and whether the event matches any of the user's keyword rules. A direct mention scores higher than a channel broadcast, and a connector the user opens frequently scores higher than one they routinely ignore. The score is recomputed when a rule changes but is never recomputed retroactively for notifications already delivered. The default priority threshold is forty. Notifications scoring at or above forty are delivered immediately through the user's chosen channels, and notifications scoring below forty are held for the next digest instead. Users may move the threshold anywhere between zero and one hundred. Setting it to zero delivers everything immediately, which some users prefer during an on call rotation, and setting it to one hundred effectively routes everything to digests. The threshold is per space, not per account, so a user may run an aggressive threshold on a noisy project and a permissive one on a quiet project."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.2418,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          }
+        ],
+        "gold_doc": "04-filtering",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Your notifications would go silent overnight due to Unopsis's \"Quiet Hours\" feature, which suppresses delivery without affecting collection. By default, this runs from ten at night until seven in the morning in your time zone. During this period, Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. Pinned notifications are the only exception and are delivered during quiet hours.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.1836,
+          "search": 0.0001,
+          "generate": 20.06,
+          "total": 20.24
+        },
+        "gen_eval_count": 97,
+        "prompt_tokens": 853,
+        "prompt_chars": 4055,
+        "context_words": 471
+      }
+    ],
+    "mean_context_quality": 5.0,
+    "mean_answer_quality": 5.0,
+    "mean_answer_rank": 1.14,
+    "distractor_slots": 14,
+    "off_doc_chunks_retrieved": 3,
+    "retrieved_slots": 21
+  },
+  {
+    "n_docs": 6,
+    "n_paragraphs": 24,
+    "n_chunks": 17,
+    "answerable_queries": [
+      "Q1",
+      "Q2",
+      "Q3",
+      "Q4",
+      "Q6",
+      "Q7",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6"
+    ],
+    "rows": [
+      {
+        "query_id": "Q1",
+        "query": "How much does the Pro plan cost per month?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.7245,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.5997,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.5575,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 2,
+        "context_quality": 5,
+        "answer": "The Pro plan costs eight dollars per month.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0292,
+          "search": 0.00037,
+          "generate": 5.76,
+          "total": 5.79
+        },
+        "gen_eval_count": 11,
+        "prompt_tokens": 553,
+        "prompt_chars": 2314,
+        "context_words": 307
+      },
+      {
+        "query_id": "Q2",
+        "query": "How long are notifications kept on the free plan?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.621,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.5152,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          },
+          {
+            "doc_id": "05-privacy",
+            "doc_title": "Privacy, Security, and Data Retention",
+            "rank": 3,
+            "score": 0.5148,
+            "words": 192,
+            "text": "Privacy, Security, and Data Retention. Retention is determined by plan. The Free plan retains notifications for seven days, the Pro plan for ninety days, and the Team plan for three hundred and sixty five days. When a notification passes its retention window it is deleted permanently rather than archived, and deletion is not reversible. Pinned notifications are exempt from retention and are kept until the user unpins or deletes them. Users may delete any notification at any time, and may delete their entire account from account settings, which removes all notifications, connectors, and billing records within thirty days. Unopsis stores the minimum necessary content from each source. For most connectors this means the title, the author, the timestamp, a short preview of the body, and a deep link back to the original item. Unopsis does not store full email bodies, full issue descriptions, or attachments. Attachment previews are generated at display time by requesting the item from the source service using the user's own authorisation, and are limited to five megabytes. This design means that revoking a connector immediately removes Unopsis's ability to read any new content from that service, even for notifications already in the inbox."
+          }
+        ],
+        "gold_doc": "05-privacy",
+        "gold_doc_retrieved": true,
+        "answer_rank": 3,
+        "context_quality": 5,
+        "answer": "Notifications on the Free plan are retained for seven days.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0608,
+          "search": 6e-05,
+          "generate": 12.61,
+          "total": 12.68
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 660,
+        "prompt_chars": 2947,
+        "context_words": 389
+      },
+      {
+        "query_id": "Q3",
+        "query": "What is the default priority threshold for immediate delivery?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 1,
+            "score": 0.5201,
+            "words": 192,
+            "text": "Filtering and the Priority Score. Every notification entering Unopsis is assigned a priority score between zero and one hundred. The score is computed from four inputs: how directly the event addresses the user, how quickly the user has historically responded to similar events, the source connector's configured weight, and whether the event matches any of the user's keyword rules. A direct mention scores higher than a channel broadcast, and a connector the user opens frequently scores higher than one they routinely ignore. The score is recomputed when a rule changes but is never recomputed retroactively for notifications already delivered. The default priority threshold is forty. Notifications scoring at or above forty are delivered immediately through the user's chosen channels, and notifications scoring below forty are held for the next digest instead. Users may move the threshold anywhere between zero and one hundred. Setting it to zero delivers everything immediately, which some users prefer during an on call rotation, and setting it to one hundred effectively routes everything to digests. The threshold is per space, not per account, so a user may run an aggressive threshold on a noisy project and a permissive one on a quiet project."
+          },
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 2,
+            "score": 0.4106,
+            "words": 98,
+            "text": "Filtering and the Priority Score. Keyword rules let a user override the score directly. A rule consists of a pattern, a scope, and an action. Patterns may be plain substrings or regular expressions. Scope limits the rule to a connector, a space, or the whole account. Actions are boost, suppress, or pin. Boost adds thirty points to the score, suppress subtracts forty, and pin forces immediate delivery regardless of score and marks the notification so it survives the retention window. Rules are evaluated in order of specificity, with connector scoped rules beating space scoped rules and space scoped rules beating account scoped rules. Quiet hours suppress delivery without suppressing collection. By default quiet hours run from ten at night until seven in the morning in the user's time zone. During quiet hours Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. Pinned notifications are the only exception and are delivered during quiet hours. Digest windows are separate from quiet hours and may be set to hourly, daily at eight in the morning, or weekly on Monday morning."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.3397,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          }
+        ],
+        "gold_doc": "04-filtering",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "The default priority threshold for immediate delivery is forty.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.1343,
+          "search": 0.00015,
+          "generate": 6.88,
+          "total": 7.02
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 759,
+        "prompt_chars": 3562,
+        "context_words": 391
+      },
+      {
+        "query_id": "Q4",
+        "query": "What uptime does the Team plan commit to each month?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.711,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.5588,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.438,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          }
+        ],
+        "gold_doc": "06-support",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "The Team plan commits to a ninety nine point nine percent monthly uptime.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.2799,
+          "search": 7e-05,
+          "generate": 11.04,
+          "total": 11.32
+        },
+        "gen_eval_count": 20,
+        "prompt_tokens": 549,
+        "prompt_chars": 2305,
+        "context_words": 308
+      },
+      {
+        "query_id": "Q6",
+        "query": "Which connector delivers events by webhook instead of polling?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6506,
+            "words": 100,
+            "text": "Connectors and Integrations. Connectors poll on a schedule rather than holding open sockets, with one exception. Most connectors poll every five minutes on paid plans and every fifteen minutes on the free plan. PagerDuty is the exception: because paging is time critical, PagerDuty events arrive through an inbound webhook and are delivered within a few seconds. The polling interval is the single biggest contributor to perceived latency in Unopsis, and it is the first thing the team adjusts when a user reports that notifications feel slow. Users on paid plans may request a two minute interval for a single connector by contacting support."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 2,
+            "score": 0.4851,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.4594,
+            "words": 103,
+            "text": "Connectors and Integrations. A connector is an authenticated link between Unopsis and one external service. Unopsis currently ships connectors for Gmail, Outlook, Slack, Discord, GitHub, GitLab, Jira, Linear, Notion, Trello, Zendesk, PagerDuty, and Google Calendar. Each connector is implemented against the source service's official API and uses OAuth where the provider supports it, so Unopsis never stores a user's password for a third party service. Adding a connector takes two steps: authorise Unopsis in the provider's consent screen, then choose which event categories from that provider should produce notifications. The second step matters, because most providers emit far more events than any person wants to read."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "PagerDuty delivers events by webhook instead of polling.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.2441,
+          "search": 6e-05,
+          "generate": 5.15,
+          "total": 5.39
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 668,
+        "prompt_chars": 3077,
+        "context_words": 388
+      },
+      {
+        "query_id": "Q7",
+        "query": "How long is the refund window on a paid plan?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.5577,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.439,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.3641,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "A paid plan offers a fourteen day refund on any reason, for any time, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.2121,
+          "search": 8e-05,
+          "generate": 15.08,
+          "total": 15.29
+        },
+        "gen_eval_count": 42,
+        "prompt_tokens": 629,
+        "prompt_chars": 2806,
+        "context_words": 379
+      },
+      {
+        "query_id": "H1",
+        "query": "If I cancel my subscription, can I get my money back?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.5057,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.2589,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.2555,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.2077,
+          "search": 7e-05,
+          "generate": 18.66,
+          "total": 18.87
+        },
+        "gen_eval_count": 76,
+        "prompt_tokens": 662,
+        "prompt_chars": 2862,
+        "context_words": 392
+      },
+      {
+        "query_id": "H2",
+        "query": "How long do I have to request a service credit after an outage?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.4122,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.3825,
+            "words": 176,
+            "text": "Support and Service Levels. Scheduled maintenance is announced at least seventy two hours in advance on the status page and is performed between two and five in the morning Central Time on Sundays wherever possible. Maintenance windows during which ingestion is paused do not count against the uptime commitment, provided the announcement requirement was met. Notifications generated during a paused ingestion window are collected when ingestion resumes, so a maintenance window delays notifications rather than losing them, with the exception of source services whose APIs expose only a short event history. Incidents are classified into three severities. Severity one means notification delivery is failing for most users, and the team commits to posting an initial status update within thirty minutes and subsequent updates every hour until resolution. Severity two means a single connector or a single region is affected, with updates every four hours. Severity three covers degraded performance and cosmetic faults, which are noted in the changelog rather than on the status page. A public post incident review is published within five business days for every severity one incident."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.3369,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          }
+        ],
+        "gold_doc": "06-support",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "You have thirty days after the end of the affected month to request a service credit following a breach of the uptime commitment.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.7103,
+          "search": 7e-05,
+          "generate": 14.81,
+          "total": 15.52
+        },
+        "gen_eval_count": 29,
+        "prompt_tokens": 623,
+        "prompt_chars": 2865,
+        "context_words": 374
+      },
+      {
+        "query_id": "H3",
+        "query": "Which plan do I need if my organisation requires single sign on?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "05-privacy",
+            "doc_title": "Privacy, Security, and Data Retention",
+            "rank": 1,
+            "score": 0.5033,
+            "words": 99,
+            "text": "Privacy, Security, and Data Retention. Data is stored in one of two regions, United States or European Union, chosen at account creation and not changeable afterwards without opening a support request and accepting a migration window. All data is encrypted in transit using TLS and at rest using AES two fifty six. OAuth tokens are encrypted with a separate key that is rotated every ninety days. Unopsis does not sell data, does not share it with advertisers, and does not use customer notification content to train machine learning models. Aggregate, non identifying usage statistics such as connector counts are used to prioritise engineering work. Single sign on through SAML is available on the Team plan and supports Okta, Google Workspace, and Microsoft Entra. Team administrators may require single sign on for all members, which disables password login for that organisation. Audit logging is also a Team feature and records connector changes, rule changes, member additions and removals, and export events, with entries retained for one year. Two factor authentication using a time based one time password is available on every plan including Free, and the team recommends it for all accounts."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.3429,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.2953,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          }
+        ],
+        "gold_doc": "05-privacy",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "You would need the Team plan ($20 per user per month) as it supports single sign on through SAML.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.3929,
+          "search": 6e-05,
+          "generate": 10.95,
+          "total": 11.34
+        },
+        "gen_eval_count": 24,
+        "prompt_tokens": 641,
+        "prompt_chars": 2912,
+        "context_words": 296
+      },
+      {
+        "query_id": "H4",
+        "query": "What are the two ways to get in touch with support?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.3795,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.2993,
+            "words": 176,
+            "text": "Support and Service Levels. Scheduled maintenance is announced at least seventy two hours in advance on the status page and is performed between two and five in the morning Central Time on Sundays wherever possible. Maintenance windows during which ingestion is paused do not count against the uptime commitment, provided the announcement requirement was met. Notifications generated during a paused ingestion window are collected when ingestion resumes, so a maintenance window delays notifications rather than losing them, with the exception of source services whose APIs expose only a short event history. Incidents are classified into three severities. Severity one means notification delivery is failing for most users, and the team commits to posting an initial status update within thirty minutes and subsequent updates every hour until resolution. Severity two means a single connector or a single region is affected, with updates every four hours. Severity three covers degraded performance and cosmetic faults, which are noted in the changelog rather than on the status page. A public post incident review is published within five business days for every severity one incident."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.2921,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          }
+        ],
+        "gold_doc": "06-support",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Support can be contacted via email or through an in-application contact form.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.3628,
+          "search": 0.00013,
+          "generate": 16.48,
+          "total": 16.84
+        },
+        "gen_eval_count": 17,
+        "prompt_tokens": 730,
+        "prompt_chars": 3473,
+        "context_words": 458
+      },
+      {
+        "query_id": "H5",
+        "query": "What happens if a connector loses its authorisation?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6161,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          },
+          {
+            "doc_id": "05-privacy",
+            "doc_title": "Privacy, Security, and Data Retention",
+            "rank": 2,
+            "score": 0.362,
+            "words": 192,
+            "text": "Privacy, Security, and Data Retention. Retention is determined by plan. The Free plan retains notifications for seven days, the Pro plan for ninety days, and the Team plan for three hundred and sixty five days. When a notification passes its retention window it is deleted permanently rather than archived, and deletion is not reversible. Pinned notifications are exempt from retention and are kept until the user unpins or deletes them. Users may delete any notification at any time, and may delete their entire account from account settings, which removes all notifications, connectors, and billing records within thirty days. Unopsis stores the minimum necessary content from each source. For most connectors this means the title, the author, the timestamp, a short preview of the body, and a deep link back to the original item. Unopsis does not store full email bodies, full issue descriptions, or attachments. Attachment previews are generated at display time by requesting the item from the source service using the user's own authorisation, and are limited to five megabytes. This design means that revoking a connector immediately removes Unopsis's ability to read any new content from that service, even for notifications already in the inbox."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.351,
+            "words": 103,
+            "text": "Connectors and Integrations. A connector is an authenticated link between Unopsis and one external service. Unopsis currently ships connectors for Gmail, Outlook, Slack, Discord, GitHub, GitLab, Jira, Linear, Notion, Trello, Zendesk, PagerDuty, and Google Calendar. Each connector is implemented against the source service's official API and uses OAuth where the provider supports it, so Unopsis never stores a user's password for a third party service. Adding a connector takes two steps: authorise Unopsis in the provider's consent screen, then choose which event categories from that provider should produce notifications. The second step matters, because most providers emit far more events than any person wants to read."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "If a connector loses its authorization, Unopsis marks it as degraded, retains existing notifications, and emails the owner. It is then retried on a backoff schedule for seven days. If it remains degraded after seven days, it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.5599,
+          "search": 0.01664,
+          "generate": 23.7,
+          "total": 24.27
+        },
+        "gen_eval_count": 76,
+        "prompt_tokens": 795,
+        "prompt_chars": 3687,
+        "context_words": 480
+      },
+      {
+        "query_id": "H6",
+        "query": "Why would my notifications go silent overnight?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 1,
+            "score": 0.4037,
+            "words": 98,
+            "text": "Filtering and the Priority Score. Keyword rules let a user override the score directly. A rule consists of a pattern, a scope, and an action. Patterns may be plain substrings or regular expressions. Scope limits the rule to a connector, a space, or the whole account. Actions are boost, suppress, or pin. Boost adds thirty points to the score, suppress subtracts forty, and pin forces immediate delivery regardless of score and marks the notification so it survives the retention window. Rules are evaluated in order of specificity, with connector scoped rules beating space scoped rules and space scoped rules beating account scoped rules. Quiet hours suppress delivery without suppressing collection. By default quiet hours run from ten at night until seven in the morning in the user's time zone. During quiet hours Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. Pinned notifications are the only exception and are delivered during quiet hours. Digest windows are separate from quiet hours and may be set to hourly, daily at eight in the morning, or weekly on Monday morning."
+          },
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 2,
+            "score": 0.3473,
+            "words": 192,
+            "text": "Filtering and the Priority Score. Every notification entering Unopsis is assigned a priority score between zero and one hundred. The score is computed from four inputs: how directly the event addresses the user, how quickly the user has historically responded to similar events, the source connector's configured weight, and whether the event matches any of the user's keyword rules. A direct mention scores higher than a channel broadcast, and a connector the user opens frequently scores higher than one they routinely ignore. The score is recomputed when a rule changes but is never recomputed retroactively for notifications already delivered. The default priority threshold is forty. Notifications scoring at or above forty are delivered immediately through the user's chosen channels, and notifications scoring below forty are held for the next digest instead. Users may move the threshold anywhere between zero and one hundred. Setting it to zero delivers everything immediately, which some users prefer during an on call rotation, and setting it to one hundred effectively routes everything to digests. The threshold is per space, not per account, so a user may run an aggressive threshold on a noisy project and a permissive one on a quiet project."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.3316,
+            "words": 176,
+            "text": "Support and Service Levels. Scheduled maintenance is announced at least seventy two hours in advance on the status page and is performed between two and five in the morning Central Time on Sundays wherever possible. Maintenance windows during which ingestion is paused do not count against the uptime commitment, provided the announcement requirement was met. Notifications generated during a paused ingestion window are collected when ingestion resumes, so a maintenance window delays notifications rather than losing them, with the exception of source services whose APIs expose only a short event history. Incidents are classified into three severities. Severity one means notification delivery is failing for most users, and the team commits to posting an initial status update within thirty minutes and subsequent updates every hour until resolution. Severity two means a single connector or a single region is affected, with updates every four hours. Severity three covers degraded performance and cosmetic faults, which are noted in the changelog rather than on the status page. A public post incident review is published within five business days for every severity one incident."
+          }
+        ],
+        "gold_doc": "04-filtering",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Your notifications might go silent overnight due to a feature called \"Quiet Hours.\" By default, this is set to run from ten at night until seven in the morning in your time zone. During this period, Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. This is designed to manage the volume of notifications and ensure important messages are not overlooked during your time off.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.0722,
+          "search": 0.00388,
+          "generate": 20.69,
+          "total": 20.76
+        },
+        "gen_eval_count": 98,
+        "prompt_tokens": 843,
+        "prompt_chars": 4096,
+        "context_words": 466
+      }
+    ],
+    "mean_context_quality": 5.0,
+    "mean_answer_quality": 5.0,
+    "mean_answer_rank": 1.25,
+    "distractor_slots": 24,
+    "off_doc_chunks_retrieved": 13,
+    "retrieved_slots": 36
+  },
+  {
+    "n_docs": 8,
+    "n_paragraphs": 32,
+    "n_chunks": 21,
+    "answerable_queries": [
+      "Q1",
+      "Q2",
+      "Q3",
+      "Q4",
+      "Q5",
+      "Q6",
+      "Q7",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "H7"
+    ],
+    "rows": [
+      {
+        "query_id": "Q1",
+        "query": "How much does the Pro plan cost per month?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.7245,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.5997,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.5575,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 2,
+        "context_quality": 5,
+        "answer": "The Pro plan costs eight dollars per month.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0289,
+          "search": 6e-05,
+          "generate": 3.96,
+          "total": 3.98
+        },
+        "gen_eval_count": 11,
+        "prompt_tokens": 553,
+        "prompt_chars": 2314,
+        "context_words": 307
+      },
+      {
+        "query_id": "Q2",
+        "query": "How long are notifications kept on the free plan?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.621,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 2,
+            "score": 0.5152,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          },
+          {
+            "doc_id": "05-privacy",
+            "doc_title": "Privacy, Security, and Data Retention",
+            "rank": 3,
+            "score": 0.5148,
+            "words": 192,
+            "text": "Privacy, Security, and Data Retention. Retention is determined by plan. The Free plan retains notifications for seven days, the Pro plan for ninety days, and the Team plan for three hundred and sixty five days. When a notification passes its retention window it is deleted permanently rather than archived, and deletion is not reversible. Pinned notifications are exempt from retention and are kept until the user unpins or deletes them. Users may delete any notification at any time, and may delete their entire account from account settings, which removes all notifications, connectors, and billing records within thirty days. Unopsis stores the minimum necessary content from each source. For most connectors this means the title, the author, the timestamp, a short preview of the body, and a deep link back to the original item. Unopsis does not store full email bodies, full issue descriptions, or attachments. Attachment previews are generated at display time by requesting the item from the source service using the user's own authorisation, and are limited to five megabytes. This design means that revoking a connector immediately removes Unopsis's ability to read any new content from that service, even for notifications already in the inbox."
+          }
+        ],
+        "gold_doc": "05-privacy",
+        "gold_doc_retrieved": true,
+        "answer_rank": 3,
+        "context_quality": 5,
+        "answer": "Notifications on the Free plan are retained for seven days.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0841,
+          "search": 5e-05,
+          "generate": 10.86,
+          "total": 10.95
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 660,
+        "prompt_chars": 2947,
+        "context_words": 389
+      },
+      {
+        "query_id": "Q3",
+        "query": "What is the default priority threshold for immediate delivery?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 1,
+            "score": 0.5201,
+            "words": 192,
+            "text": "Filtering and the Priority Score. Every notification entering Unopsis is assigned a priority score between zero and one hundred. The score is computed from four inputs: how directly the event addresses the user, how quickly the user has historically responded to similar events, the source connector's configured weight, and whether the event matches any of the user's keyword rules. A direct mention scores higher than a channel broadcast, and a connector the user opens frequently scores higher than one they routinely ignore. The score is recomputed when a rule changes but is never recomputed retroactively for notifications already delivered. The default priority threshold is forty. Notifications scoring at or above forty are delivered immediately through the user's chosen channels, and notifications scoring below forty are held for the next digest instead. Users may move the threshold anywhere between zero and one hundred. Setting it to zero delivers everything immediately, which some users prefer during an on call rotation, and setting it to one hundred effectively routes everything to digests. The threshold is per space, not per account, so a user may run an aggressive threshold on a noisy project and a permissive one on a quiet project."
+          },
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 2,
+            "score": 0.4106,
+            "words": 98,
+            "text": "Filtering and the Priority Score. Keyword rules let a user override the score directly. A rule consists of a pattern, a scope, and an action. Patterns may be plain substrings or regular expressions. Scope limits the rule to a connector, a space, or the whole account. Actions are boost, suppress, or pin. Boost adds thirty points to the score, suppress subtracts forty, and pin forces immediate delivery regardless of score and marks the notification so it survives the retention window. Rules are evaluated in order of specificity, with connector scoped rules beating space scoped rules and space scoped rules beating account scoped rules. Quiet hours suppress delivery without suppressing collection. By default quiet hours run from ten at night until seven in the morning in the user's time zone. During quiet hours Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. Pinned notifications are the only exception and are delivered during quiet hours. Digest windows are separate from quiet hours and may be set to hourly, daily at eight in the morning, or weekly on Monday morning."
+          },
+          {
+            "doc_id": "08-onboarding",
+            "doc_title": "Onboarding and Data Portability",
+            "rank": 3,
+            "score": 0.3757,
+            "words": 180,
+            "text": "Onboarding and Data Portability. A new account is seeded rather than left empty. On first sign in, Unopsis creates a Personal space, installs a small set of example notifications that demonstrate the priority score and the digest, and opens the connector gallery. The example notifications are clearly marked as samples and are deleted automatically once the user connects their first real service, or after seven days, whichever comes first. This decision was made after early testers who signed in and saw an empty inbox assumed the product was broken rather than simply unconfigured. The recommended onboarding path is to connect one noisy service first rather than several at once. Connecting a single chat or mail account immediately produces enough volume for the priority score to become visible and for the user to feel the difference between immediate delivery and digest delivery. Users who connect six services on their first day frequently report feeling overwhelmed and then abandon the product, whereas users who connect one service and adjust their threshold before adding a second are substantially more likely to still be active after a month."
+          }
+        ],
+        "gold_doc": "04-filtering",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "The default priority threshold for immediate delivery is forty.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.2784,
+          "search": 0.0001,
+          "generate": 8.71,
+          "total": 8.99
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 842,
+        "prompt_chars": 4089,
+        "context_words": 470
+      },
+      {
+        "query_id": "Q4",
+        "query": "What uptime does the Team plan commit to each month?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.711,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.5588,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.438,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          }
+        ],
+        "gold_doc": "06-support",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "The Team plan commits to a ninety nine point nine percent monthly uptime.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.056,
+          "search": 7e-05,
+          "generate": 11.84,
+          "total": 11.9
+        },
+        "gen_eval_count": 20,
+        "prompt_tokens": 549,
+        "prompt_chars": 2305,
+        "context_words": 308
+      },
+      {
+        "query_id": "Q5",
+        "query": "How many API requests per minute can a Pro account make?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "07-architecture",
+            "doc_title": "Technical Architecture",
+            "rank": 1,
+            "score": 0.597,
+            "words": 194,
+            "text": "Technical Architecture. Notification deduplication happens at write time. Each incoming event is reduced to a fingerprint composed of the connector identifier, the source item identifier, and the event category. If a fingerprint already exists within a twenty four hour window, the incoming event updates the existing notification's timestamp rather than creating a second row. This matters because several source APIs re deliver the same event when an item is edited, and without deduplication a single active pull request could produce dozens of near identical entries in a user's inbox over the course of a day. The public API is REST over HTTPS and is available on the Pro and Team plans. Pro accounts are limited to sixty requests per minute and Team accounts to six hundred requests per minute, measured per account rather than per token. Exceeding the limit returns HTTP four twenty nine with a Retry After header. Outbound webhooks are retried up to five times with exponential backoff starting at ten seconds, and a webhook endpoint that fails all five attempts is marked unhealthy and skipped for one hour. Webhook payloads are signed with a per endpoint secret using HMAC SHA two fifty six. Mobile delivery uses Apple Push Notification service on iOS and Firebase Cloud Messaging on Android. Push payloads carry only a title and a short preview, never full content, so a lost or stolen device does not expose notification bodies beyond what is already visible on the lock screen. Email delivery uses a transactional provider and is rate limited to one message per minute per user for immediate notifications, which prevents a misconfigured rule from generating an email storm. Digest emails bypass that limit because they are assembled as a single message."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.5075,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.486,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          }
+        ],
+        "gold_doc": "07-architecture",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "A Pro account is limited to sixty requests per minute.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0755,
+          "search": 5e-05,
+          "generate": 9.54,
+          "total": 9.61
+        },
+        "gen_eval_count": 13,
+        "prompt_tokens": 748,
+        "prompt_chars": 3434,
+        "context_words": 401
+      },
+      {
+        "query_id": "Q6",
+        "query": "Which connector delivers events by webhook instead of polling?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6506,
+            "words": 100,
+            "text": "Connectors and Integrations. Connectors poll on a schedule rather than holding open sockets, with one exception. Most connectors poll every five minutes on paid plans and every fifteen minutes on the free plan. PagerDuty is the exception: because paging is time critical, PagerDuty events arrive through an inbound webhook and are delivered within a few seconds. The polling interval is the single biggest contributor to perceived latency in Unopsis, and it is the first thing the team adjusts when a user reports that notifications feel slow. Users on paid plans may request a two minute interval for a single connector by contacting support."
+          },
+          {
+            "doc_id": "07-architecture",
+            "doc_title": "Technical Architecture",
+            "rank": 2,
+            "score": 0.4907,
+            "words": 194,
+            "text": "Technical Architecture. Notification deduplication happens at write time. Each incoming event is reduced to a fingerprint composed of the connector identifier, the source item identifier, and the event category. If a fingerprint already exists within a twenty four hour window, the incoming event updates the existing notification's timestamp rather than creating a second row. This matters because several source APIs re deliver the same event when an item is edited, and without deduplication a single active pull request could produce dozens of near identical entries in a user's inbox over the course of a day. The public API is REST over HTTPS and is available on the Pro and Team plans. Pro accounts are limited to sixty requests per minute and Team accounts to six hundred requests per minute, measured per account rather than per token. Exceeding the limit returns HTTP four twenty nine with a Retry After header. Outbound webhooks are retried up to five times with exponential backoff starting at ten seconds, and a webhook endpoint that fails all five attempts is marked unhealthy and skipped for one hour. Webhook payloads are signed with a per endpoint secret using HMAC SHA two fifty six. Mobile delivery uses Apple Push Notification service on iOS and Firebase Cloud Messaging on Android. Push payloads carry only a title and a short preview, never full content, so a lost or stolen device does not expose notification bodies beyond what is already visible on the lock screen. Email delivery uses a transactional provider and is rate limited to one message per minute per user for immediate notifications, which prevents a misconfigured rule from generating an email storm. Digest emails bypass that limit because they are assembled as a single message."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.4851,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "PagerDuty delivers events by webhook instead of polling.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.0476,
+          "search": 6e-05,
+          "generate": 14.0,
+          "total": 14.05
+        },
+        "gen_eval_count": 12,
+        "prompt_tokens": 854,
+        "prompt_chars": 4114,
+        "context_words": 479
+      },
+      {
+        "query_id": "Q7",
+        "query": "How long is the refund window on a paid plan?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.5577,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.439,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.3641,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "A paid plan offers a fourteen day refund on any reason, for any time, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "direct",
+        "latency": {
+          "embed_query": 0.1792,
+          "search": 7e-05,
+          "generate": 13.65,
+          "total": 13.83
+        },
+        "gen_eval_count": 42,
+        "prompt_tokens": 629,
+        "prompt_chars": 2806,
+        "context_words": 379
+      },
+      {
+        "query_id": "H1",
+        "query": "If I cancel my subscription, can I get my money back?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 1,
+            "score": 0.5057,
+            "words": 181,
+            "text": "Plans and Pricing. Exceeding a plan's daily notification limit does not incur an overage charge and does not drop notifications silently. Instead, Unopsis continues to accept and store notifications but stops sending push and email delivery for the remainder of the day, and displays a banner explaining that the limit was reached. The counter resets at midnight in the user's configured time zone. This behaviour was chosen deliberately over hard rejection, because losing a notification is worse than delaying one, and over automatic billing, because a surprise charge is worse than a delay. Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated. There is no charge for cancelling, no retention offer process, and no requirement to contact a human to cancel; the cancellation control is in the billing section of account settings."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.2589,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.2555,
+            "words": 110,
+            "text": "Plans and Pricing. Annual billing is available on Pro and Team and is discounted by two months, so an annual Pro subscription costs eighty dollars per year rather than ninety six. Students with a verified academic email address receive fifty percent off the Pro plan for twelve months, which brings it to four dollars per month. The student discount may be renewed once by reverifying, giving a maximum of twenty four discounted months. Team plans are billed per seat, and seats may be added at any time. Adding a seat mid cycle is prorated to the day; removing a seat takes effect at the end of the current billing period rather than immediately."
+          }
+        ],
+        "gold_doc": "03-pricing",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Unopsis offers a fourteen day refund on any paid plan, for any reason, with no requirement to explain. Refunds are issued to the original payment method and typically appear within five business days. Annual subscriptions cancelled after the fourteen day window are not refunded pro rata, but the subscription continues to the end of its paid term rather than being terminated.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.2758,
+          "search": 0.00028,
+          "generate": 19.12,
+          "total": 19.4
+        },
+        "gen_eval_count": 76,
+        "prompt_tokens": 662,
+        "prompt_chars": 2862,
+        "context_words": 392
+      },
+      {
+        "query_id": "H2",
+        "query": "How long do I have to request a service credit after an outage?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.4122,
+            "words": 101,
+            "text": "Support and Service Levels. The Team plan carries a ninety nine point nine percent monthly uptime commitment. Uptime is measured against the notification ingestion and delivery path, not against the marketing site or the public documentation. If monthly uptime falls below the commitment, affected Team customers receive a service credit of ten percent of that month's fee for each full tenth of a percent below the target, capped at fifty percent of the monthly fee. Credits are applied to the following invoice and must be requested within thirty days of the end of the affected month. The Free and Pro plans carry no uptime commitment."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.3825,
+            "words": 176,
+            "text": "Support and Service Levels. Scheduled maintenance is announced at least seventy two hours in advance on the status page and is performed between two and five in the morning Central Time on Sundays wherever possible. Maintenance windows during which ingestion is paused do not count against the uptime commitment, provided the announcement requirement was met. Notifications generated during a paused ingestion window are collected when ingestion resumes, so a maintenance window delays notifications rather than losing them, with the exception of source services whose APIs expose only a short event history. Incidents are classified into three severities. Severity one means notification delivery is failing for most users, and the team commits to posting an initial status update within thirty minutes and subsequent updates every hour until resolution. Severity two means a single connector or a single region is affected, with updates every four hours. Severity three covers degraded performance and cosmetic faults, which are noted in the changelog rather than on the status page. A public post incident review is published within five business days for every severity one incident."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.3369,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          }
+        ],
+        "gold_doc": "06-support",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "You have thirty days after the end of the affected month to request a service credit following a breach of the uptime commitment.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.1597,
+          "search": 0.00027,
+          "generate": 13.5,
+          "total": 13.66
+        },
+        "gen_eval_count": 29,
+        "prompt_tokens": 623,
+        "prompt_chars": 2865,
+        "context_words": 374
+      },
+      {
+        "query_id": "H3",
+        "query": "Which plan do I need if my organisation requires single sign on?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "05-privacy",
+            "doc_title": "Privacy, Security, and Data Retention",
+            "rank": 1,
+            "score": 0.5033,
+            "words": 99,
+            "text": "Privacy, Security, and Data Retention. Data is stored in one of two regions, United States or European Union, chosen at account creation and not changeable afterwards without opening a support request and accepting a migration window. All data is encrypted in transit using TLS and at rest using AES two fifty six. OAuth tokens are encrypted with a separate key that is rotated every ninety days. Unopsis does not sell data, does not share it with advertisers, and does not use customer notification content to train machine learning models. Aggregate, non identifying usage statistics such as connector counts are used to prioritise engineering work. Single sign on through SAML is available on the Team plan and supports Okta, Google Workspace, and Microsoft Entra. Team administrators may require single sign on for all members, which disables password login for that organisation. Audit logging is also a Team feature and records connector changes, rule changes, member additions and removals, and export events, with entries retained for one year. Two factor authentication using a time based one time password is available on every plan including Free, and the team recommends it for all accounts."
+          },
+          {
+            "doc_id": "08-onboarding",
+            "doc_title": "Onboarding and Data Portability",
+            "rank": 2,
+            "score": 0.3943,
+            "words": 180,
+            "text": "Onboarding and Data Portability. A new account is seeded rather than left empty. On first sign in, Unopsis creates a Personal space, installs a small set of example notifications that demonstrate the priority score and the digest, and opens the connector gallery. The example notifications are clearly marked as samples and are deleted automatically once the user connects their first real service, or after seven days, whichever comes first. This decision was made after early testers who signed in and saw an empty inbox assumed the product was broken rather than simply unconfigured. The recommended onboarding path is to connect one noisy service first rather than several at once. Connecting a single chat or mail account immediately produces enough volume for the priority score to become visible and for the user to feel the difference between immediate delivery and digest delivery. Users who connect six services on their first day frequently report feeling overwhelmed and then abandon the product, whereas users who connect one service and adjust their threshold before adding a second are substantially more likely to still be active after a month."
+          },
+          {
+            "doc_id": "03-pricing",
+            "doc_title": "Plans and Pricing",
+            "rank": 3,
+            "score": 0.3429,
+            "words": 100,
+            "text": "Plans and Pricing. Unopsis offers three plans. The Free plan costs nothing, allows three connectors, and processes up to two hundred notifications per day. The Pro plan costs eight dollars per month, allows fifteen connectors, and processes up to five thousand notifications per day. The Team plan costs twenty dollars per user per month, allows unlimited connectors, and processes up to fifty thousand notifications per day across the whole team. All three plans include the full filtering engine, the unified inbox, mobile push, and the web application. The paid plans are distinguished by capacity, retention, and support rather than by withholding core features."
+          }
+        ],
+        "gold_doc": "05-privacy",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "You would need the Team plan ($20 per user per month) as it offers single sign-on through SAML for all its members.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.166,
+          "search": 7e-05,
+          "generate": 13.63,
+          "total": 13.8
+        },
+        "gen_eval_count": 29,
+        "prompt_tokens": 741,
+        "prompt_chars": 3487,
+        "context_words": 379
+      },
+      {
+        "query_id": "H4",
+        "query": "What are the two ways to get in touch with support?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 1,
+            "score": 0.3795,
+            "words": 97,
+            "text": "Support and Service Levels. Support is delivered by email and by an in application contact form. The Free plan receives best effort support with no committed response time, and in practice most free tier questions are answered within three business days. The Pro plan commits to a first response within one business day. The Team plan commits to a first response within four business hours during the business week, which the team defines as nine in the morning to six in the evening Central Time, Monday through Friday. None of the plans offer telephone support, and there is no live chat."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.2993,
+            "words": 176,
+            "text": "Support and Service Levels. Scheduled maintenance is announced at least seventy two hours in advance on the status page and is performed between two and five in the morning Central Time on Sundays wherever possible. Maintenance windows during which ingestion is paused do not count against the uptime commitment, provided the announcement requirement was met. Notifications generated during a paused ingestion window are collected when ingestion resumes, so a maintenance window delays notifications rather than losing them, with the exception of source services whose APIs expose only a short event history. Incidents are classified into three severities. Severity one means notification delivery is failing for most users, and the team commits to posting an initial status update within thirty minutes and subsequent updates every hour until resolution. Severity two means a single connector or a single region is affected, with updates every four hours. Severity three covers degraded performance and cosmetic faults, which are noted in the changelog rather than on the status page. A public post incident review is published within five business days for every severity one incident."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.2921,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          }
+        ],
+        "gold_doc": "06-support",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Support can be contacted via email or through an in-application contact form.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.108,
+          "search": 0.00013,
+          "generate": 12.51,
+          "total": 12.61
+        },
+        "gen_eval_count": 17,
+        "prompt_tokens": 730,
+        "prompt_chars": 3473,
+        "context_words": 458
+      },
+      {
+        "query_id": "H5",
+        "query": "What happens if a connector loses its authorisation?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 1,
+            "score": 0.6161,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          },
+          {
+            "doc_id": "05-privacy",
+            "doc_title": "Privacy, Security, and Data Retention",
+            "rank": 2,
+            "score": 0.362,
+            "words": 192,
+            "text": "Privacy, Security, and Data Retention. Retention is determined by plan. The Free plan retains notifications for seven days, the Pro plan for ninety days, and the Team plan for three hundred and sixty five days. When a notification passes its retention window it is deleted permanently rather than archived, and deletion is not reversible. Pinned notifications are exempt from retention and are kept until the user unpins or deletes them. Users may delete any notification at any time, and may delete their entire account from account settings, which removes all notifications, connectors, and billing records within thirty days. Unopsis stores the minimum necessary content from each source. For most connectors this means the title, the author, the timestamp, a short preview of the body, and a deep link back to the original item. Unopsis does not store full email bodies, full issue descriptions, or attachments. Attachment previews are generated at display time by requesting the item from the source service using the user's own authorisation, and are limited to five megabytes. This design means that revoking a connector immediately removes Unopsis's ability to read any new content from that service, even for notifications already in the inbox."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.351,
+            "words": 103,
+            "text": "Connectors and Integrations. A connector is an authenticated link between Unopsis and one external service. Unopsis currently ships connectors for Gmail, Outlook, Slack, Discord, GitHub, GitLab, Jira, Linear, Notion, Trello, Zendesk, PagerDuty, and Google Calendar. Each connector is implemented against the source service's official API and uses OAuth where the provider supports it, so Unopsis never stores a user's password for a third party service. Adding a connector takes two steps: authorise Unopsis in the provider's consent screen, then choose which event categories from that provider should produce notifications. The second step matters, because most providers emit far more events than any person wants to read."
+          }
+        ],
+        "gold_doc": "02-connectors",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "If a connector's authorization expires or is revoked, Unopsis marks it as degraded, retains existing notifications, and emails the owner. It is then retried on a backoff schedule for seven days. If it remains degraded after seven days, it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.1663,
+          "search": 7e-05,
+          "generate": 13.45,
+          "total": 13.61
+        },
+        "gen_eval_count": 79,
+        "prompt_tokens": 795,
+        "prompt_chars": 3687,
+        "context_words": 480
+      },
+      {
+        "query_id": "H6",
+        "query": "Why would my notifications go silent overnight?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 1,
+            "score": 0.4037,
+            "words": 98,
+            "text": "Filtering and the Priority Score. Keyword rules let a user override the score directly. A rule consists of a pattern, a scope, and an action. Patterns may be plain substrings or regular expressions. Scope limits the rule to a connector, a space, or the whole account. Actions are boost, suppress, or pin. Boost adds thirty points to the score, suppress subtracts forty, and pin forces immediate delivery regardless of score and marks the notification so it survives the retention window. Rules are evaluated in order of specificity, with connector scoped rules beating space scoped rules and space scoped rules beating account scoped rules. Quiet hours suppress delivery without suppressing collection. By default quiet hours run from ten at night until seven in the morning in the user's time zone. During quiet hours Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. Pinned notifications are the only exception and are delivered during quiet hours. Digest windows are separate from quiet hours and may be set to hourly, daily at eight in the morning, or weekly on Monday morning."
+          },
+          {
+            "doc_id": "04-filtering",
+            "doc_title": "Filtering and the Priority Score",
+            "rank": 2,
+            "score": 0.3473,
+            "words": 192,
+            "text": "Filtering and the Priority Score. Every notification entering Unopsis is assigned a priority score between zero and one hundred. The score is computed from four inputs: how directly the event addresses the user, how quickly the user has historically responded to similar events, the source connector's configured weight, and whether the event matches any of the user's keyword rules. A direct mention scores higher than a channel broadcast, and a connector the user opens frequently scores higher than one they routinely ignore. The score is recomputed when a rule changes but is never recomputed retroactively for notifications already delivered. The default priority threshold is forty. Notifications scoring at or above forty are delivered immediately through the user's chosen channels, and notifications scoring below forty are held for the next digest instead. Users may move the threshold anywhere between zero and one hundred. Setting it to zero delivers everything immediately, which some users prefer during an on call rotation, and setting it to one hundred effectively routes everything to digests. The threshold is per space, not per account, so a user may run an aggressive threshold on a noisy project and a permissive one on a quiet project."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 3,
+            "score": 0.3316,
+            "words": 176,
+            "text": "Support and Service Levels. Scheduled maintenance is announced at least seventy two hours in advance on the status page and is performed between two and five in the morning Central Time on Sundays wherever possible. Maintenance windows during which ingestion is paused do not count against the uptime commitment, provided the announcement requirement was met. Notifications generated during a paused ingestion window are collected when ingestion resumes, so a maintenance window delays notifications rather than losing them, with the exception of source services whose APIs expose only a short event history. Incidents are classified into three severities. Severity one means notification delivery is failing for most users, and the team commits to posting an initial status update within thirty minutes and subsequent updates every hour until resolution. Severity two means a single connector or a single region is affected, with updates every four hours. Severity three covers degraded performance and cosmetic faults, which are noted in the changelog rather than on the status page. A public post incident review is published within five business days for every severity one incident."
+          }
+        ],
+        "gold_doc": "04-filtering",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "Your notifications might go silent overnight due to a feature called \"Quiet Hours.\" By default, this period runs from ten at night until seven in the morning in your time zone. During this time, Unopsis continues to collect and score notifications but holds all delivery until quiet hours end, at which point anything above the threshold is delivered as a single batch. This is set to prioritize important notifications during daytime hours.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.1033,
+          "search": 6e-05,
+          "generate": 20.53,
+          "total": 20.63
+        },
+        "gen_eval_count": 86,
+        "prompt_tokens": 843,
+        "prompt_chars": 4096,
+        "context_words": 466
+      },
+      {
+        "query_id": "H7",
+        "query": "How many times does a failed webhook get retried?",
+        "top_k": 3,
+        "retrieved": [
+          {
+            "doc_id": "07-architecture",
+            "doc_title": "Technical Architecture",
+            "rank": 1,
+            "score": 0.525,
+            "words": 194,
+            "text": "Technical Architecture. Notification deduplication happens at write time. Each incoming event is reduced to a fingerprint composed of the connector identifier, the source item identifier, and the event category. If a fingerprint already exists within a twenty four hour window, the incoming event updates the existing notification's timestamp rather than creating a second row. This matters because several source APIs re deliver the same event when an item is edited, and without deduplication a single active pull request could produce dozens of near identical entries in a user's inbox over the course of a day. The public API is REST over HTTPS and is available on the Pro and Team plans. Pro accounts are limited to sixty requests per minute and Team accounts to six hundred requests per minute, measured per account rather than per token. Exceeding the limit returns HTTP four twenty nine with a Retry After header. Outbound webhooks are retried up to five times with exponential backoff starting at ten seconds, and a webhook endpoint that fails all five attempts is marked unhealthy and skipped for one hour. Webhook payloads are signed with a per endpoint secret using HMAC SHA two fifty six. Mobile delivery uses Apple Push Notification service on iOS and Firebase Cloud Messaging on Android. Push payloads carry only a title and a short preview, never full content, so a lost or stolen device does not expose notification bodies beyond what is already visible on the lock screen. Email delivery uses a transactional provider and is rate limited to one message per minute per user for immediate notifications, which prevents a misconfigured rule from generating an email storm. Digest emails bypass that limit because they are assembled as a single message."
+          },
+          {
+            "doc_id": "06-support",
+            "doc_title": "Support and Service Levels",
+            "rank": 2,
+            "score": 0.3967,
+            "words": 176,
+            "text": "Support and Service Levels. Scheduled maintenance is announced at least seventy two hours in advance on the status page and is performed between two and five in the morning Central Time on Sundays wherever possible. Maintenance windows during which ingestion is paused do not count against the uptime commitment, provided the announcement requirement was met. Notifications generated during a paused ingestion window are collected when ingestion resumes, so a maintenance window delays notifications rather than losing them, with the exception of source services whose APIs expose only a short event history. Incidents are classified into three severities. Severity one means notification delivery is failing for most users, and the team commits to posting an initial status update within thirty minutes and subsequent updates every hour until resolution. Severity two means a single connector or a single region is affected, with updates every four hours. Severity three covers degraded performance and cosmetic faults, which are noted in the changelog rather than on the status page. A public post incident review is published within five business days for every severity one incident."
+          },
+          {
+            "doc_id": "02-connectors",
+            "doc_title": "Connectors and Integrations",
+            "rank": 3,
+            "score": 0.3353,
+            "words": 185,
+            "text": "Connectors and Integrations. Each connector exposes its own event categories, and the names follow the source service. The GitHub connector can emit review requested, mention, assigned, workflow failed, and release published. The Jira and Linear connectors can emit assigned, mentioned, status changed, comment added, and due date approaching. The Gmail and Outlook connectors can emit direct message, thread reply, and label matched, where label matched lets a user forward only mail carrying a specific label. Calendar connectors emit event starting soon, event changed, and invitation received. Chat connectors emit direct message, channel mention, and keyword matched. When a connector's authorisation expires or is revoked, Unopsis marks it as degraded rather than deleting it, retains its existing notifications, and emails the owner. A degraded connector is retried on a backoff schedule for seven days. If it has not recovered after seven days it moves to a disabled state and stops being retried, but its historical notifications remain readable for as long as the plan's retention window allows. Reauthorising a disabled connector restores it without losing history, and no notifications are backfilled for the period during which it was disabled."
+          }
+        ],
+        "gold_doc": "07-architecture",
+        "gold_doc_retrieved": true,
+        "answer_rank": 1,
+        "context_quality": 5,
+        "answer": "A failed webhook is retried up to five times with exponential backoff, starting at ten seconds.",
+        "answer_quality": 5,
+        "verdict": "correct",
+        "also_states_conflicting": false,
+        "difficulty": "hard",
+        "latency": {
+          "embed_query": 0.1813,
+          "search": 7e-05,
+          "generate": 15.03,
+          "total": 15.21
+        },
+        "gen_eval_count": 19,
+        "prompt_tokens": 944,
+        "prompt_chars": 4644,
+        "context_words": 555
+      }
+    ],
+    "mean_context_quality": 5.0,
+    "mean_answer_quality": 5.0,
+    "mean_answer_rank": 1.21,
+    "distractor_slots": 28,
+    "off_doc_chunks_retrieved": 18,
+    "retrieved_slots": 42
+  }
+]

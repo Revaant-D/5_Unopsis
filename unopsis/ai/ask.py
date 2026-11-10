@@ -13,8 +13,11 @@ Guardrails, in order:
   * no retrieved messages        -> no model call; "nothing to answer from"
   * prompt-injection question    -> refused, no model call
   * model missing / error        -> the retrieved messages are still shown, with the reason
-  * time limit                   -> generate(max_seconds=...) stops a slow CPU
-  * empty / cut-off output       -> reported as a failure, not shown as an answer
+  * time limit                   -> generate(max_seconds=...) stops a slow CPU, and an answer
+                                    that ran into the limit is reported ("timeout"), not shown
+  * empty output                 -> reported as a failure, not shown as an answer
+  * "couldn't find" + a cited fact -> the cited fact is shown, with a note (seen in A8);
+                                    with no valid citation the not-found answer stands
   * citations [n] outside 1..N   -> dropped; an answer with no valid citation is flagged
 """
 
@@ -26,13 +29,16 @@ from django.conf import settings
 from . import guardrails, local_llm, prompts
 
 _CITE = re.compile(r"\[(\d{1,2})\]")
+# The not-found sentence, matched loosely: any case, curly or straight apostrophe, optional period.
+_NOT_FOUND = re.compile(
+    re.escape(prompts.NOT_FOUND_ANSWER.rstrip(".")).replace("'", "['’]") + r"\.?", re.IGNORECASE)
 MAX_ANSWER_CHARS = 500
 
 
 def answer_question(question, rows):
     """
     Returns {"status", "answer", "cited", "note", "raw", "ms", "model"} where status is one of
-    ok | uncited | not_found | no_context | refused | unavailable | failed.
+    ok | uncited | not_found | no_context | refused | unavailable | failed | timeout.
     """
     out = {"answer": "", "cited": [], "note": "", "raw": "", "ms": 0, "model": local_llm.model_name()}
     if not rows:
@@ -45,9 +51,11 @@ def answer_question(question, rows):
                         + "; ".join(reasons) + ")."}
 
     context = rows[:getattr(settings, "AI_ANSWER_CONTEXT", 3)]
+    limit = getattr(settings, "AI_LOCAL_MAX_SECONDS", 90)
     started = time.perf_counter()
     try:
-        raw = local_llm.generate(prompts.build_answer_messages(question, context), max_new_tokens=100)
+        raw = local_llm.generate(prompts.build_answer_messages(question, context),
+                                 max_new_tokens=100, max_seconds=limit)
     except local_llm.LocalModelUnavailable as exc:
         return {**out, "status": "unavailable", "note": str(exc),
                 "ms": int((time.perf_counter() - started) * 1000)}
@@ -60,8 +68,25 @@ def answer_question(question, rows):
     if not answer:
         return {**out, "status": "failed", "raw": raw, "ms": ms,
                 "note": "The model returned an empty answer (it may have hit the time limit)."}
-    if prompts.NOT_FOUND_ANSWER.lower().rstrip(".") in answer.lower():
-        return {**out, "status": "not_found", "answer": prompts.NOT_FOUND_ANSWER, "raw": raw, "ms": ms}
+    if ms >= limit * 1000:
+        # transformers' max_time stops mid-sentence and returns what it has. A half-finished
+        # answer can read as a confident one, so it is reported, not shown.
+        return {**out, "status": "timeout", "raw": raw, "ms": ms,
+                "note": f"The local model hit the {limit} s time limit, so its unfinished answer "
+                        "is not shown. The search results below are still correct."}
+    hedge = ""
+    if _NOT_FOUND.search(answer):
+        # The model said the not-found sentence. Usually that IS the whole answer. But A8 caught
+        # Granite writing "NOT IN CONTEXT. ... a fourteen day refund ..." -- the abstention
+        # phrase followed by the correct, sourced fact. So: if what remains cites a retrieved
+        # message, show it (with a note); otherwise the not-found answer stands. An uncited
+        # remainder is not shown, because nothing on the page could back it up.
+        rest = " ".join(_NOT_FOUND.sub(" ", answer).split())
+        if not any(1 <= int(n) <= len(context) for n in _CITE.findall(rest)):
+            return {**out, "status": "not_found", "answer": prompts.NOT_FOUND_ANSWER, "raw": raw, "ms": ms}
+        answer = rest.lstrip(" .,;:-") or rest
+        hedge = ("The model also said it couldn't find this, then answered from the cited "
+                 "message. Check the answer against it below.")
 
     numbers = [int(n) for n in _CITE.findall(answer)]
     valid = sorted({n for n in numbers if 1 <= n <= len(context)})
@@ -70,7 +95,7 @@ def answer_question(question, rows):
     if len(answer) > MAX_ANSWER_CHARS:
         answer = answer[:MAX_ANSWER_CHARS].rsplit(" ", 1)[0] + "..."
     cited = [{"n": n, **context[n - 1]} for n in valid]
-    status, note = "ok", ""
+    status, note = "ok", hedge
     if not valid:
         status = "uncited"
         note = "The answer cites none of the retrieved messages, so check it against them below."
