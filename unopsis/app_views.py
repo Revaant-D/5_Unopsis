@@ -311,8 +311,15 @@ def personal_catchup(request):
 
 @login_required
 def caught_up(request):
-    """Screen 13: the deliberate dead end -- what you did, and when the next read lands."""
+    """
+    Screen 13: the deliberate dead end -- what you did, and when the next read lands.
+
+    B-4: it only says "That was everything." when it is true. If Needs-you items are still
+    open (the user clicked "Mark me caught up" without handling them), the page says how many
+    still want a reply and links back, instead of claiming nothing that matters is unread.
+    """
     space, brief, now = _world(PERSONAL, request.user)
+    still = list(ui.lane_items(brief, NEEDS_YOU))
     done = (
         brief.items.filter(state=HANDLED).order_by("handled_at")
         if brief else BriefItem.objects.none()
@@ -320,6 +327,7 @@ def caught_up(request):
     return _render_world(
         request, "unopsis/app/caught_up.html", PERSONAL, "caught-up", space, brief, now,
         done=done,
+        still=still,
         work_next=ui.next_digest(ui.current_space(WORK, request.user), now),
     )
 

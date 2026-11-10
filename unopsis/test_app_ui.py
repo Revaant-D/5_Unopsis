@@ -798,8 +798,18 @@ class PersonalTests(SignedInAppClient, TestCase):
         self.assertContains(response, "Maya asked for your launch numbers")
         # The next work digest depends on the wall clock (08:00 or 16:30 UTC), so accept either.
         self.assertRegex(response.content.decode(), r"Work brief (8:00 AM|4:30 PM)")
-        self.assertContains(response, f'href="{reverse("app-setup-world")}"')
-        self.assertContains(response, f'href="{reverse("app-journey")}"')
+        # B-4: the demo-tour buttons are gone from the product's dead end.
+        self.assertNotContains(response, "See the whole journey")
+        self.assertNotContains(response, "Restart from setup")
+
+    def test_caught_up_does_not_claim_everything_while_a_reply_is_still_wanted(self):
+        """B-4: "Mark me caught up" is a link, so the page itself has to check."""
+        response = self.client.get(reverse("app-personal-caught-up"))
+        self.assertContains(response, "1 still wants a reply.")
+        self.assertContains(response, "Maya asked for your launch numbers")
+        self.assertContains(response, f'href="{reverse("app-personal-catchup")}"')
+        self.assertNotContains(response, "That was everything.")
+        self.assertNotContains(response, "Nothing is unread that matters")
 
 
 class EmptyPersonalTests(SignedInAppClient, TestCase):

@@ -6,23 +6,32 @@
 {% block title %}Caught up{% endblock %}
 {% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
 {% block rail_foot %}<p class="hint small mb-0">Next catch-up when you're back.</p>{% endblock %}
-{% block topbar %}<span class="chip">Personal · done</span>{% endblock %}
+{% block topbar %}<span class="chip">Personal · {% if still %}{{ still|length }} open{% else %}done{% endif %}</span>{% endblock %}
 
 {% block app_content %}
 {% if not brief %}
   <h1 class="page-title">Nothing to catch up on yet.</h1>
   <p class="page-sub">There is no personal catch-up yet. Load the demo data with <code>python manage.py seed_demo</code>.</p>
 {% else %}
+  {% if not still %}
   <div class="d-flex gap-2 mb-5" aria-label="All four parts done">
     <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
     <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
     <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
     <div class="progress-thin flex-fill"><span style="width:100%"></span></div>
   </div>
+  {% endif %}
 
   <div class="text-center mx-auto" style="max-width: 560px">
-    <h1 class="page-title">That was everything.</h1>
-    <p>{{ done|length }} thing{{ done|length|pluralize }} handled, and {{ brief.message_count }} messages are behind you. Nothing is unread that matters.</p>
+    {% if still %}
+      {# B-4: never claim "everything" while something still wants a reply. #}
+      <h1 class="page-title">Almost. <span class="soft">{{ still|length }} still want{{ still|length|pluralize:"s," }} a reply.</span></h1>
+      <p>{{ done|length }} thing{{ done|length|pluralize }} handled so far. {% for item in still %}{% if forloop.first %}Still open: {% endif %}<strong>{{ item.title }}</strong>{% if not forloop.last %}, {% else %}.{% endif %}{% endfor %}</p>
+      <p><a class="btn-app btn-app--primary" href="{% url 'app-personal-catchup' %}">← Back to the catch-up</a></p>
+    {% else %}
+      <h1 class="page-title">That was everything.</h1>
+      <p>{{ done|length }} thing{{ done|length|pluralize }} handled, and {{ brief.message_count }} messages are behind you. Nothing is unread that matters.</p>
+    {% endif %}
 
     <div class="app-card text-start my-4">
       <small class="meta">What you did</small>
@@ -36,10 +45,6 @@
     <p class="d-flex flex-wrap justify-content-center gap-2">
       <span class="chip">Next catch-up when you're back</span>
       {% if work_next %}<span class="chip">Work brief {{ work_next|time:"g:i A" }}</span>{% endif %}
-    </p>
-    <p class="d-flex flex-wrap justify-content-center gap-2">
-      <a class="btn-app" href="{% url 'app-journey' %}">See the whole journey</a>
-      <a class="btn-app btn-app--quiet" href="{% url 'app-setup-world' %}">Restart from setup</a>
     </p>
   </div>
 {% endif %}
