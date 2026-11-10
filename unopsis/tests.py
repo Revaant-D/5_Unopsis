@@ -1432,6 +1432,54 @@ class TenantIsolationTests(TestCase):
         )
 
 
+class DemoPersonaTests(TestCase):
+    """B-7 / D-3: the seed uses a fictional persona, never a real person's addresses."""
+
+    REAL = ("mohitg2@illinois.edu", "mohit.personal@gmail.com", "mohitg#4417")
+
+    def _accounts(self, owner):
+        return set(Connection.objects.filter(space__user=owner)
+                   .values_list("external_account", flat=True))
+
+    def test_a_fresh_seed_uses_only_the_fictional_persona(self):
+        from .management.commands.seed_demo import PERSONA, seed_demo_data
+        owner = User.objects.create_user("persona-owner")
+        seed_demo_data(owner)
+        accounts = self._accounts(owner)
+        self.assertTrue(set(PERSONA.values()) <= accounts)
+        for real in self.REAL:
+            self.assertNotIn(real, accounts)
+        self.assertFalse(any("mohit" in a for a in accounts))
+
+    def test_reseeding_an_old_database_renames_in_place_without_duplicates(self):
+        from .management.commands.seed_demo import seed_demo_data
+        owner = User.objects.create_user("legacy-owner")
+        seed_demo_data(owner)
+        before = Connection.objects.filter(space__user=owner).count()
+        # Put the database back the way the old seed left it.
+        renames = {"alex.rivera@university.example": "mohitg2@illinois.edu",
+                   "alex.rivera@mail.example": "mohit.personal@gmail.com",
+                   "alexrivera#2048": "mohitg#4417"}
+        for new, old in renames.items():
+            Connection.objects.filter(space__user=owner, external_account=new).update(
+                external_account=old)
+        seed_demo_data(owner)
+        self.assertEqual(Connection.objects.filter(space__user=owner).count(), before)
+        accounts = self._accounts(owner)
+        self.assertFalse(any("mohit" in a for a in accounts))
+        self.assertTrue(set(renames) <= accounts)
+
+    def test_messages_search_depends_on_are_untouched(self):
+        """COLLAB_PLAN Rule 2: external_ids and the "Mom" sender stay exactly as they were."""
+        from .management.commands.seed_demo import seed_demo_data
+        owner = User.objects.create_user("rule-two-owner")
+        seed_demo_data(owner)
+        moms = Message.objects.filter(connection__space__user=owner,
+                                      external_id__in=["w-mom1", "w-mom2", "w-mom3"])
+        self.assertEqual(moms.count(), 3)
+        self.assertEqual({m.author.display_name for m in moms}, {"Mom"})
+
+
 class NewAccountSeedingTests(TestCase):
     """
     Assignment 5: a brand-new account is given its OWN demo rows (unopsis/onboarding.py).

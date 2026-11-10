@@ -43,6 +43,37 @@ from unopsis.models import Brief, BriefItem, Connection, Message, Person, Provid
 DEFAULT_OWNER_USERNAME = "mohitg2"
 
 
+# The demo persona (B-7 / D-3): Alex Rivera, a grad student and TA juggling a thesis, a lab
+# job and family. Every address is on a reserved .example domain, so nothing here can belong
+# to a real person. Earlier versions of this file used a teammate's real addresses; those
+# rows are renamed in place on the next seed (see LEGACY_ACCOUNTS below), because the
+# get_or_create calls are keyed on external_account and would otherwise add Alex's
+# connections beside the old ones instead of replacing them.
+PERSONA = {
+    "work_mail": "alex.rivera@university.example",
+    "personal_mail": "alex.rivera@mail.example",
+    "discord": "alexrivera#2048",
+}
+LEGACY_ACCOUNTS = {
+    "mohitg2@illinois.edu": (PERSONA["work_mail"], "University Mail"),
+    "mohit.personal@gmail.com": (PERSONA["personal_mail"], "Personal Mail"),
+    "mohitg#4417": (PERSONA["discord"], "Discord"),
+}
+
+
+def _rename_legacy_accounts(owner):
+    """Swap the old real identifiers on this owner's connections for the persona's."""
+    for old, (new, display_name) in LEGACY_ACCOUNTS.items():
+        for connection in Connection.objects.filter(space__user=owner, external_account=old):
+            clash = Connection.objects.filter(
+                space=connection.space, provider=connection.provider, external_account=new
+            ).exists()
+            if not clash:   # (space, provider, external_account) is unique
+                connection.external_account = new
+                connection.display_name = display_name
+                connection.save(update_fields=["external_account", "display_name"])
+
+
 @transaction.atomic
 def seed_demo_data(owner):
     """
@@ -94,16 +125,17 @@ def seed_demo_data(owner):
     )
 
     # ---- Connections, with their included scopes ----
+    _rename_legacy_accounts(owner)
     conns = {}
     for key, space, provider, account, name, scopes in [
-        ("wmail", work, Provider.GMAIL, "mohitg2@illinois.edu", "UIUC Mail",
+        ("wmail", work, Provider.GMAIL, PERSONA["work_mail"], "University Mail",
          [{"id": "INBOX", "name": "Inbox", "type": "label"}]),
         ("wslack", work, Provider.SLACK, "hci-lab.slack.com", "HCI Lab",
          [{"id": "C08KJ21X", "name": "#engineering", "type": "channel"},
           {"id": "C08DEP44", "name": "#deploys", "type": "channel"}]),
-        ("pmail", personal, Provider.GMAIL, "mohit.personal@gmail.com", "Personal Mail",
+        ("pmail", personal, Provider.GMAIL, PERSONA["personal_mail"], "Personal Mail",
          [{"id": "INBOX", "name": "Inbox", "type": "label"}]),
-        ("pdisc", personal, Provider.DISCORD, "mohitg#4417", "Discord",
+        ("pdisc", personal, Provider.DISCORD, PERSONA["discord"], "Discord",
          [{"id": "srv-friends", "name": "Friends", "type": "server"}]),
         ("pwa", personal, Provider.WHATSAPP_BUSINESS, "+1-217-555-0142", "WhatsApp",
          [{"id": "wa-family-01", "name": "Family", "type": "chat"}]),
