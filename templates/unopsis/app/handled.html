@@ -35,7 +35,7 @@
     <tbody>
       {% for item in still %}
         <tr>
-          <td class="px-3 py-2" style="width: 4rem"><span class="chip chip--on">{% if item.deadline_at %}{{ item.deadline_at|date:"D" }}{% else %}now{% endif %}</span></td>
+          <td class="px-3 py-2" style="width: 4rem"><span class="chip chip--due">{% if item.deadline_at %}{{ item.deadline_at|date:"D" }}{% else %}now{% endif %}</span></td>
           <td class="py-2" style="width: 2.5rem"><span class="tile">{% if item.primary_message %}{{ item.primary_message.connection|provider_letter }}{% else %}·{% endif %}</span></td>
           <td class="py-2"><a href="{% url 'app-work-focus' item.pk %}">{{ item.title }}</a></td>
           <td class="px-3 py-2 text-end">

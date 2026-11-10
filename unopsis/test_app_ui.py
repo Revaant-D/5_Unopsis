@@ -882,7 +882,8 @@ class LandingTests(SignedInAppClient, TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "unopsis/home.html")
-        self.assertContains(response, "Know what happened, in one page a day.")
+        # The second half of the headline is set in italic (Morning Edition), hence the <em>.
+        self.assertContains(response, "Know what happened, <em>in one page a day.</em>")
         self.assertContains(response, "It reads")
         self.assertContains(response, f'href="{reverse("app-signup")}"')
         self.assertContains(response, f'href="{reverse("app-login")}"')

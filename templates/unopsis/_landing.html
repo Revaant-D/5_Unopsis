@@ -3,41 +3,70 @@
   pitch (It reads / It ranks / It writes), and the only ways into the app from here are
   Sign in and Create account -- no shortcut around them.
 {% endcomment %}
-<div class="panel mb-4">
-  <h2 class="h3 mb-2">Know what happened, in one page a day.</h2>
-  <p class="text-muted mb-3" style="max-width: 46rem">
-    Unopsis reads the places your messages arrive, works out what actually needs you, and writes
-    it up as one short page — with every line traceable to the real messages behind it. Work and
-    personal stay separate, and nothing is ever sent on your behalf.
+{% load static %}
+<div class="front">
+  <section class="front-hero">
+    <div>
+      <p class="front-eyebrow">For anyone who checks five apps before breakfast</p>
+      <h2 class="front-title">Know what happened, <em>in one page a day.</em></h2>
+      <p class="front-sub">
+        Unopsis reads the places your messages arrive, works out what actually needs you, and writes
+        it up as one short page — with every line traceable to the real messages behind it. Work and
+        personal stay separate, and nothing is ever sent on your behalf.
+      </p>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-primary" href="{% url 'app-signup' %}">Create account</a>
+        <a class="btn btn-outline-secondary" href="{% url 'app-login' %}">Sign in</a>
+      </div>
+    </div>
+
+    {# The proof: noisy message strips pass through the mark and come out as one short edition. #}
+    <div class="proof" aria-label="Many messages become one short brief">
+      <div class="strips" aria-hidden="true">
+        <div>Slack #engineering · Still nobody on models.py…</div>
+        <div>Gmail · Billing · Invoice #4471 is now 14 days…</div>
+        <div>WhatsApp · Family · did you eat</div>
+        <div>Gmail · Advisor · Tighten section 3 and…</div>
+        <div>Slack #deploys · Rollback done, staging is…</div>
+        <div>Gmail · Promotions · 50% off your first month…</div>
+        <div>Discord #trip-planning · Found $180 round-trip…</div>
+        <div>Slack #random · lunch anyone?</div>
+        <div>Gmail · Newsletter · This week in Django</div>
+      </div>
+      <div class="proof-mark"><img src="{% static 'img/unopsis-logo.svg' %}" alt=""><span>214 → 3</span></div>
+      <div class="broadsheet">
+        <div class="bs-mast">The Unopsis</div>
+        <div class="bs-line"><span>Morning edition</span><span>16h window</span><span>214 read</span></div>
+        <p class="bs-head">Three things need you before noon.</p>
+        <div class="bs-row"><span class="n">01</span><span><b>Thesis draft: section 3 due Friday</b>Your advisor · Gmail, Slack</span></div>
+        <div class="bs-row"><span class="n">02</span><span><b>Invoice #4471 overdue</b>Billing · late fee tomorrow</span></div>
+        <div class="bs-row"><span class="n">03</span><span><b>ER diagram now required</b>#engineering · you were asked by name</span></div>
+        <div class="bs-colo">211 other messages needed nothing from you.</div>
+      </div>
+    </div>
+  </section>
+
+  {# The wireframe's sign-up pitch: It reads / It ranks / It writes. #}
+  <section class="front-how" aria-label="How it works">
+    <div>
+      <div class="step-n">I</div>
+      <h3>It reads</h3>
+      <p>Gmail, Outlook, Slack, WhatsApp Business — or Discord and your group chats. Read-only, revocable per source.</p>
+    </div>
+    <div>
+      <div class="step-n">II</div>
+      <h3>It ranks</h3>
+      <p>By who is blocked and what has a deadline, using rules you set. The ranking is stored, so it reads the same every time.</p>
+    </div>
+    <div>
+      <div class="step-n">III</div>
+      <h3>It writes</h3>
+      <p>A short brief twice a day, in prose. Three things that need you; everything else folded into one line.</p>
+    </div>
+  </section>
+
+  <p class="front-foot">
+    Building or grading this project? The course pages — briefs, the four view kinds, search,
+    reports, charts and the JSON API — are <a href="{% url 'under-the-hood' %}">under the hood</a>.
   </p>
-  <div class="d-flex flex-wrap gap-2">
-    <a class="btn btn-primary" href="{% url 'app-signup' %}">Create account</a>
-    <a class="btn btn-outline-secondary" href="{% url 'app-login' %}">Sign in</a>
-  </div>
 </div>
-
-<div class="row g-3 mb-4">
-  <div class="col-md-4">
-    <div class="stat-tile">
-      <h3 class="h5">It reads</h3>
-      <p class="mb-0 text-muted">Gmail, Outlook, Slack, WhatsApp Business — or Discord and your group chats. Read-only, revocable per source.</p>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="stat-tile">
-      <h3 class="h5">It ranks</h3>
-      <p class="mb-0 text-muted">By who is blocked and what has a deadline, using rules you set. The ranking is stored, so it reads the same every time.</p>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="stat-tile">
-      <h3 class="h5">It writes</h3>
-      <p class="mb-0 text-muted">A short brief twice a day, in prose. Three things that need you; everything else folded into one line.</p>
-    </div>
-  </div>
-</div>
-
-<p class="small text-muted">
-  Building or grading this project? The course pages — briefs, the four view kinds, search,
-  reports, charts and the JSON API — are <a href="{% url 'under-the-hood' %}">under the hood</a>.
-</p>

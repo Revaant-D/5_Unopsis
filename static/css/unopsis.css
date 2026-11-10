@@ -8,159 +8,367 @@
 
    Everything here is layered ON TOP of Bootstrap: no Bootstrap file is edited, so the
    framework can be upgraded without losing the theme.
+
+   Visual direction: "Morning Edition". The brief is treated like a short morning paper:
+   warm newsprint, an editorial serif for headlines (Newsreader), a clean sans for reading
+   (Plus Jakarta Sans), a monospace for datelines and counts (JetBrains Mono), hairline and
+   double rules instead of shadows, and tight 4-6px corners.
+
+   This file owns the palette for the WHOLE site. app.css (the product screens) maps its own
+   --app-* names onto these tokens, and section 1b points Bootstrap's variables at them, so a
+   colour is changed in exactly one place.
    ======================================================================================= */
 
 /* ---- 1. Tokens: the palette and the type scale, named once -------------------------- */
-/* Moved to the wireframe's palette (docs/wireframes/v2) so the course pages and the app read
-   as one product: warm paper, black for "selected", one blue accent. The token NAMES are
-   unchanged, so no rule below and no template had to change -- only what they resolve to. */
 :root {
-  --paper:      #fbfaf7;   /* page background: the wireframe's warm paper */
-  --ink:        #1b1b1b;   /* body text */
-  --ink-soft:   #6b665e;   /* secondary text */
-  --slate:      #1b1b1b;   /* primary actions and the active nav pill: black, as in the wireframe */
-  --slate-deep: #111111;
-  --amber:      #2b7bd8;   /* the one accent, now the wireframe's blue */
-  --line:       #e4dfd6;   /* hairlines and card borders */
-  --needs-you:  #c44536;   /* lane colours, unchanged: the same three everywhere in the product */
-  --moving:     #33658a;
-  --fyi:        #758e4f;
-  --radius:     12px;
-  --shadow:     0 1px 2px rgba(27, 27, 27, .05);
+  --paper:       #f7f3eb;   /* page background: warm newsprint */
+  --rail:        #ede7db;   /* margins, sidebars, recessed bars */
+  --surface:     #fcfbf7;   /* cards and panels: a crisp page on the newsprint */
+  --ink:         #151413;   /* body text */
+  --ink-soft:    #5c564e;   /* secondary text */
+  --ink-faint:   #8a8378;   /* captions, disabled */
+  --line:        #dcd4c6;   /* hairlines */
+  --line-strong: #bfb5a4;   /* card borders, double rules */
+  --selected:    #e7e0d2;   /* hover and "you are here" fills */
+  --accent:      #1d4e89;   /* press ultramarine: the one action to take */
+  --accent-deep: #163d6c;
+  --accent-soft: #e5ecf5;
+  --needs-you:   #b83a2a;   /* the three lanes, the same everywhere in the product */
+  --needs-soft:  #f5e4df;
+  --moving:      #2e5e7e;
+  --moving-soft: #e2ebf1;
+  --fyi:         #4e6e3a;
+  --fyi-soft:    #e8eee1;
+  --warn:        #8a5a12;
+  --warn-soft:   #f6ecd9;
+
+  /* Older names, kept so no template or rule that still uses them has to change. */
+  --slate:       var(--ink);
+  --slate-deep:  var(--ink);
+  --amber:       var(--accent);
+
+  --f-display: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --f-ui:      "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --radius:    4px;         /* cards and panels */
+  --radius-ui: 6px;         /* buttons and inputs */
+  --shadow:    none;        /* the paper look uses rules, not shadows */
+}
+
+/* ---- 1b. Bootstrap, pointed at the same palette ------------------------------------- */
+/* Bootstrap 5.3 reads these custom properties, so alerts, forms, tables, list groups and
+   badges follow the theme without a single Bootstrap class being restyled one by one. */
+:root {
+  --bs-body-font-family: var(--f-ui);
+  --bs-font-monospace: var(--f-mono);
+  --bs-body-bg: var(--paper);
+  --bs-body-color: var(--ink);
+  --bs-emphasis-color: var(--ink);
+  --bs-secondary-color: var(--ink-soft);
+  --bs-tertiary-color: var(--ink-faint);
+  --bs-secondary-bg: var(--selected);
+  --bs-tertiary-bg: var(--rail);
+  --bs-border-color: var(--line);
+  --bs-border-color-translucent: var(--line);
+  --bs-border-radius: var(--radius-ui);
+  --bs-border-radius-sm: 4px;
+  --bs-border-radius-lg: var(--radius-ui);
+  --bs-border-radius-xl: var(--radius-ui);
+  --bs-border-radius-pill: 999px;
+  --bs-box-shadow: none;
+  --bs-box-shadow-sm: none;
+  --bs-link-color: var(--accent);
+  --bs-link-color-rgb: 29, 78, 137;
+  --bs-link-hover-color: var(--accent-deep);
+  --bs-link-hover-color-rgb: 22, 61, 108;
+  --bs-primary: #1d4e89;
+  --bs-primary-rgb: 29, 78, 137;
+  --bs-secondary-rgb: 92, 86, 78;
+  --bs-danger: #b83a2a;
+  --bs-danger-rgb: 184, 58, 42;
+  --bs-success: #4e6e3a;
+  --bs-success-rgb: 78, 110, 58;
+  --bs-info-rgb: 46, 94, 126;
+  --bs-warning: #d6aa54;
+  --bs-warning-rgb: 214, 170, 84;
+  --bs-dark-rgb: 21, 20, 19;
+  --bs-light-rgb: 237, 231, 219;
+  --bs-code-color: var(--ink);
+  --bs-focus-ring-color: rgba(29, 78, 137, .25);
+  --bs-danger-text-emphasis: #7d2519;  --bs-danger-bg-subtle: var(--needs-soft);  --bs-danger-border-subtle: #e3b5ac;
+  --bs-success-text-emphasis: #34491f; --bs-success-bg-subtle: var(--fyi-soft);   --bs-success-border-subtle: #c3d1b4;
+  --bs-info-text-emphasis: #1f4157;    --bs-info-bg-subtle: var(--moving-soft);   --bs-info-border-subtle: #b9cddb;
+  --bs-warning-text-emphasis: #5f3d0a; --bs-warning-bg-subtle: var(--warn-soft);  --bs-warning-border-subtle: #e2c896;
+  --bs-primary-text-emphasis: #163d6c; --bs-primary-bg-subtle: var(--accent-soft); --bs-primary-border-subtle: #b8c9df;
+  --bs-secondary-bg-subtle: var(--rail); --bs-secondary-border-subtle: var(--line); --bs-secondary-text-emphasis: var(--ink-soft);
+  --bs-light-bg-subtle: var(--surface); --bs-light-border-subtle: var(--line);
 }
 
 /* ---- 2. Base typography and layout -------------------------------------------------- */
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
-  font-size: 1.02rem;
+  font-family: var(--f-ui);
+  font-size: 0.97rem;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4, .brand-mark {
-  font-family: "Fraunces", Georgia, "Times New Roman", serif;
-  letter-spacing: -0.01em;
-  color: var(--slate-deep);
+h1, h2, h3, h4, .h1, .h2, .h3, .h4, .brand-mark {
+  font-family: var(--f-display);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  text-wrap: balance;
 }
+h5, h6, .h5, .h6 { font-family: var(--f-ui); font-weight: 700; color: var(--ink); }
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 { font-family: var(--f-display); font-weight: 500; letter-spacing: -.02em; }
+.lead { color: var(--ink-soft); }
 
-a { color: var(--slate); }
-a:hover { color: var(--amber); }
+a { color: var(--accent); text-underline-offset: 3px; }
+a:hover { color: var(--accent-deep); }
+.text-muted { color: var(--ink-soft) !important; }
+.link-secondary { color: var(--ink-soft) !important; }
+.link-secondary:hover { color: var(--ink) !important; }
 
-code { color: var(--slate); background: #ece7df; padding: .05em .35em; border-radius: 5px; }
+code, kbd, pre, samp { font-family: var(--f-mono); }
+code { color: var(--ink); background: var(--selected); padding: .05em .35em; border-radius: 3px; font-size: .86em; }
+pre { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .9rem 1rem; }
+hr { border-color: var(--line-strong); opacity: 1; }
+hr.rule-double, .rule-double { border: 0; border-top: 3px double var(--line-strong); opacity: 1; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: var(--accent-soft); }
 
 /* ---- 3. Header and the logo --------------------------------------------------------- */
+/* A masthead: the name set in the headline serif, a thin rule above the navigation. */
 .site-header {
   background: var(--paper);
   color: var(--ink);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-strong);
 }
-.site-header h1, .site-header .brand-mark { color: var(--ink); }
-.site-logo { width: 42px; height: 42px; flex: 0 0 auto; }
-.site-tagline { color: var(--ink-soft); }
+.site-header h1, .site-header .brand-mark { color: var(--ink); font-size: 1.75rem; font-weight: 600; letter-spacing: -.02em; }
+.site-logo { width: 40px; height: 40px; flex: 0 0 auto; }
+.site-tagline { color: var(--ink-soft); font-family: var(--f-mono); font-size: .72rem !important; letter-spacing: .08em; text-transform: uppercase; }
 
 /* ---- 4. Navigation ------------------------------------------------------------------ */
-.site-nav { border-bottom: 1px solid var(--line); background: #fffdfa; }
+.site-nav { border-bottom: 2px solid var(--ink); background: var(--paper); }
 .site-nav .nav-link {
   color: var(--ink-soft);
   font-weight: 600;
-  font-size: .95rem;
-  border-radius: 999px;
-  padding: .35rem .95rem;
+  font-size: .9rem;
+  border-radius: var(--radius);
+  padding: .3rem .8rem;
 }
-.site-nav .nav-link:hover { background: #eee9e0; color: var(--slate-deep); }
-.site-nav .nav-link.active { background: var(--slate); color: #fff; }
-/* "Open the app" -- the one blue pill in the bar, because it leaves the course pages. */
-.site-nav .nav-link--app { background: var(--amber); color: #fff; }
-.site-nav .nav-link--app:hover { background: #1f63b4; color: #fff; }
+.site-nav .nav-link:hover { background: var(--selected); color: var(--ink); }
+.site-nav .nav-link.active { background: var(--ink); color: var(--paper); }
+/* "Open the app" -- the one ultramarine tab in the bar, because it leaves the course pages. */
+.site-nav .nav-link--app { background: var(--accent); color: #fff; }
+.site-nav .nav-link--app:hover { background: var(--accent-deep); color: #fff; }
 
 /* ---- 5. Cards and the lane accent --------------------------------------------------- */
 .card {
-  border: 1px solid var(--line);
+  --bs-card-bg: var(--surface);
+  --bs-card-cap-bg: transparent;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
-.item-card { border-left: 5px solid var(--line); transition: transform .12s ease; }
-.item-card:hover { transform: translateY(-2px); }
+.card-header { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 3px double var(--line-strong); }
+.card-title { font-family: var(--f-display); font-weight: 600; }
+.item-card { border-left: 3px solid var(--line-strong); }
 .item-card.lane-needs_you { border-left-color: var(--needs-you); }
 .item-card.lane-moving    { border-left-color: var(--moving); }
 .item-card.lane-fyi       { border-left-color: var(--fyi); }
-.item-card .card-title a { text-decoration: none; }
+.item-card .card-title a { text-decoration: none; color: var(--ink); }
+.item-card .card-title a:hover { text-decoration: underline; }
+
+.list-group { --bs-list-group-bg: var(--surface); --bs-list-group-border-color: var(--line); --bs-list-group-action-hover-bg: var(--selected); --bs-list-group-active-bg: var(--ink); --bs-list-group-active-border-color: var(--ink); }
+.badge { font-family: var(--f-mono); font-weight: 500; letter-spacing: .02em; border-radius: 3px; }
 
 /* ---- 6. Small reusable pieces ------------------------------------------------------- */
 .stat-tile {
-  background: #fffdfa;
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: .9rem 1.1rem;
   height: 100%;
 }
 .stat-tile .stat-number {
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 1.9rem;
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 2.1rem;
   line-height: 1;
-  color: var(--slate);
+  color: var(--ink);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .stat-tile .stat-label {
-  font-size: .78rem;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  color: var(--ink-soft);
-}
-
-.section-title {
-  font-size: .8rem;
+  font-family: var(--f-mono);
+  font-size: .7rem;
   text-transform: uppercase;
   letter-spacing: .1em;
   color: var(--ink-soft);
-  border-bottom: 1px solid var(--line);
-  padding-bottom: .35rem;
+}
+
+/* Section labels read like a newspaper's section slug: monospace caps over a double rule. */
+.section-title {
+  font-family: var(--f-mono);
+  font-weight: 500;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--ink-soft);
+  border-bottom: 3px double var(--line-strong);
+  padding-bottom: .4rem;
   margin-bottom: 1rem;
 }
 
 .panel {
-  background: #fffdfa;
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: 1.25rem;
 }
-.panel--private { border-color: #d9c3a0; background: #fdf8ef; }
+.panel--private { border-color: #d9c3a0; background: var(--warn-soft); }
 
 .chart-figure img {
   max-width: 100%;
   height: auto;
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: .5rem;
 }
-.chart-figure figcaption { color: var(--ink-soft); font-size: .88rem; margin-top: .5rem; }
+.chart-figure figcaption { color: var(--ink-soft); font-size: .85rem; margin-top: .5rem; }
 
-.btn-primary {
-  background: var(--slate);
-  border-color: var(--slate);
+/* Buttons: tight corners, crisp 1px borders; ultramarine for the one action to take,
+   outlined "margin tools" for everything else. Set through Bootstrap's own --bs-btn-*
+   variables so hover, active, focus and disabled states stay consistent. */
+.btn { --bs-btn-border-radius: var(--radius-ui); --bs-btn-font-weight: 600; --bs-btn-font-size: .9rem; }
+.btn-sm { --bs-btn-border-radius: 5px; --bs-btn-font-size: .82rem; }
+.btn-lg { --bs-btn-border-radius: var(--radius-ui); }
+.btn-primary, .btn-accent {
+  --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-color: #fff;
+  --bs-btn-hover-bg: var(--accent-deep); --bs-btn-hover-border-color: var(--accent-deep); --bs-btn-hover-color: #fff;
+  --bs-btn-active-bg: var(--accent-deep); --bs-btn-active-border-color: var(--accent-deep); --bs-btn-active-color: #fff;
+  --bs-btn-disabled-bg: var(--accent); --bs-btn-disabled-border-color: var(--accent);
+  --bs-btn-focus-shadow-rgb: 29, 78, 137;
 }
-.btn-primary:hover, .btn-primary:focus { background: var(--slate-deep); border-color: var(--slate-deep); }
-.btn-accent { background: var(--amber); border-color: var(--amber); color: #fff; }
-.btn-accent:hover { background: #1f63b4; border-color: #1f63b4; color: #fff; }
+.btn-secondary, .btn-dark {
+  --bs-btn-bg: var(--ink); --bs-btn-border-color: var(--ink); --bs-btn-color: var(--paper);
+  --bs-btn-hover-bg: #000; --bs-btn-hover-border-color: #000; --bs-btn-hover-color: var(--paper);
+}
+.btn-outline-secondary, .btn-outline-primary, .btn-outline-dark, .btn-light {
+  --bs-btn-bg: transparent; --bs-btn-color: var(--ink); --bs-btn-border-color: var(--line-strong);
+  --bs-btn-hover-bg: var(--surface); --bs-btn-hover-color: var(--ink); --bs-btn-hover-border-color: var(--ink);
+  --bs-btn-active-bg: var(--selected); --bs-btn-active-color: var(--ink); --bs-btn-active-border-color: var(--ink);
+  --bs-btn-focus-shadow-rgb: 29, 78, 137;
+}
+.btn-outline-danger, .btn-danger {
+  --bs-btn-color: var(--needs-you); --bs-btn-border-color: var(--needs-you); --bs-btn-bg: transparent;
+  --bs-btn-hover-bg: var(--needs-you); --bs-btn-hover-border-color: var(--needs-you); --bs-btn-hover-color: #fff;
+}
+.btn-danger { --bs-btn-bg: var(--needs-you); --bs-btn-color: #fff; }
 
-.table-tight th {
-  font-size: .78rem;
+/* Forms */
+.form-control, .form-select {
+  background-color: var(--surface);
+  border-color: var(--line-strong);
+  border-radius: var(--radius-ui);
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 .2rem rgba(29, 78, 137, .15);
+}
+.form-label { font-weight: 600; font-size: .9rem; }
+.form-text { color: var(--ink-soft); }
+.form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+.form-range::-webkit-slider-thumb { background: var(--accent); }
+.form-range::-moz-range-thumb { background: var(--accent); }
+
+/* Alerts and tables */
+.alert { border-radius: var(--radius); }
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--line);
+  --bs-table-striped-bg: rgba(21, 20, 19, .025);
+  --bs-table-hover-bg: var(--selected);
+}
+.table > thead th, .table-tight th {
+  font-family: var(--f-mono);
+  font-size: .7rem;
   text-transform: uppercase;
-  letter-spacing: .06em;
+  letter-spacing: .1em;
   color: var(--ink-soft);
-  font-weight: 600;
+  font-weight: 500;
+  border-bottom: 3px double var(--line-strong);
 }
+.table td.text-end, .table th.text-end, .table .num-col { font-variant-numeric: tabular-nums; }
+
+.pagination { --bs-pagination-color: var(--ink); --bs-pagination-bg: transparent; --bs-pagination-border-color: var(--line-strong); --bs-pagination-hover-bg: var(--selected); --bs-pagination-hover-color: var(--ink); --bs-pagination-active-bg: var(--ink); --bs-pagination-active-border-color: var(--ink); --bs-pagination-border-radius: var(--radius-ui); }
+.nav-tabs { --bs-nav-tabs-border-color: var(--line-strong); --bs-nav-tabs-link-active-bg: var(--surface); --bs-nav-tabs-link-active-border-color: var(--line-strong) var(--line-strong) var(--surface); --bs-nav-tabs-border-radius: var(--radius); }
+.nav-link { color: var(--ink-soft); }
+.nav-tabs .nav-link.active { color: var(--ink); }
+
+/* ---- 6b. The landing page: a front page ------------------------------------------- */
+.front { padding-block: 1.5rem 1rem; }
+.front-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3rem; align-items: center; }
+.front-eyebrow { font: 500 .72rem/1.4 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--needs-you); margin-bottom: .6rem; }
+.front-title { font-family: var(--f-display); font-weight: 500; font-size: clamp(2.6rem, 6vw, 4.6rem); line-height: .98; letter-spacing: -.03em; margin: 0 0 1.1rem; }
+.front-title em { font-style: italic; font-weight: 400; }
+.front-sub { font-size: 1.12rem; color: var(--ink-soft); max-width: 34rem; margin-bottom: 1.4rem; }
+.proof { display: grid; grid-template-columns: minmax(0, .8fr) 56px minmax(0, 1.3fr); align-items: center; gap: 18px; }
+.strips { display: grid; }
+.strips div { font: .72rem/1.3 var(--f-mono); color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); padding: 6px 9px; margin-top: -4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.strips div:nth-child(3n+1) { transform: rotate(-1.4deg) translateX(2px); }
+.strips div:nth-child(3n+2) { transform: rotate(.9deg) translateX(-6px); }
+.strips div:nth-child(3n) { transform: rotate(-.4deg) translateX(4px); }
+.strips div:nth-child(n+6) { opacity: .55; }
+.proof-mark { display: grid; justify-items: center; gap: 6px; }
+.proof-mark img { width: 46px; height: 46px; }
+.proof-mark span { font: 500 .62rem var(--f-mono); letter-spacing: .1em; color: var(--ink-faint); }
+.broadsheet { background: var(--surface); border: 1px solid var(--line-strong); outline: 1px solid var(--line-strong); outline-offset: 4px; padding: 16px 18px 14px; display: grid; gap: 8px; margin: 5px; }
+.bs-mast { text-align: center; font: 600 1.6rem/1 var(--f-display); letter-spacing: -.02em; padding-bottom: 8px; border-bottom: 3px double var(--line-strong); }
+.bs-line { display: flex; justify-content: space-between; gap: 8px; font: 500 .6rem/1.3 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.bs-head { font: 600 1.5rem/1.08 var(--f-display); letter-spacing: -.015em; margin: 0; }
+.bs-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: .82rem; color: var(--ink-soft); }
+.bs-row .n { font: 500 1.6rem/1 var(--f-display); color: var(--needs-you); text-align: right; padding-right: 8px; border-right: 2px solid var(--needs-you); }
+.bs-row b { display: block; font: 600 1rem/1.2 var(--f-display); color: var(--ink); }
+.bs-colo { font: .66rem/1.4 var(--f-mono); color: var(--ink-soft); background: var(--rail); padding: 7px 9px; border-top: 3px double var(--line-strong); }
+.front-how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 3px double var(--line-strong); margin-top: 3rem; padding-top: 2rem; }
+.front-how > div { padding-inline: 1.6rem; border-left: 1px solid var(--line); }
+.front-how > div:first-child { padding-left: 0; border-left: 0; }
+.front-how .step-n { font: italic 400 2.8rem/1 var(--f-display); color: var(--ink); margin-bottom: .5rem; }
+.front-how h3 { font-size: 1.35rem; margin-bottom: .35rem; }
+.front-how p { color: var(--ink-soft); margin: 0; }
+.front-foot { border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1rem; font-size: .88rem; color: var(--ink-soft); }
 
 /* ---- 7. Footer ---------------------------------------------------------------------- */
 .site-footer {
   background: var(--paper);
   color: var(--ink-soft);
-  border-top: 1px solid var(--line);
+  border-top: 3px double var(--line-strong);
+  font-family: var(--f-mono);
+  font-size: .78rem;
+  letter-spacing: .03em;
 }
 
 /* ---- 8. Small screens ---------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  .front-hero { grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+}
 @media (max-width: 575.98px) {
-  .stat-tile .stat-number { font-size: 1.5rem; }
-  .site-nav .nav-link { padding: .3rem .7rem; font-size: .88rem; }
+  .stat-tile .stat-number { font-size: 1.6rem; }
+  .site-nav .nav-link { padding: .3rem .6rem; font-size: .86rem; }
+  .proof { grid-template-columns: minmax(0, 1fr); }
+  .proof-mark { grid-auto-flow: column; justify-content: center; }
+  .proof-mark img { transform: rotate(90deg); }
+  .strips div:nth-child(n+6) { display: none; }
+  .front-how { grid-template-columns: minmax(0, 1fr); gap: 1.2rem; }
+  .front-how > div { padding: 1.2rem 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .front-how > div:first-child { border-top: 0; padding-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
 }

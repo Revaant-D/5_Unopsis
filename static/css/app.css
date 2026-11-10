@@ -1,137 +1,201 @@
 /* =======================================================================================
-   app.css -- the wireframe UI (templates/unopsis/app/). Loaded only by shell.html, on top of
-   Bootstrap and unopsis.css, so the course pages pay nothing for it.
+   app.css -- the product screens (templates/unopsis/app/). Loaded only by shell.html, on top
+   of Bootstrap and unopsis.css, so the course pages pay nothing for it.
 
-   Read off docs/wireframes/v2: warm paper, a cream left rail, black for "selected", one blue
-   for the action you are meant to take, dashed boxes for asides, pills for metadata.
+   Visual direction: "Morning Edition" (see the header of unopsis.css). The palette lives in
+   unopsis.css; the --app-* names below are aliases onto it, kept because a few templates
+   reference them in inline styles.
    ======================================================================================= */
 
 :root {
-  --app-paper: #fbfaf7;
-  --app-rail: #f6f3ee;
-  --app-ink: #1b1b1b;
-  --app-ink-soft: #6b665e;
-  --app-line: #e4dfd6;
-  --app-selected: #ebe6dc;
-  --app-blue: #2b7bd8;
-  --app-blue-deep: #1f63b4;
-  --app-alert: #c0392b;
-  --app-alert-soft: #fbeceb;
-  --app-radius: 12px;
+  --app-paper:     var(--paper);
+  --app-rail:      var(--rail);
+  --app-surface:   var(--surface);
+  --app-ink:       var(--ink);
+  --app-ink-soft:  var(--ink-soft);
+  --app-line:      var(--line);
+  --app-line-strong: var(--line-strong);
+  --app-selected:  var(--selected);
+  --app-blue:      var(--accent);
+  --app-blue-deep: var(--accent-deep);
+  --app-alert:     var(--needs-you);
+  --app-alert-soft: var(--needs-soft);
+  --app-radius:    var(--radius);
 }
 
 /* ---- 1. The frame ---------------------------------------------------------------------- */
 .app-body { background: var(--app-paper); color: var(--app-ink); }
-/* The wireframe's headings are a heavy sans, not unopsis.css's Fraunces serif. */
-.app-body h1, .app-body h2, .app-body h3, .app-body h4, .app-body h5, .app-body h6 {
-  font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif; font-weight: 700; color: var(--app-ink);
+.app-body h1, .app-body h2, .app-body h3, .app-body h4, .app-body .h1, .app-body .h2, .app-body .h3, .app-body .h4, .app-body .h5 {
+  font-family: var(--f-display); font-weight: 600; letter-spacing: -.012em; color: var(--app-ink);
+}
+.app-body h5, .app-body .h5 { font-size: 1.2rem; }
+/* h6 is the section slug: "Moving without you", "Receipts", "Needs a decision". */
+.app-body h6, .app-body .h6 {
+  font-family: var(--f-mono); font-weight: 500; font-size: .72rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--app-ink-soft);
 }
 .app-shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
 .app-rail {
   background: var(--app-rail); border-right: 1px solid var(--app-line);
-  padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: .3rem;
+  padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: .2rem;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
+.app-rail hr { margin: .75rem 0; }
 .app-rail__foot { margin-top: auto; display: grid; gap: .6rem; padding-top: 1rem; }
-.app-rail__under { font-size: .8rem; color: var(--app-ink-soft); }
+.app-rail__under { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .04em; color: var(--app-ink-soft); }
 .app-main { display: flex; flex-direction: column; min-width: 0; }
-.app-topbar { display: flex; justify-content: flex-end; align-items: center; gap: .5rem; padding: .75rem 1.5rem; }
-.app-content { padding: .5rem 2rem 3rem; max-width: 1120px; width: 100%; }
+.app-topbar { display: flex; justify-content: flex-end; align-items: center; gap: .5rem; padding: .75rem 2rem; min-height: 3.6rem; }
+.app-content { padding: .5rem 2rem 3rem; max-width: 1080px; width: 100%; }
 
 /* ---- 2. Rail pieces -------------------------------------------------------------------- */
-.rail-brand { display: flex; align-items: center; gap: .6rem; font-weight: 700; margin-bottom: .4rem; }
+.rail-brand { display: flex; align-items: center; gap: .6rem; font-family: var(--f-display); font-weight: 600; font-size: 1.3rem; letter-spacing: -.015em; margin-bottom: .5rem; }
 .rail-logo { width: 28px; height: 28px; }
-.rail-day { margin-left: auto; font-size: .8rem; font-weight: 400; color: var(--app-ink-soft); }
-.rail-note, .rail-label { font-size: .8rem; color: var(--app-ink-soft); margin: .25rem 0 .5rem; }
+.rail-day { margin-left: auto; font: 500 .7rem var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--app-ink-soft); }
+.rail-note { font-size: .78rem; color: var(--app-ink-soft); margin: .3rem 0 .5rem; }
+.rail-label { font: 500 .66rem/1.4 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--app-ink-soft); margin: .25rem 0 .4rem; }
 .rail-link, .step {
-  display: block; padding: .55rem .7rem; border-radius: 10px; border: 1px solid transparent;
-  color: var(--app-ink); text-decoration: none;
+  display: block; padding: .5rem .7rem; border-radius: var(--radius); border: 1px solid transparent;
+  color: var(--app-ink); text-decoration: none; font-size: .92rem;
 }
-.rail-link small { display: block; color: var(--app-ink-soft); font-size: .75rem; }
+.rail-link small { display: block; color: var(--app-ink-soft); font-size: .74rem; }
 .rail-link:hover, .step:hover { background: var(--app-selected); color: var(--app-ink); }
-.rail-link.is-active, .step.is-active { background: var(--app-selected); border-color: #cfc8bb; }
+.rail-link.is-active, .step.is-active { background: var(--app-surface); border-color: var(--app-line-strong); }
 .rail-source {
   display: flex; align-items: center; gap: .6rem; padding: .3rem .2rem;
-  font-size: .85rem; color: var(--app-ink-soft); text-decoration: none;
+  font-size: .84rem; color: var(--app-ink-soft); text-decoration: none;
 }
+a.rail-source:hover { color: var(--app-ink); }
 .rail-source.is-broken { color: var(--app-alert); }
 
 /* ---- 3. Small marks -------------------------------------------------------------------- */
 .tile {
-  display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none;
-  border: 1.5px solid var(--app-ink); border-radius: 6px; font-size: .7rem; font-weight: 700; color: var(--app-ink);
+  display: inline-grid; place-items: center; width: 24px; height: 24px; flex: none;
+  border: 1px solid var(--app-line-strong); border-radius: 4px; background: var(--app-surface);
+  font: 600 .66rem var(--f-mono); color: var(--app-ink);
 }
 .is-broken .tile { border-color: var(--app-alert); color: var(--app-alert); }
 .avatar {
   display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 50%;
-  border: 1.5px solid #8a8378; background: #f1ede6; font-size: .68rem; font-weight: 700;
+  border: 1px solid var(--app-line-strong); background: var(--app-selected); font-size: .66rem; font-weight: 700; color: var(--app-ink);
 }
 .badge-alert {
   margin-left: auto; display: inline-grid; place-items: center; width: 18px; height: 18px;
-  border-radius: 50%; background: var(--app-alert); color: #fff; font-size: .7rem;
+  border-radius: 50%; background: var(--app-alert); color: #fff; font: 700 .68rem var(--f-mono);
 }
-.badge-count { margin-left: auto; background: var(--app-blue); color: #fff; border-radius: 6px; padding: 0 .4rem; font-size: .72rem; }
+.badge-count { margin-left: auto; background: var(--app-alert); color: #fff; border-radius: 999px; padding: 0 .45rem; font: 600 .68rem/1.5 var(--f-mono); }
 .num {
-  display: inline-grid; place-items: center; width: 22px; height: 20px; border-radius: 4px;
-  background: var(--app-blue); color: #fff; font-size: .75rem; font-weight: 700; vertical-align: middle;
+  display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 .3rem; border-radius: 4px;
+  background: var(--app-ink); color: var(--app-paper); font: 600 .72rem var(--f-mono); vertical-align: middle;
 }
 .check {
-  display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 4px;
-  background: var(--app-ink); color: #fff; font-size: .7rem;
+  display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 3px;
+  background: var(--app-ink); color: var(--app-paper); font-size: .68rem;
 }
-.is-done .check { background: var(--app-blue); }
+.is-done .check { background: var(--fyi); color: #fff; }
 .kbd {
   display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 .3rem;
-  border: 1px solid #bdb6aa; border-radius: 5px; font-size: .72rem;
+  border: 1px solid var(--app-line-strong); border-bottom-width: 2px; border-radius: 4px;
+  font: 500 .7rem var(--f-mono); background: var(--app-surface); color: var(--app-ink);
 }
 
 /* ---- 4. Controls ----------------------------------------------------------------------- */
-.segmented { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--app-ink); border-radius: 8px; overflow: hidden; }
-.segmented a { text-align: center; padding: .35rem; font-size: .85rem; color: var(--app-ink); text-decoration: none; }
-.segmented a.is-on { background: var(--app-ink); color: #fff; }
+.segmented { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--app-line-strong); border-radius: var(--radius-ui); overflow: hidden; background: var(--app-surface); }
+.segmented a { text-align: center; padding: .38rem; font-size: .85rem; font-weight: 600; color: var(--app-ink); text-decoration: none; }
+.segmented a:hover { background: var(--app-selected); }
+.segmented a.is-on { background: var(--app-ink); color: var(--app-paper); }
 .chip {
-  display: inline-flex; align-items: center; gap: .3rem; border: 1px solid #bdb6aa; border-radius: 999px;
-  padding: .1rem .65rem; font-size: .8rem; color: var(--app-ink); background: #fff; text-decoration: none;
+  display: inline-flex; align-items: center; gap: .3rem; border: 1px solid var(--app-line); border-radius: 4px;
+  padding: .1rem .55rem; font-size: .78rem; color: var(--app-ink-soft); background: var(--app-surface); text-decoration: none;
 }
-.chip--on { border-color: var(--app-blue); color: var(--app-blue); }
+a.chip:hover { border-color: var(--app-ink); color: var(--app-ink); }
+.chip--on { border-color: var(--app-blue); color: var(--app-blue); background: var(--accent-soft); }
+.chip--due { border-color: transparent; color: var(--app-alert); background: var(--app-alert-soft); font-weight: 600; }
 .chip--add { border-style: dashed; color: var(--app-ink-soft); }
 .btn-app {
-  display: inline-flex; align-items: center; justify-content: center; gap: .35rem; border-radius: 8px;
-  padding: .45rem .9rem; font-weight: 600; font-size: .9rem; border: 1.5px solid var(--app-ink);
-  background: #fff; color: var(--app-ink); text-decoration: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: .35rem; border-radius: var(--radius-ui);
+  padding: .42rem .85rem; font-weight: 600; font-size: .88rem; line-height: 1.3; border: 1px solid var(--app-line-strong);
+  background: transparent; color: var(--app-ink); text-decoration: none; cursor: pointer;
 }
+.btn-app:hover { border-color: var(--app-ink); background: var(--app-surface); color: var(--app-ink); }
 .btn-app--primary { background: var(--app-blue); border-color: var(--app-blue); color: #fff; }
 .btn-app--primary:hover { background: var(--app-blue-deep); border-color: var(--app-blue-deep); color: #fff; }
-.btn-app--quiet { border-color: #bdb6aa; color: var(--app-ink-soft); }
+.btn-app--quiet { border-color: transparent; color: var(--app-ink-soft); }
+.btn-app--quiet:hover { border-color: transparent; background: var(--app-selected); color: var(--app-ink); }
 .btn-app:disabled, .btn-app[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
-.app-body a:focus-visible, .app-body button:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 2px; }
+.btn-app:disabled:hover { background: transparent; border-color: var(--app-line-strong); }
+.btn-app--primary:disabled:hover { background: var(--app-blue); border-color: var(--app-blue); }
+.app-body a:focus-visible, .app-body button:focus-visible, .app-body summary:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 2px; }
+.app-body .form-range { accent-color: var(--app-blue); }
 
 /* ---- 5. Blocks ------------------------------------------------------------------------- */
-.page-title { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; margin: 0 0 .35rem; }
-.page-sub { color: var(--app-ink-soft); max-width: 36rem; }
-.meta { color: var(--app-ink-soft); font-size: .85rem; }
-.app-card { background: #fff; border: 1.5px solid var(--app-ink); border-radius: var(--app-radius); padding: 1.25rem; }
-.app-card--selected { border-color: var(--app-blue); }
-.app-card--muted { border-style: dashed; border-color: #bdb6aa; }
-.hint { border: 1.5px dashed #bdb6aa; border-radius: var(--app-radius); padding: .9rem 1.1rem; color: var(--app-ink-soft); }
+.page-title { font-family: var(--f-display); font-size: clamp(2rem, 4.2vw, 3.1rem); font-weight: 500; letter-spacing: -.02em; line-height: 1.05; margin: 0 0 .5rem; text-wrap: balance; }
+.page-title .soft { font-style: italic; font-weight: 400; color: var(--app-ink-soft); }
+.page-sub { color: var(--app-ink-soft); max-width: 38rem; font-size: 1.02rem; }
+.meta { color: var(--app-ink-soft); font-size: .84rem; }
+.app-card { background: var(--app-surface); border: 1px solid var(--app-line-strong); border-radius: var(--app-radius); padding: 1.25rem; }
+.app-card--selected { border-color: var(--app-blue); box-shadow: inset 3px 0 0 var(--app-blue); }
+.app-card--muted { border-style: dashed; background: transparent; }
+.app-card small.meta, .app-card > small { font-family: var(--f-mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
+.hint { border: 1px dashed var(--app-line-strong); border-radius: var(--app-radius); padding: .9rem 1.1rem; color: var(--app-ink-soft); }
 .list-row { display: flex; align-items: center; gap: .75rem; padding: .7rem 0; border-bottom: 1px solid var(--app-line); }
-.list-row time { margin-left: auto; color: var(--app-ink-soft); font-size: .8rem; }
-.banner { border: 1.5px solid var(--app-alert); background: var(--app-alert-soft); border-radius: var(--app-radius); padding: 1.1rem 1.25rem; }
-.progress-thin { height: 5px; background: var(--app-line); border-radius: 999px; overflow: hidden; }
+.list-row time { margin-left: auto; color: var(--app-ink-soft); font: .74rem var(--f-mono); }
+.banner { border: 1px solid var(--app-alert); background: var(--app-alert-soft); border-radius: var(--app-radius); padding: 1.1rem 1.25rem; }
+.banner > * + .btn-app { margin-top: .2rem; }
+.progress-thin { height: 4px; background: var(--app-line); border-radius: 0; overflow: hidden; }
 .progress-thin > span { display: block; height: 100%; background: var(--app-blue); transition: width .3s ease; }
 .build-steps { list-style: none; padding: 0; margin: 0; }
-.build-steps li { display: flex; align-items: center; gap: .6rem; padding: .35rem 0; }
-.build-steps li .meta { margin-left: auto; }
-.table-app { width: 100%; border: 1.5px solid var(--app-ink); border-radius: var(--app-radius); border-collapse: separate; overflow: hidden; }
-.table-app caption { caption-side: top; background: #f1ede6; padding: .5rem 1rem; color: var(--app-ink); font-size: .85rem; }
+.build-steps li { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid var(--app-line); }
+.build-steps li:last-child { border-bottom: 0; }
+.build-steps li .meta { margin-left: auto; font-family: var(--f-mono); font-size: .74rem; }
+.table-app { width: 100%; border: 1px solid var(--app-line-strong); border-radius: var(--app-radius); border-collapse: separate; border-spacing: 0; overflow: hidden; background: var(--app-surface); }
+.table-app caption {
+  caption-side: top; padding: .55rem 0; color: var(--app-ink-soft); border-bottom: 3px double var(--app-line-strong); margin-bottom: .2rem;
+  font: 500 .72rem/1.4 var(--f-mono); letter-spacing: .12em; text-transform: uppercase;
+}
+.table-app tr + tr td { border-top: 1px solid var(--app-line); }
 
-/* ---- 6. Small screens: the rail stacks above the page --------------------------------- */
+/* ---- 6. The brief, set like a front page --------------------------------------------- */
+.masthead {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1.1rem;
+  border-top: 2px solid var(--app-ink); border-bottom: 1px solid var(--app-line-strong); padding-block: .55rem; margin-bottom: 1.6rem;
+}
+.dateline { font: 500 .72rem/1.5 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--app-ink-soft); }
+.dateline b { color: var(--app-ink); font-weight: 600; }
+.dateline .arrow { color: var(--app-alert); }
+.page-title--lead { font-size: clamp(2.3rem, 5.4vw, 4rem); }
+.ed-item { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 1.25rem; padding: 1.6rem 0; border-top: 1px solid var(--app-line); }
+.ed-item:first-of-type { border-top: 0; }
+.ed-num {
+  display: block; padding-right: .85rem; border-right: 3px solid var(--app-alert); color: var(--app-alert); text-align: right;
+  font: 500 2.5rem/.92 var(--f-display); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.02em; margin-top: .1rem;
+}
+.ed-title { font-family: var(--f-display); font-weight: 600; font-size: 1.45rem; line-height: 1.18; letter-spacing: -.01em; margin: 0 0 .4rem; }
+.ed-item--lead .ed-num { font-size: 3.6rem; }
+.ed-item--lead .ed-title { font-size: 1.9rem; }
+.ed-sum { max-width: 44rem; margin-bottom: .6rem; }
+.dispatch-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--app-ink); margin-top: .5rem; }
+.dispatch-cell { display: grid; gap: .25rem; align-content: start; padding: .9rem 1.25rem 1rem 0; border-bottom: 1px solid var(--app-line); }
+.dispatch-cell:nth-child(even) { padding-left: 1.25rem; padding-right: 0; border-left: 1px solid var(--app-line); }
+.dispatch-cell .dl { font: 500 .68rem/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--moving); }
+.dispatch-cell .dt { font-family: var(--f-display); font-weight: 600; font-size: 1.15rem; line-height: 1.2; color: var(--app-ink); text-decoration: none; }
+.dispatch-cell a.dt:hover { text-decoration: underline; }
+.colophon { border: 0; border-top: 3px double var(--app-line-strong); border-radius: 0; background: var(--app-rail); padding: .9rem 1.1rem; font: 500 .8rem/1.5 var(--f-mono); letter-spacing: .02em; color: var(--app-ink-soft); }
+.colophon summary { cursor: pointer; list-style: none; }
+.colophon summary::-webkit-details-marker { display: none; }
+.colophon p { font: .95rem/1.55 var(--f-ui); letter-spacing: 0; color: var(--app-ink); }
+.receipt { border: 0; border-left: 3px solid var(--app-line-strong); border-radius: 0; background: transparent; padding: .15rem 0 .15rem 1rem; }
+.receipt p { font-family: var(--f-display); font-size: 1.12rem; line-height: 1.45; }
+.receipt small.meta { text-transform: none; letter-spacing: .02em; font-size: .72rem; }
+
+/* ---- 7. Small screens: the rail stacks above the page --------------------------------- */
 /* Stacked in full, the rail alone is taller than a phone screen and pushes the page below
    the fold. So on small screens it keeps only what navigates -- the brand, the Work/Personal
    switch and the page links, laid out in a row -- and drops the descriptions and source lists. */
 @media (max-width: 767.98px) {
   .app-shell { grid-template-columns: 1fr; }
   .app-rail {
-    border-right: 0; border-bottom: 1px solid var(--app-line);
+    position: static; height: auto; overflow: visible;
+    border-right: 0; border-bottom: 2px solid var(--app-ink);
     flex-direction: row; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .75rem 1rem;
   }
   .rail-brand, .segmented { flex: 1 1 100%; }
@@ -140,6 +204,12 @@
   .app-rail__foot .hint { display: none; }
   .app-rail small.d-block { display: none !important; }   /* beats Bootstrap's d-block !important */
   .app-rail__foot { margin-top: 0; padding-top: 0; }
+  .app-topbar { padding: .6rem 1rem; min-height: 0; flex-wrap: wrap; }
   .app-content { padding: .5rem 1rem 2rem; }
-  .page-title { font-size: 1.6rem; }
+  .ed-item { grid-template-columns: 48px minmax(0, 1fr); gap: .9rem; }
+  .ed-num { font-size: 1.9rem; padding-right: .6rem; }
+  .ed-item--lead .ed-num { font-size: 2.5rem; }
+  .ed-item--lead .ed-title { font-size: 1.55rem; }
+  .dispatch-grid { grid-template-columns: minmax(0, 1fr); }
+  .dispatch-cell:nth-child(even) { padding-left: 0; border-left: 0; }
 }

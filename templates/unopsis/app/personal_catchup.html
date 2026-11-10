@@ -18,7 +18,7 @@
   <p class="page-sub">There is no personal catch-up yet. Load the demo data with <code>python manage.py seed_demo</code>.</p>
 {% else %}
   {% for connection in broken %}{% include "unopsis/app/_error_banner.html" %}{% empty %}{% endfor %}
-  <h1 class="page-title">You were gone {{ hours }} hours.<br>Here's the short version.</h1>
+  <h1 class="page-title">You were gone {{ hours }} hours.<br><span class="soft">Here's the short version.</span></h1>
   <p class="meta">{{ brief.message_count }} messages · {{ place_count }} place{{ place_count|pluralize }} · {{ want_reply }} want a reply</p>
 
   {% if lead %}

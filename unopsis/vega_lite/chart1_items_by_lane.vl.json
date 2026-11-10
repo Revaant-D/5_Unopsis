@@ -2,17 +2,86 @@
   "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
   "title": "Brief items by lane",
   "description": "Bar chart: how many brief items sit in each lane (an aggregated GROUP BY lane).",
-  "data": {"url": "/api/insights/items-by-lane/"},
-  "mark": {"type": "bar", "cornerRadiusEnd": 3},
+  "data": {
+    "url": "/api/insights/items-by-lane/"
+  },
+  "mark": {
+    "type": "bar",
+    "cornerRadiusEnd": 3
+  },
   "encoding": {
-    "x": {"field": "label", "type": "nominal", "title": "Lane", "sort": null, "axis": {"labelAngle": 0}},
-    "y": {"field": "total", "type": "quantitative", "title": "Brief items", "axis": {"tickMinStep": 1}},
-    "color": {"field": "label", "type": "nominal", "legend": null, "sort": null},
+    "x": {
+      "field": "label",
+      "type": "nominal",
+      "title": "Lane",
+      "sort": null,
+      "axis": {
+        "labelAngle": 0
+      }
+    },
+    "y": {
+      "field": "total",
+      "type": "quantitative",
+      "title": "Brief items",
+      "axis": {
+        "tickMinStep": 1
+      }
+    },
+    "color": {
+      "field": "label",
+      "type": "nominal",
+      "legend": null,
+      "sort": null
+    },
     "tooltip": [
-      {"field": "label", "type": "nominal", "title": "Lane"},
-      {"field": "total", "type": "quantitative", "title": "Items"}
+      {
+        "field": "label",
+        "type": "nominal",
+        "title": "Lane"
+      },
+      {
+        "field": "total",
+        "type": "quantitative",
+        "title": "Items"
+      }
     ]
   },
   "width": 480,
-  "height": 260
+  "height": 260,
+  "config": {
+    "background": "#fcfbf7",
+    "font": "Plus Jakarta Sans, Segoe UI, sans-serif",
+    "title": {
+      "font": "Newsreader, Georgia, serif",
+      "fontSize": 17,
+      "fontWeight": 600,
+      "color": "#151413",
+      "anchor": "start",
+      "offset": 12
+    },
+    "axis": {
+      "labelColor": "#5c564e",
+      "titleColor": "#5c564e",
+      "labelFont": "JetBrains Mono, monospace",
+      "labelFontSize": 10,
+      "titleFont": "Plus Jakarta Sans, sans-serif",
+      "titleFontWeight": 600,
+      "domainColor": "#bfb5a4",
+      "tickColor": "#bfb5a4",
+      "gridColor": "#e7e0d2"
+    },
+    "view": {
+      "stroke": null
+    },
+    "range": {
+      "category": [
+        "#b83a2a",
+        "#2e5e7e",
+        "#4e6e3a",
+        "#1d4e89",
+        "#8a5a12",
+        "#5c564e"
+      ]
+    }
+  }
 }
