@@ -6,6 +6,7 @@
 {% endcomment %}
 {% block rail %}{% include "unopsis/app/_rail_setup.html" %}{% endblock %}
 {% block rail_foot %}
+  {% include "unopsis/app/_demo_badge.html" %}
   <p class="hint small mb-0">Read-only access. Replies are only ever sent by you, from the original platform.</p>
 {% endblock %}
 {% block topbar %}<span class="chip">Setup · {{ step }} of 4</span>{% endblock %}

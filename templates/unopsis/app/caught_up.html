@@ -5,7 +5,7 @@
 {% endcomment %}
 {% block title %}Caught up{% endblock %}
 {% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
-{% block rail_foot %}<p class="hint small mb-0">Next catch-up when you're back.</p>{% endblock %}
+{% block rail_foot %}{% include "unopsis/app/_demo_badge.html" %}<p class="hint small mb-0">Next catch-up when you're back.</p>{% endblock %}
 {% block topbar %}<span class="chip">Personal · {% if still %}{{ still|length }} open{% else %}done{% endif %}</span>{% endblock %}
 
 {% block app_content %}

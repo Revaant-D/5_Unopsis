@@ -330,6 +330,17 @@ class ShellTests(SignedInAppClient, TestCase):
             with self.subTest(route=name):
                 self.assertNotContains(self.client.get(reverse(name)), "Assignment")
 
+    def test_every_signed_in_app_page_carries_the_demo_badge(self):
+        """F-1: the sample data is labelled as such, on every page that shows it."""
+        self.client.force_login(self.rows["work"].user)
+        for name in APP_ROUTES:
+            if name == "app-journey":   # the screen index, not a workspace page
+                continue
+            with self.subTest(route=name):
+                response = self.client.get(reverse(name))
+                self.assertContains(response, "Demo workspace")
+                self.assertContains(response, "Sources are simulated with sample data")
+
     def test_the_sign_in_page_has_no_account_menu(self):
         self.client.logout()
         html = self.client.get(reverse("login")).content.decode()

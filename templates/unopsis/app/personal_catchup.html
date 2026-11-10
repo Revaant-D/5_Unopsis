@@ -8,6 +8,7 @@
 {% block title %}Catch up{% endblock %}
 {% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
 {% block rail_foot %}
+  {% include "unopsis/app/_demo_badge.html" %}
   <p class="hint small mb-0">{{ quiet_places|length }} place{{ quiet_places|length|pluralize }} {{ quiet_places|length|pluralize:"was,were" }} quiet — summarized in one line, not one card each.</p>
 {% endblock %}
 {% block topbar %}{% if brief %}<span class="chip">Personal · {{ hours }}h away</span>{% endif %}{% endblock %}
