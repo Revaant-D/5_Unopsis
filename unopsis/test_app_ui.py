@@ -298,6 +298,26 @@ class ShellTests(SignedInAppClient, TestCase):
         self.assertIn(f'href="{reverse("under-the-hood")}"', html)
         self.assertIn("Under the hood", html)
 
+    def test_the_top_bar_shows_who_is_signed_in_and_can_log_out(self):
+        """B-2: no "Sign in / Sign up" chip once signed in; an account menu instead."""
+        user = self.rows["work"].user
+        self.client.force_login(user)
+        html = self.client.get(reverse("app-work-brief")).content.decode()
+        topbar = html.split('class="app-topbar"', 1)[1].split("</header>", 1)[0]
+        self.assertNotIn("Sign in / Sign up", topbar)
+        self.assertIn(f"Signed in as <strong>{user.get_username()}</strong>", topbar)
+        self.assertIn(f'href="{reverse("under-the-hood")}"', topbar)
+        # Log out is a POST with a CSRF token: Django 5's LogoutView answers 405 to GET.
+        self.assertIn(f'action="{reverse("logout")}"', topbar)
+        self.assertIn('method="post"', topbar)
+        self.assertIn("csrfmiddlewaretoken", topbar)
+
+    def test_the_sign_in_page_has_no_account_menu(self):
+        self.client.logout()
+        html = self.client.get(reverse("login")).content.decode()
+        self.assertNotIn("data-account-menu", html)
+        self.assertNotIn("Sign in / Sign up", html)
+
     def test_course_pages_keep_their_own_layout(self):
         response = self.client.get(reverse("brief-list"))
         self.assertTemplateNotUsed(response, "unopsis/app/shell.html")

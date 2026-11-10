@@ -126,6 +126,24 @@ a.chip:hover { border-color: var(--app-ink); color: var(--app-ink); }
 .btn-app--primary:disabled:hover { background: var(--app-blue); border-color: var(--app-blue); }
 .btn-google { background: var(--app-surface); gap: .5rem; }
 .auth-card { max-width: 460px; }
+
+/* The account menu in the top bar (B-2): a <details>, so it works with JavaScript off. */
+.account-menu { position: relative; }
+.account-menu > summary { list-style: none; cursor: pointer; border-radius: 50%; }
+.account-menu > summary::-webkit-details-marker { display: none; }
+.account-menu > summary .avatar { width: 34px; height: 34px; font-size: .72rem; background: var(--app-ink); color: var(--app-paper); border-color: var(--app-ink); }
+.account-menu[open] > summary .avatar { background: var(--app-blue); border-color: var(--app-blue); }
+.account-menu__panel {
+  position: absolute; right: 0; top: calc(100% + .4rem); z-index: 30; min-width: 220px;
+  background: var(--app-surface); border: 1px solid var(--app-line-strong); border-radius: var(--app-radius); padding: .75rem;
+}
+.account-menu__panel hr { margin: .6rem 0; border-color: var(--app-line); opacity: 1; }
+.account-menu__who { font-size: .88rem; }
+.account-menu__link {
+  display: block; width: 100%; text-align: left; padding: .35rem .5rem; border: 0; border-radius: var(--radius-ui);
+  background: transparent; color: var(--app-ink); font-size: .88rem; text-decoration: none; cursor: pointer;
+}
+.account-menu__link:hover { background: var(--app-selected); color: var(--app-ink); }
 .auth-card .form-text ul { padding-left: 1.1rem; margin: .25rem 0 0; }
 .app-body a:focus-visible, .app-body button:focus-visible, .app-body summary:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 2px; }
 .app-body .form-range { accent-color: var(--app-blue); }

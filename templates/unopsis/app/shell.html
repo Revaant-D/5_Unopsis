@@ -1,11 +1,16 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static app_ui %}
 {% comment %}
   The frame of every wireframe screen (docs/wireframes/v2): a left rail, a thin top bar and the
   page. Extends base.html, so the <head>, Bootstrap, unopsis.css and the flash messages are
   shared with the course pages; it swaps only the body layout.
 
   Children fill: title, rail, rail_foot (optional), topbar (optional), app_content.
+
+  The account menu at the right of the top bar is a <details>, so it opens without any
+  JavaScript (app.js only closes it on an outside click or Escape). Log out is a POST form
+  with a CSRF token, as in base.html: Django 5's LogoutView refuses GET. Signed out, there is
+  no menu at all: the only app pages a visitor can reach are the sign-in pages themselves.
 {% endcomment %}
 
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/app.css' %}">{% endblock %}
@@ -24,7 +29,25 @@
   <div class="app-main">
     <header class="app-topbar">
       {% block topbar %}{% endblock %}
-      <a class="chip" href="{% url 'app-login' %}">Sign in / Sign up</a>
+      {% if user.is_authenticated %}
+        {% with name=user.get_full_name|default:user.get_username %}
+        <details class="account-menu" data-account-menu>
+          <summary aria-label="Account menu for {{ user.get_username }}">
+            <span class="avatar">{{ name|initials }}</span>
+          </summary>
+          <div class="account-menu__panel">
+            <p class="account-menu__who mb-0">Signed in as <strong>{{ user.get_username }}</strong></p>
+            {% if user.email %}<p class="meta small mb-0">{{ user.email }}</p>{% endif %}
+            <hr>
+            <a class="account-menu__link" href="{% url 'under-the-hood' %}">Under the hood</a>
+            <form method="post" action="{% url 'logout' %}" class="m-0">
+              {% csrf_token %}
+              <button class="account-menu__link" type="submit">Log out</button>
+            </form>
+          </div>
+        </details>
+        {% endwith %}
+      {% endif %}
     </header>
     {% include "unopsis/_messages.html" %}
     <main class="app-content">
