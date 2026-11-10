@@ -66,7 +66,7 @@
           <button type="button" class="btn-app w-100 mb-2" data-copy="#draft">Copy text</button>
         {% endif %}
         {% for action in secondary %}
-          <button type="button" class="btn-app w-100 mb-2" disabled title="Unopsis is read-only — nothing is sent on your behalf">{{ action.label }}</button>
+          <button type="button" class="btn-app w-100 mb-2" disabled title="Coming soon. For now Unopsis only reads; nothing is sent on your behalf.">{{ action.label }}</button>
         {% empty %}{% endfor %}
         <p class="meta small">Read-only access — nothing is sent from here. You reply in {{ open_label|default:"the original app" }} and the item closes when you mark it handled.</p>
         <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}

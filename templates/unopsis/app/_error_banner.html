@@ -7,7 +7,7 @@
     so anything that arrived on {{ connection.get_provider_display }} may be missing.
   </p>
   <button type="button" class="btn-app btn-app--primary" disabled
-          title="Reconnecting needs sign-in, which arrives in Assignment 5">Reconnect {{ connection.get_provider_display }} →</button>
+          title="Coming soon">Reconnect {{ connection.get_provider_display }} →</button>
   <button type="button" class="btn-app" data-dismiss>Keep reading without {{ connection.get_provider_display }}</button>
   <span class="meta ms-2">Last good sync: {{ connection.last_synced_at|date:"D g:i A"|default:"never" }}</span>
 </section>

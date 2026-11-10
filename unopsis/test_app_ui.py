@@ -317,6 +317,19 @@ class ShellTests(SignedInAppClient, TestCase):
         self.assertIn('method="post"', topbar)
         self.assertIn("csrfmiddlewaretoken", topbar)
 
+    def test_no_app_page_shows_course_language(self):
+        """B-8 / C-2: course provenance belongs in the README and the course footer, not the app."""
+        self.client.force_login(self.rows["work"].user)
+        for name in APP_ROUTES:
+            with self.subTest(route=name):
+                html = self.client.get(reverse(name)).content.decode()
+                for phrase in ("Assignment", "INFO 490", "previous assignment", "Demo only"):
+                    self.assertNotIn(phrase, html)
+        self.client.logout()
+        for name in ("login", "signup"):
+            with self.subTest(route=name):
+                self.assertNotContains(self.client.get(reverse(name)), "Assignment")
+
     def test_the_sign_in_page_has_no_account_menu(self):
         self.client.logout()
         html = self.client.get(reverse("login")).content.decode()

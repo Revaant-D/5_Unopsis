@@ -39,7 +39,7 @@
     <div class="d-flex flex-wrap align-items-center gap-2">
       <a class="btn-app btn-app--primary" href="{% url 'app-thread' 'work' item.pk %}">See the receipts &amp; reply</a>
       {% for action in secondary %}
-        <button type="button" class="btn-app" disabled title="Unopsis is read-only — nothing is sent on your behalf">{{ action.label }}</button>
+        <button type="button" class="btn-app" disabled title="Coming soon. For now Unopsis only reads; nothing is sent on your behalf.">{{ action.label }}</button>
       {% empty %}{% endfor %}
       <form method="post" action="{% url 'app-item-action' item.pk %}" data-key="s">{% csrf_token %}
         <input type="hidden" name="action" value="snooze">

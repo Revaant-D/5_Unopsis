@@ -58,7 +58,7 @@
             <button class="btn-app btn-app--primary" type="submit" title="Marks this done in Unopsis. Nothing is sent anywhere.">Mark done</button>
           </form>
           {% if item.primary.label %}<span class="meta align-self-center">Suggested: {{ item.primary.label|lowerfirst }}</span>{% endif %}
-          {% if item.deadline_at %}<button type="button" class="btn-app" disabled title="Unopsis is read-only — nothing is added on your behalf">Add to calendar</button>{% endif %}
+          {% if item.deadline_at %}<button type="button" class="btn-app" disabled title="Coming soon. For now Unopsis only reads; nothing is added on your behalf.">Add to calendar</button>{% endif %}
           <a class="meta align-self-center" href="{% url 'app-thread' 'personal' item.pk %}">see how it changed</a>
         </div>
       </div>

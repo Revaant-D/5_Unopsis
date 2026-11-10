@@ -65,7 +65,7 @@
         <h1 class="h4 mb-0 brand-mark">
           <a class="text-reset text-decoration-none" href="{% url 'home' %}">Unopsis</a>
         </h1>
-        <p class="mb-0 small site-tagline">One view of everything that needs you. Team 5, INFO 490.</p>
+        <p class="mb-0 small site-tagline">One view of everything that needs you.</p>
       </div>
     </div>
   </header>
@@ -170,7 +170,8 @@
   <!-- Footer -->
   <footer class="site-footer py-3">
     <div class="container small text-center">
-      5_Unopsis &middot; INFO 490 &middot; Team 5
+      {# C-2: course provenance lives here, in the footer, and nowhere in a page's own copy. #}
+      Unopsis &middot; Built by Team 5 for INFO 490
       {% if user.is_authenticated %}
         &middot;
         <a class="link-secondary" href="{% url 'insights' %}">Insights</a> &middot;
