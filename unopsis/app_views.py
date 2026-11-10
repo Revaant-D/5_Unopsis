@@ -78,10 +78,17 @@ def setup_world(request):
 
 @login_required
 def setup_sources(request):
-    """Screen 3: one tile per provider. Work's connection wins when both worlds link one."""
+    """
+    Screen 3: one tile per provider. Work's connection wins when both worlds link one.
+
+    Scoped to the signed-in account (B-5): every other app view already filters by the user's
+    spaces, and this one used to read Connection.objects unfiltered, which showed one
+    account's connected addresses to every other account.
+    """
     by_provider = {
         connection.provider: connection
-        for connection in Connection.objects.select_related("space").order_by("space__kind", "pk")
+        for connection in Connection.objects.filter(space__user=request.user)
+        .select_related("space").order_by("space__kind", "pk")
     }   # personal sorts before work, so a work connection overwrites a personal one
     tiles = [
         {"provider": value, "label": label, "connection": by_provider.get(value)}

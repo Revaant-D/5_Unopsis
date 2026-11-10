@@ -434,6 +434,27 @@ class SetupTests(SignedInAppClient, TestCase):
         self.assertContains(response, "Teams")                  # discrepancy 5
         self.assertContains(response, "2 connected")
 
+    def test_sources_shows_only_the_signed_in_accounts_connections(self):
+        """B-5: two accounts with different connections each see only their own."""
+        other = User.objects.create_user("someone-else")
+        other_work = Space.objects.create(user=other, kind=Space.Kind.WORK)
+        Connection.objects.create(space=other_work, provider="outlook",
+                                  external_account="other@elsewhere.example")
+        Connection.objects.create(space=other_work, provider="gmail",
+                                  external_account="other-gmail@elsewhere.example")
+
+        mine = self.client.get(reverse("app-setup-sources"))
+        self.assertContains(mine, "me@work.example")
+        self.assertNotContains(mine, "elsewhere.example")
+
+        self.client.force_login(other)
+        theirs = self.client.get(reverse("app-setup-sources"))
+        self.assertContains(theirs, "other@elsewhere.example")
+        self.assertContains(theirs, "other-gmail@elsewhere.example")
+        for leak in ("me@work.example", "acme.slack.com", "me#0001"):
+            with self.subTest(leak=leak):
+                self.assertNotContains(theirs, leak)
+
     def test_scope_shows_included_scopes_and_the_reading_load(self):
         response = self.client.get(reverse("app-setup-scope"))
         for scope in ("#acme", "#ops", "#eng-releases", "Inbox", "Clients"):
