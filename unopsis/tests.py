@@ -1542,6 +1542,12 @@ class RefreshDemoTests(TestCase):
         self.assertTrue(friday.exists())
         for item in friday:
             self.assertEqual(timezone.localtime(item.deadline_at).strftime("%A"), "Friday")
+        # A weekday named only in an action label ("Add Friday deadline to calendar") counts too.
+        rubric = BriefItem.objects.filter(brief__space__user=self.owner,
+                                          title__startswith="Project rubric").exclude(deadline_at=None)
+        self.assertTrue(rubric.exists())
+        for item in rubric:
+            self.assertEqual(timezone.localtime(item.deadline_at).strftime("%A"), "Friday")
 
     def test_deadline_day(self):
         from .management.commands.refresh_demo import deadline_day

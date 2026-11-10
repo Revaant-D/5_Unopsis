@@ -14,8 +14,9 @@ the anchor (08:00 today, or now if it is earlier than that), and shifts every ti
 account owns by that same amount. Because everything moves together, every gap between two
 rows stays the same: "you were gone 14 hours", "3 new messages since the brief", the
 messages-per-hour chart. Deadlines are then rounded to 5 PM on their (shifted) day, so they
-read "Fri 5:00 PM" rather than "Fri 3:47 AM". An item whose title names a weekday ("revisions
-due Friday") gets the next such day instead, so the chip and the title can never disagree.
+read "Fri 5:00 PM" rather than "Fri 3:47 AM". An item whose title, or failing that one of its
+action labels, names a weekday ("revisions due Friday", "Add Friday deadline to calendar")
+gets the next such day instead, so the chip and the words beside it never disagree.
 
 It also applies the demo persona (B-7): connections still carrying the old real
 identifiers are renamed to Alex Rivera's .example addresses. That is what lets an existing
@@ -110,7 +111,10 @@ def refresh_demo_data(owner, anchor=None):
     anchor_day = timezone.localtime(anchor, tz).date()
     items = BriefItem.objects.filter(brief__space__user=owner, deadline_at__isnull=False)
     for item in items:
-        day = deadline_day(item.title, timezone.localtime(item.deadline_at, tz).date(), anchor_day)
+        # Title first, so a weekday in the title wins over one in an action label.
+        labels = [a.get("label", "") for a in (item.actions or []) if isinstance(a, dict)]
+        words = " ".join([item.title, *labels])
+        day = deadline_day(words, timezone.localtime(item.deadline_at, tz).date(), anchor_day)
         rounded = timezone.make_aware(datetime.combine(day, DEADLINE_TIME), tz)
         if rounded != item.deadline_at:
             item.deadline_at = rounded
