@@ -770,6 +770,12 @@ class VegaLiteTests(SignedInClientMixin, TestCase):
             self.assertIn(f'data-vega-spec="{reverse("vega-chart-spec", args=[chart])}"', html)
         self.assertNotIn('"values"', html)
 
+    def test_the_site_wide_chart_says_it_is_site_wide(self):
+        """B-6: the Vega bar chart reads the public all-accounts feed, so it must say so."""
+        html = self.client.get(reverse("insights")).content.decode()
+        self.assertIn("All accounts (public feed)", html)
+        self.assertIn("Your account", html)
+
 
 def _fake_nager(url, params=None, timeout=None):
     """

@@ -344,9 +344,16 @@
         <div data-vega-spec="{% url 'vega-chart-spec' 'chart1' %}" role="img" style="width: 100%;"
              aria-label="Bar chart of brief items grouped by lane."></div>
         <figcaption>
-          <strong>Items by lane.</strong> A bar mark over
+          {% comment %}
+            B-6: this feed is the one public endpoint, so it counts every account on the site,
+            while the matplotlib chart above counts only yours. Without saying so, the two
+            charts look like they disagree (e.g. 5/1/1 above, 10/2/2 here).
+          {% endcomment %}
+          <span class="badge text-bg-light border me-1">All accounts (public feed)</span>
+          <strong>Items by lane, site-wide.</strong> A bar mark over
           <a href="{% url 'api-items-by-lane' %}"><code>{% url 'api-items-by-lane' %}</code></a>,
-          the same GROUP BY the matplotlib bar chart above is drawn from.
+          the one public endpoint. It runs the same GROUP BY as the matplotlib bar chart above, but
+          across every account, so its numbers are larger than yours.
           <a href="{% url 'vega-chart-page' 'chart1' %}">Chart page</a> &middot;
           <a href="{% url 'vega-chart-spec' 'chart1' %}">spec</a> &middot;
           <a href="{% url 'vega-chart-png' 'chart1' %}">PNG</a>
@@ -358,6 +365,7 @@
         <div data-vega-spec="{% url 'vega-chart-spec' 'chart2' %}" role="img" style="width: 100%;"
              aria-label="Line chart of messages received per hour over time."></div>
         <figcaption>
+          <span class="badge text-bg-light border me-1">Your account</span>
           <strong>Messages per hour.</strong> A line mark over
           <a href="{% url 'api-messages-by-hour' %}"><code>{% url 'api-messages-by-hour' %}</code></a>:
           <code>Message</code> rows grouped by <code>TruncHour(sent_at)</code>, quiet hours as zero.
