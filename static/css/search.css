@@ -60,6 +60,7 @@
 .search-how[open] summary { margin-bottom: .5rem; }
 
 @media (max-width: 640px) {
+  .search-kbd-hint { display: none; }
   .search-bar { flex-direction: column; }
   .search-submit { width: 100%; }
   .search-result { grid-template-columns: 2rem minmax(0, 1fr); }

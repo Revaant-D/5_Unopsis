@@ -29,7 +29,7 @@
       <input type="checkbox" name="ask" value="on" {% if form.ask.value %}checked{% endif %} data-search-ask>
       Also answer the question
     </label>
-    <span id="search-help" class="meta">Press <span class="kbd">/</span> to search from anywhere on this page.</span>
+    <span id="search-help" class="meta search-kbd-hint">Press <span class="kbd">/</span> to search from anywhere on this page.</span>
   </div>
   <div class="search-examples" aria-label="Try an example">
     <span class="meta">Try:</span>
@@ -65,7 +65,7 @@
   {% endif %}
 
   {% if outcome.results %}
-    <p class="meta mb-2">{{ outcome.results|length }} message{{ outcome.results|length|pluralize }} match “{{ outcome.query }}”</p>
+    <p class="meta mb-2">{% with n=outcome.results|length %}{{ n }} message{{ n|pluralize:" matches,s match" }}{% endwith %} “{{ outcome.query }}”</p>
     <ol class="search-results">
       {% for r in outcome.results %}
         <li class="search-result" id="r{{ forloop.counter }}">
