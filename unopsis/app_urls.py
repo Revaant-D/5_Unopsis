@@ -39,6 +39,7 @@ class WorldConverter:
 
 register_converter(WorldConverter, "world")
 
+from . import ai_views  # noqa: E402  (semantic search inside the app: /search/)
 urlpatterns = [
     # "/" is matched here first (this file is included before unopsis/urls.py), so the old
     # dashboard -- views.home, graded code, unchanged -- moves to /under-the-hood/. The name
@@ -63,4 +64,5 @@ urlpatterns = [
     path("personal/caught-up/", app_views.caught_up, name="app-personal-caught-up"),
     path("app/items/<int:pk>/action/", app_views.item_action, name="app-item-action"),
     path("journey/", app_views.journey, name="app-journey"),
+    path("search/", ai_views.app_search, name="app-search"),
 ]

@@ -22,6 +22,8 @@
     <strong>Threads</strong><small>A topic in full: chronology, receipts, draft reply</small></a>
   <a class="rail-link {% if active == 'handled' %}is-active{% endif %}" href="{% url 'app-work-handled' %}">
     <strong>Handled today</strong><small>What you closed, and what is still waiting</small></a>
+  <a class="rail-link {% if active == 'search' %}is-active{% endif %}" href="{% url 'app-search' %}?world=work">
+    <strong>Search</strong><small>Find any message by what it means</small></a>
   <hr>
   <p class="rail-label">Digesting — click to change</p>
   {% for row in connections %}
@@ -40,6 +42,8 @@
     <strong>Since last visit</strong><small>Everything that happened while you were away, in order</small></a>
   <a class="rail-link {% if active == 'caught-up' %}is-active{% endif %}" href="{% url 'app-personal-caught-up' %}">
     <strong>Caught up</strong><small>The ending: what you did, and when the next one lands</small></a>
+  <a class="rail-link {% if active == 'search' %}is-active{% endif %}" href="{% url 'app-search' %}?world=personal">
+    <strong>Search</strong><small>Find any message by what it means</small></a>
   <hr>
   <p class="rail-label">Your places — ranked by what wants you</p>
   {% for place in places %}
