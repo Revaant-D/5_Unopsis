@@ -47,16 +47,6 @@ def landing(request):
     return render(request, "unopsis/home.html", {"landing": True})
 
 
-def signup(request):
-    """Screen 1, "Create account" page. Static until A5: the page submits nothing."""
-    return render(request, "unopsis/app/auth.html", {"mode": "signup"})
-
-
-def login_page(request):
-    """Screen 1, "Sign in" page. Named login_page so it never shadows django.contrib.auth.login."""
-    return render(request, "unopsis/app/auth.html", {"mode": "login"})
-
-
 # ---- Setup (screens 2-5): read-only display of what is stored; "Continue" only navigates ----
 SETUP_STEPS = [
     (1, "Your world", "Work, personal or both — decides sources and ranking", "app-setup-world"),
@@ -338,7 +328,7 @@ def journey(request):
     """Every screen in the order a new user meets them -- the screen flow, clickable."""
     first = ui.lane_items(ui.latest_brief(ui.current_space(WORK, request.user)), NEEDS_YOU).first()
     screens = [
-        ("Sign up", reverse("app-signup"), "The account, before any source is connected."),
+        ("Sign up", reverse("signup"), "The account, before any source is connected."),
         ("Setup 1 · Your world", reverse("app-setup-world"), "Work, personal, or both."),
         ("Setup 2 · Sources", reverse("app-setup-sources"), "The read-only accounts."),
         ("Setup 3 · What's read", reverse("app-setup-scope"), "Channels and labels."),

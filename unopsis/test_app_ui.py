@@ -280,9 +280,6 @@ class TemplateFilterTests(TestCase):
         self.assertEqual(provider_letter(None), "·")
 
 
-APP_ROUTES += ["app-signup", "app-login"]
-
-
 class ShellTests(SignedInAppClient, TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -297,7 +294,7 @@ class ShellTests(SignedInAppClient, TestCase):
                 self.assertTemplateUsed(response, "base.html")
 
     def test_shell_links_back_to_the_course_pages(self):
-        html = self.client.get(reverse("app-signup")).content.decode()
+        html = self.client.get(reverse("app-setup-world")).content.decode()
         self.assertIn(f'href="{reverse("under-the-hood")}"', html)
         self.assertIn("Under the hood", html)
 
@@ -321,50 +318,60 @@ class ShellTests(SignedInAppClient, TestCase):
 
     def test_app_stylesheet_only_loads_inside_the_shell(self):
         from django.templatetags.static import static
-        self.assertContains(self.client.get(reverse("app-signup")), static("css/app.css"))
+        self.assertContains(self.client.get(reverse("app-setup-world")), static("css/app.css"))
         # "/" forwards a signed-in account to the app, so read the course frame as a visitor.
         self.client.logout()
         self.assertNotContains(self.client.get(reverse("home")), static("css/app.css"))
 
 
-class AuthScreenTests(SignedInAppClient, TestCase):
-    """A5 Part 1 wins over the wireframe: two separate pages, Django-shaped fields, Google only."""
+class AuthScreenTests(TestCase):
+    """
+    B-1: one sign-in page and one sign-up page. The old static mock-ups at /login/ and /signup/
+    now redirect to the real Django pages, which wear the app shell's look.
+    """
 
-    def test_login_and_signup_are_separate_pages(self):
+    def test_the_old_mock_up_addresses_redirect_to_the_real_pages(self):
+        for old, real in (("app-login", "login"), ("app-signup", "signup")):
+            with self.subTest(route=old):
+                self.assertRedirects(self.client.get(reverse(old)), reverse(real))
+
+    def test_the_redirect_keeps_the_next_destination(self):
+        response = self.client.get(reverse("app-login") + "?next=/reports/")
+        self.assertRedirects(response, reverse("login") + "?next=/reports/")
+
+    def test_real_pages_render_inside_the_app_shell_with_the_switch(self):
         for name, active, heading in (
-            ("app-signup", "Create account", "Know what happened, in one page a day."),
-            ("app-login", "Sign in", "Welcome back."),
+            ("signup", "Create account", "Create your account."),
+            ("login", "Sign in", "Welcome back."),
         ):
             with self.subTest(route=name):
                 response = self.client.get(reverse(name))
-                self.assertTemplateUsed(response, "unopsis/app/auth.html")
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "unopsis/app/shell.html")
                 self.assertContains(response, heading)
                 self.assertContains(response, f'aria-current="page">{active}<')
 
-    def test_fields_follow_django_auth_not_the_wireframe(self):
-        login = self.client.get(reverse("app-login")).content.decode()
-        signup = self.client.get(reverse("app-signup")).content.decode()
-        self.assertIn(">Username<", login)
-        self.assertIn(">Password<", login)
-        self.assertNotIn("Work email", login + signup)
-        for label in (">Username<", ">Email<", ">Password<", ">Confirm password<"):
-            self.assertIn(label, signup)
-
-    def test_auth_pages_submit_nothing(self):
-        for name in ("app-signup", "app-login"):
+    def test_the_real_pages_submit_a_form(self):
+        for name in ("signup", "login"):
             with self.subTest(route=name):
                 html = self.client.get(reverse(name)).content.decode()
-                self.assertNotIn('method="post"', html)
-                self.assertNotIn("name=", html.split("<main", 1)[1])   # no named inputs in the page
+                self.assertIn('method="post"', html)
+                self.assertIn("csrfmiddlewaretoken", html)
+                self.assertIn('name="username"', html)
+                self.assertIn('name="next"', html)
 
-    def test_google_button_on_both_pages_disabled_until_a5_and_no_microsoft(self):
-        for name in ("app-signup", "app-login"):
+    def test_no_mock_up_copy_survives(self):
+        for name in ("signup", "login"):
             with self.subTest(route=name):
                 html = self.client.get(reverse(name)).content.decode()
-                self.assertIn("Continue with Google", html)
-                self.assertIn("disabled", html)
+                self.assertNotIn("Demo only", html)
+                self.assertNotIn("Assignment", html)
                 self.assertNotIn("Microsoft", html)
-                self.assertNotIn("Digest", html)   # discrepancy 1: the brand is Unopsis
+                self.assertIn("Continue with Google", html)
+
+    def test_next_survives_the_switch_between_pages(self):
+        html = self.client.get(reverse("login") + "?next=/reports/").content.decode()
+        self.assertIn(f'href="{reverse("signup")}?next=/reports/"', html)
 
 
 APP_ROUTES += ["app-setup-world", "app-setup-sources", "app-setup-scope", "app-setup-tuning"]
@@ -783,7 +790,7 @@ class JourneyAndHomeTests(SignedInAppClient, TestCase):
 
     def test_journey_links_every_screen_in_order(self):
         html = self.client.get(reverse("app-journey")).content.decode()
-        order = ["app-signup", "app-setup-world", "app-setup-sources", "app-setup-scope",
+        order = ["signup", "app-setup-world", "app-setup-sources", "app-setup-scope",
                  "app-setup-tuning", "app-work-building", "app-work-brief", "app-work-handled",
                  "app-personal-building", "app-personal-catchup", "app-personal-caught-up"]
         positions = [html.index(f'href="{reverse(name)}"') for name in order]
@@ -794,8 +801,8 @@ class JourneyAndHomeTests(SignedInAppClient, TestCase):
     def test_a_visitor_can_only_sign_in_or_sign_up_from_home(self):
         self.client.logout()   # A5: this class signs in by default; a visitor does not
         response = self.client.get(reverse("home"))
-        self.assertContains(response, f'href="{reverse("app-signup")}"')
-        self.assertContains(response, f'href="{reverse("app-login")}"')
+        self.assertContains(response, f'href="{reverse("signup")}"')
+        self.assertContains(response, f'href="{reverse("login")}"')
         for name in ("app-work-brief", "app-personal-catchup", "app-journey"):
             with self.subTest(route=name):
                 self.assertNotContains(response, f'href="{reverse(name)}"')
@@ -885,8 +892,8 @@ class LandingTests(SignedInAppClient, TestCase):
         # The second half of the headline is set in italic (Morning Edition), hence the <em>.
         self.assertContains(response, "Know what happened, <em>in one page a day.</em>")
         self.assertContains(response, "It reads")
-        self.assertContains(response, f'href="{reverse("app-signup")}"')
-        self.assertContains(response, f'href="{reverse("app-login")}"')
+        self.assertContains(response, f'href="{reverse("signup")}"')
+        self.assertContains(response, f'href="{reverse("login")}"')
         self.assertNotContains(response, "What is in the database right now")
 
     def test_a_signed_in_user_goes_straight_to_their_brief(self):

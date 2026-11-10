@@ -124,6 +124,9 @@ a.chip:hover { border-color: var(--app-ink); color: var(--app-ink); }
 .btn-app:disabled, .btn-app[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
 .btn-app:disabled:hover { background: transparent; border-color: var(--app-line-strong); }
 .btn-app--primary:disabled:hover { background: var(--app-blue); border-color: var(--app-blue); }
+.btn-google { background: var(--app-surface); gap: .5rem; }
+.auth-card { max-width: 460px; }
+.auth-card .form-text ul { padding-left: 1.1rem; margin: .25rem 0 0; }
 .app-body a:focus-visible, .app-body button:focus-visible, .app-body summary:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 2px; }
 .app-body .form-range { accent-color: var(--app-blue); }
 
