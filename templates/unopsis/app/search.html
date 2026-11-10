@@ -1,0 +1,125 @@
+{% extends "unopsis/app/shell.html" %}
+{% load static app_ui %}
+{% comment %}
+  /search/ (ai_views.app_search): semantic search inside the product. The engine and guardrails
+  are the same as /ai/search/ (unopsis/ai/semantic_search.py, ask.py); this page drops the lab
+  details into a disclosure at the bottom, links every result to the thread that cites it, and
+  turns the answer's [n] citations into jumps to the matching result (#r1, #r2 ...).
+{% endcomment %}
+{% block title %}Search{% endblock %}
+{% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/search.css' %}">{% endblock %}
+{% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
+{% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
+
+{% block app_content %}
+<h1 class="page-title">Search your messages</h1>
+<p class="page-sub">Ask in your own words. It finds messages by meaning, so <em>what did my mom say?</em> finds Mom's messages even when none of them says "mom".</p>
+
+<form class="search-form my-3" method="get" action="{% url 'app-search' %}" role="search" data-search-form>
+  <input type="hidden" name="world" value="{{ world }}">
+  <label class="visually-hidden" for="search-q">Search your messages</label>
+  <div class="search-bar">
+    <input id="search-q" class="search-input" type="search" name="q" value="{{ q }}"
+           maxlength="300" autocomplete="off" placeholder="Search your messages…"
+           {% if not outcome %}autofocus{% endif %} aria-describedby="search-help">
+    <button class="btn-app btn-app--primary search-submit" type="submit" data-search-submit>Search</button>
+  </div>
+  <div class="search-options">
+    <label class="search-toggle">
+      <input type="checkbox" name="ask" value="on" {% if form.ask.value %}checked{% endif %} data-search-ask>
+      Also answer the question
+    </label>
+    <span id="search-help" class="meta">Press <span class="kbd">/</span> to search from anywhere on this page.</span>
+  </div>
+  <div class="search-examples" aria-label="Try an example">
+    <span class="meta">Try:</span>
+    {% for example in examples %}
+      <a class="chip" href="{% url 'app-search' %}?world={{ world }}&amp;q={{ example|urlencode }}" data-search-example>{{ example }}</a>
+    {% endfor %}
+  </div>
+  <p class="search-busy meta" data-search-busy hidden aria-live="polite"></p>
+</form>
+
+{% if error %}
+  <div class="hint search-state" role="alert">{{ error }}</div>
+{% endif %}
+
+{% if outcome %}
+
+  {% if answer %}
+    <section class="app-card search-answer mb-4" aria-label="Answer">
+      <p class="search-answer__label">Answer</p>
+      {% if answer.html %}
+        <p class="search-answer__text">{{ answer.html }}</p>
+      {% endif %}
+      {% if answer.plain_note %}
+        <p class="meta mb-0">{{ answer.plain_note }}</p>
+      {% elif answer.status == 'ok' %}
+        <p class="meta mb-0">Written from the messages below{% if answer.cited %}: {% for c in answer.cited %}<a href="#r{{ c.n }}">{{ c.who }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  {% if outcome.mode == 'keyword' %}
+    <div class="hint search-state mb-3">Smart search isn't available on this computer right now, so these are exact word matches.</div>
+  {% endif %}
+
+  {% if outcome.results %}
+    <p class="meta mb-2">{{ outcome.results|length }} message{{ outcome.results|length|pluralize }} match “{{ outcome.query }}”</p>
+    <ol class="search-results">
+      {% for r in outcome.results %}
+        <li class="search-result" id="r{{ forloop.counter }}">
+          <span class="avatar search-result__avatar" aria-hidden="true">{{ r.who|initials }}</span>
+          <div class="search-result__body">
+            <p class="search-result__meta">
+              <strong>{{ r.who }}</strong>
+              <span class="meta">· {{ r.where }} · <time datetime="{{ r.message.sent_at|date:'c' }}" title="{{ r.message.sent_at|date:'D j M, g:i A' }}">{{ r.message.sent_at|timesince }} ago</time></span>
+              {% if r.world != world|capfirst %}<span class="chip search-result__world">{{ r.world }}</span>{% endif %}
+            </p>
+            <p class="search-result__text">{{ r.text }}</p>
+            <p class="search-result__foot">
+              {% if r.thread_url %}
+                <a href="{{ r.thread_url }}">Open “{{ r.item.title }}” →</a>
+              {% else %}
+                <span class="meta">Not in a brief</span>
+              {% endif %}
+            </p>
+          </div>
+          <div class="search-result__side">
+            <span class="search-result__n" title="Result {{ forloop.counter }}">{{ forloop.counter }}</span>
+            {% if r.strength %}<span class="search-result__score" title="Similarity {{ r.score }}">{{ r.strength }}</span>{% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <div class="hint search-state">
+      <strong>Nothing in your messages matches that.</strong><br>
+      Try a person's name, a place, or a topic, like “invoice” or “flights”.
+    </div>
+  {% endif %}
+
+{% elif not error %}
+  <div class="hint search-state">Your Work and Personal messages are both searched. Nothing leaves this computer.</div>
+{% endif %}
+
+<details class="search-how mt-4">
+  <summary>ⓘ How search works</summary>
+  <p class="meta mb-1">
+    Each message, with who sent it and where, is turned into a list of numbers that captures its
+    meaning (model <code>{{ status.embed_model }}</code>). Your search is turned into numbers the
+    same way, and the closest messages are shown: up to {{ status.top_k }}, and only ones with a
+    similarity of at least {{ status.min_score }}.
+  </p>
+  <p class="meta mb-1">
+    "Also answer" gives the best 3 matches to a local language model
+    (<code>{{ status.local_model }}</code>), which must answer only from them and cite them as [1], [2]…
+    The first answer after the app starts loads that model, so it can take a minute.
+  </p>
+  {% if outcome %}
+    <p class="meta mb-0">This search: {{ outcome.ms }} ms{% if outcome.index_ms %} (including {{ outcome.index_ms }} ms to read your messages the first time){% endif %}{% if outcome.dropped %}, {{ outcome.dropped }} weaker match{{ outcome.dropped|pluralize:"es" }} hidden{% endif %}{% if answer.ms %}; answer {{ answer.ms }} ms{% endif %}.</p>
+  {% endif %}
+</details>
+
+<script src="{% static 'js/search.js' %}" defer></script>
+{% endblock %}

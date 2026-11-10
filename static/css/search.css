@@ -1,0 +1,68 @@
+/* /search/ — semantic search inside the app (templates/unopsis/app/search.html).
+   Builds on app.css variables and components (app-card, chip, btn-app, avatar, hint, meta). */
+
+.search-form { max-width: 46rem; }
+.search-bar { display: flex; gap: .5rem; }
+.search-input {
+  flex: 1; min-width: 0; font-size: 1.15rem; padding: .7rem .95rem;
+  border: 1.5px solid var(--app-ink); border-radius: var(--app-radius); background: #fff; color: var(--app-ink);
+}
+.search-input:focus { outline: 2px solid var(--app-blue); outline-offset: 1px; border-color: var(--app-blue); }
+.search-submit { padding-left: 1.25rem; padding-right: 1.25rem; }
+.search-submit[disabled] { opacity: .7; cursor: progress; }
+
+.search-options { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; margin-top: .6rem; }
+.search-toggle { display: inline-flex; align-items: center; gap: .45rem; font-size: .9rem; cursor: pointer; }
+.search-toggle input { width: 1rem; height: 1rem; accent-color: var(--app-blue); }
+
+.search-examples { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: .75rem; }
+.search-examples .chip { text-decoration: none; color: var(--app-ink); }
+.search-examples .chip:hover { border-color: var(--app-blue); color: var(--app-blue); }
+
+.search-busy { margin: .6rem 0 0; }
+.search-busy::before {
+  content: ""; display: inline-block; width: .8rem; height: .8rem; margin-right: .45rem; vertical-align: -1px;
+  border: 2px solid var(--app-line); border-top-color: var(--app-blue); border-radius: 50%;
+  animation: search-spin .8s linear infinite;
+}
+@keyframes search-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .search-busy::before { animation: none; } }
+
+.search-state { max-width: 46rem; }
+
+.search-answer { max-width: 46rem; border-color: var(--app-blue); }
+.search-answer__label { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--app-blue); margin: 0 0 .35rem; }
+.search-answer__text { font-size: 1.15rem; line-height: 1.5; margin: 0 0 .5rem; }
+.cite { font-size: .85em; font-weight: 600; text-decoration: none; color: var(--app-blue); padding: 0 .1rem; border-radius: 4px; }
+.cite:hover { background: var(--app-selected); }
+
+.search-results { list-style: none; padding: 0; margin: 0; max-width: 46rem; display: grid; gap: .6rem; }
+.search-result {
+  display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) auto; gap: .8rem; align-items: start;
+  background: #fff; border: 1.5px solid var(--app-line); border-radius: var(--app-radius); padding: .9rem 1rem;
+  scroll-margin-top: 1rem;
+}
+.search-result:target { border-color: var(--app-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+.search-result__avatar { width: 2.25rem; height: 2.25rem; }
+.search-result__meta { margin: 0 0 .2rem; line-height: 1.4; }
+.search-result__world { margin-left: .35rem; font-size: .7rem; padding: 0 .4rem; }
+.search-result__text { margin: 0 0 .4rem; overflow-wrap: anywhere; }
+.search-result__foot { margin: 0; font-size: .9rem; }
+.search-result__side { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; }
+.search-result__n {
+  font-size: .75rem; font-weight: 700; color: var(--app-ink-soft);
+  border: 1.5px solid var(--app-line); border-radius: 6px; min-width: 1.5rem; text-align: center;
+}
+.search-result__score { font-size: .72rem; color: var(--app-ink-soft); white-space: nowrap; }
+
+.search-how { max-width: 46rem; }
+.search-how summary { cursor: pointer; color: var(--app-ink-soft); font-size: .85rem; }
+.search-how[open] summary { margin-bottom: .5rem; }
+
+@media (max-width: 640px) {
+  .search-bar { flex-direction: column; }
+  .search-submit { width: 100%; }
+  .search-result { grid-template-columns: 2rem minmax(0, 1fr); }
+  .search-result__avatar { width: 2rem; height: 2rem; }
+  .search-result__side { grid-column: 2; flex-direction: row; align-items: center; justify-content: flex-start; }
+}
