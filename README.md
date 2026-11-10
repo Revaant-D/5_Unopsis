@@ -22,7 +22,8 @@
   optional **grounded answer** from the same local model at `/ai/search/` (**Semantic search**);
   an optional Groq brief writer. How to run them: **AI features** below. How they work, why these
   models, evaluation and failure analysis: [`README_AI.md`](README_AI.md). Benchmarks:
-  [`llm-test/`](llm-test/) (A6), [`a7/`](a7/) (A7).
+  [`llm-test/`](llm-test/) (A6), [`a7/`](a7/) (A7), [`a8/`](a8/) (A8: the RAG / embedding-model
+  comparison behind the choice of search model).
 
 ---
 
@@ -184,10 +185,10 @@ live in their own files (`unopsis/app_views.py`, `unopsis/app_urls.py`, `unopsis
 `templates/unopsis/app/`, `static/css/app.css`, `static/js/app.js`), so none of the course code
 above changed.
 
-Two limits until Assignment 5: **there is no login yet** (the pages show the first work and
-personal space in the database, and `/signup/` and `/login/` submit nothing), and **nothing is
-ever sent anywhere** -- buttons that would act outside Unopsis are disabled, and replies are copied
-to the clipboard and finished in the original app. Run it the usual way and open `/journey/`.
+Since Assignment 5 every screen requires a login and shows only the signed-in account's own
+data (see **Authentication and access** below). One deliberate limit remains: **nothing is ever
+sent anywhere**. Buttons that would act outside Unopsis are disabled, and replies are copied to the
+clipboard and finished in the original app. Run it the usual way, sign in, and open `/journey/`.
 
 | URL | Route name | Screen |
 |---|---|---|
@@ -586,11 +587,12 @@ written up in [`docs/sdlc/README.md`](docs/sdlc/README.md).
 python manage.py test
 ```
 
-45 tests: the named routes and `get_absolute_url()`, the four list views and their shared
-templates, ordering, both empty states, the GET search and its relationship-spanning filters, the
-aggregations, the static files, the PNG chart endpoints, all three POST forms (including a CSRF
-rejection), the JSON API with its filtering and MIME types, and the reports page and both file
-exports (including their behaviour against an empty database). Django builds a temporary database
+274 tests. They cover the named routes and `get_absolute_url()`, the list views, the search
+and aggregations, the charts, the POST forms (including a CSRF rejection), the JSON API, the
+reports and exports, login, per-account data isolation (`TenantIsolationTests`), the wireframe
+app screens, and the AI features: triage, the hybrid brief pipeline, semantic search, grounded
+answers and the evaluation command (`unopsis/tests_ai.py`, `unopsis/tests_ai_search.py`). The AI
+tests mock the models, so the suite downloads nothing and runs in under a minute. Django builds a temporary database
 for the run, so the committed `db.sqlite3` is never read or written by the tests.
 
 ## Screenshots

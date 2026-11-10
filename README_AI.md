@@ -87,7 +87,8 @@ SEMANTIC SEARCH + GROUNDED ANSWER  (/ai/search/)                              al
                                            ▼
                      granite-3.3-2b-instruct (transformers, greedy, ≤100 tokens, ≤90 s)
                                            │
-                     validate: non-empty · drop citations to [n] that don't exist ·
+                     validate: non-empty · hit the time limit ─▶ not shown ·
+                               drop citations to [n] that don't exist ·
                                flag answers with no citation · "couldn't find" passes through
                                            ▼
                      page: answer + cited sources + ranked results with scores
@@ -133,21 +134,61 @@ Granite is the smallest model that reaches the accuracy plateau of its size clas
 on the laptop we demo on. The same model answers search questions, so the app loads one
 generation model, not two.
 
-### Embedding model: `sentence-transformers/all-MiniLM-L6-v2` (new in A9)
+### Embedding model: `sentence-transformers/all-MiniLM-L6-v2` (chosen from the A8 experiments)
 
-* **384 dimensions, 22M parameters, ~90 MB.** It embeds all of a user's demo messages in well under a
-  second on a CPU, and a query in milliseconds. That's what makes search feel instant next to a
-  generation model that takes tens of seconds.
-* Trained for sentence similarity on 1B+ sentence pairs; our "documents" are chat messages
-  and e-mail lines of 5–30 words, which is the length it was trained on.
-* **Alternatives:** `all-mpnet-base-v2` (768-d, 110M parameters) and `BAAI/bge-large-en-v1.5`
-  (1024-d, 335M). Assignment 8's small/medium/large comparison is exactly this choice. Bigger
-  embeddings typically help with long, nuanced documents; for one-line messages the speed
-  and memory cost buys little. The model is one setting (`AI_EMBED_MODEL`), so the app can
-  switch if a larger one retrieves measurably better on our queries.
-* Retrieval design from the A8 work: one "chunk" per message (messages are already short and
-  self-contained, so splitting would only break thoughts apart), top-k = 5, and 3 chunks in the
-  answer prompt to keep the CPU prompt short.
+Assignment 8 ([`a8/`](a8/), analysis in [`a8/rag_analysis.md`](a8/rag_analysis.md)) built a RAG
+system over Unopsis's own product documentation (8 documents, 32 paragraphs, 3,093 words). It
+compared exactly these three embedding models under 3 chunking strategies and 14 test queries,
+with the generation model held fixed. **That generator is the same Granite-3.3-2B the app uses**:
+a 4-bit build served by Ollama in A8, full precision through `transformers` here. Each row
+averages 3 strategies × 14 queries = 42 queries:
+
+| A8 result (`a8/rag_analysis.md`, Step 2.3) | Small: **all-MiniLM-L6-v2** (384-d) | Medium: all-mpnet-base-v2 (768-d) | Large: bge-large-en-v1.5 (1024-d) |
+|---|---|---|---|
+| Retrieved-context quality (0–5) | 4.88 | 4.83* | **5.00** |
+| Right document retrieved | 41/42 | 41/42 | **42/42** |
+| Answer quality (0–5) | **4.67** | **4.67** | 4.60 |
+| Full-mark answers | 39/42 | 39/42 | 38/42 |
+| MRR (rank of the right chunk) | 0.909 | 0.805* | 0.913 |
+| Query embedding time (laptop CPU) | **25 ms** | 85 ms | 329 ms |
+| Index build (21–32 chunks) | **0.9–1.5 s** | 9.5–14.4 s | 21.0–28.8 s |
+
+\* corrected in A8 for one grader false positive (`a8/rag_analysis.md`, "Known grader limits").
+
+**What that decided.** In A8 the 1024-d model retrieved slightly better (it never missed the
+right document) but did not answer better: 4.60 against 4.67 for the 384-d model, at **13× the
+per-query embedding time**. The 768-d model ranked answers lowest (MRR 0.805). Bigger embeddings
+did not perform better. A8's first run, with a different generator, reached the same verdict, so
+this is A8's most robust result.
+
+On a corpus of topically distinct documents, 384 dimensions already separate the topics, so the
+extra capacity has little left to resolve. A user's messages are the same kind of corpus, only
+shorter: one-line chat messages and e-mail lines of 5–30 words. So A9 uses the small model. The
+large model (335M parameters, ~15× MiniLM's 22M) would add ~0.3 s to every search, plus
+gigabytes of download and RAM, for no measured gain in answers.
+
+*Caveats, stated plainly:* the A8 gaps are small (one answer out of 42 between small and large),
+and were measured on product docs, not on messages. The embedding model is one setting
+(`AI_EMBED_MODEL`), so swapping it in is a single line if a larger model ever retrieves
+measurably better on real users' messages.
+
+**Other A8 findings carried into the A9 design:**
+
+| A8 finding | A9 design choice |
+|---|---|
+| **Chunks need their surrounding context.** Answer quality rose with the context each chunk carried (fixed 4.45 < hybrid 4.69 < overlap 4.79). Several failures were Granite attaching a number to the wrong thing when the chunk lacked the sentence saying what it belonged to (Pro's "sixty" vs Team's "six hundred"). The hybrid strategy prefixed each chunk with its document title for the same reason. | A bare message ("did you eat") says nothing about who sent it or where. Each message is embedded and shown to the model as `From Mom (WhatsApp, Family): did you eat`. Measured again in A9.6: irrelevant results 16 → 2 |
+| Messages need **no chunking**: A8's rule was "every chunk is one complete thought" | One message = one chunk. Messages are already short and self-contained, so splitting would break them apart and merging would join unrelated senders |
+| **Prompt size is the dominant recurring cost**: k=3 → 5 added +51% prompt tokens, and wider chunks +70%. On a CPU that is also +51% generation time (A8 Step 4.1) | Search shows the top 5 (cheap: no generation), but only the **best 3** go into the answer prompt, keeping the CPU prompt short |
+| **Retrieval noise rises with corpus size** (off-document chunks 0% → 43% from 2 to 8 documents) while answer quality stays flat, so noise is the early warning (A8 Step 2.5) | A similarity **threshold** (0.25) drops weak matches, so an unrelated query returns "no close match" instead of filling five slots with noise (A9.6) |
+| **Most A8 failures had the answer in the prompt**: 4 of 10 were generation errors (wrong figure, merged facts), and 3 came from an ambiguous question | The answer prompt numbers its sources and requires `[n]` citations; uncited answers are flagged, and "I couldn't find that" is an explicit, allowed answer |
+| **Pure prompting is not free even at 3,093 words**: the whole corpus was silently truncated at Ollama's default context, and 7–8× slower once it fit (A8 Step 4.2) | Retrieve first and send only 3 messages, never a user's whole inbox |
+| **Exact NumPy search** beats an ANN index below ~10⁵ chunks (A8 Step 4.3) | A per-user in-memory NumPy matrix, with pgvector named as the next step at scale |
+
+**Why not fine-tune instead of retrieving (A7 Part 2)?** In A7 Part 2 (notebook 3) we fine-tuned
+our from-scratch SLM on a knowledge base. Fine-tuning got facts into answers, but it also mixed
+them up (asked what membership costs, it gave the far-dorm fee). And every change of fact needs
+retraining. A user's inbox changes by the minute, so the app retrieves at question time and never
+trains on messages.
 
 ## A9.4 Guardrails and error handling (Step 1.5)
 
@@ -160,12 +201,12 @@ generation model, not two.
 | Prompt injection in a question or a triage message | Refused with the reason; never reaches the model | `find_injection()` |
 | sentence-transformers not installed / embedding model fails to download | Search still works with **keyword matching**, with a banner saying so | `SearchUnavailable` → `keyword_search()` |
 | Granite not installed / fails to load / out of memory | Search results still shown; a note explains why there is no answer. Triage falls back to keyword rules | `LocalModelUnavailable` |
-| Slow CPU (time-out) | Generation stops at `AI_LOCAL_MAX_SECONDS` (90 s); a cut-off answer fails validation and is reported, not shown as an answer | `generate(max_seconds=…)` |
-| Broken model output | Triage: invalid JSON or lane → rules. Answer: empty → "failed"; citations to `[n]` that don't exist are removed; an answer citing nothing gets a warning | `validate_triage()`, `ask.py` |
+| Slow CPU (time-out) | Generation stops at `AI_LOCAL_MAX_SECONDS` (90 s). Triage: cut-off JSON fails validation, so the keyword rules answer. Answers: one that ran into the limit is reported ("hit the 90 s time limit"), not shown, and the search results stay on the page | `generate(max_seconds=…)`, `ask.py` |
+| Broken model output | Triage: invalid JSON or lane → rules. Answer: empty → "failed"; citations to `[n]` that don't exist are removed; an answer citing nothing gets a warning; "I couldn't find that" followed by a *cited* fact shows the fact with a note (A8 caught Granite doing this), and with no valid citation the not-found answer stands | `validate_triage()`, `ask.py` |
 | Abuse / cost | 10 model runs per account per minute (HTTP 429); search itself is not limited (cheap) | `_over_limit()` |
 | Another user's data | Every query goes through `owned_messages()` / `owned_briefs()` | `views.py` |
 
-Tested in `unopsis/tests_ai_search.py` (20 tests) and `unopsis/tests_ai.py`, with the models
+Tested in `unopsis/tests_ai_search.py` (23 tests) and `unopsis/tests_ai.py`, with the models
 mocked so the suite runs anywhere in seconds.
 
 ## A9.5 Evaluation (Steps 3.1–3.2)
@@ -195,9 +236,17 @@ designed to have *no* correct match, to test that the system says so instead of 
 
 | Feature | Quality | Correct | Latency | Weaknesses seen |
 |---|---|---|---|---|
-| **Semantic search** (Q1–Q6) | Top-1 result right on **6/6**; average recall **0.89**; **2** irrelevant results shown across all six queries; "pizza recipe" correctly returns nothing | 6/6 top-1 | **8–12 ms** per search (index built once, then cached) | Threshold hid one relevant message in Q3 and Q5 (F2); Q1 still shows 2 loosely related messages above the threshold |
+| **Semantic search** (Q1–Q6) | Top-1 result right on **6/6**; average recall **0.89**; **2** irrelevant results shown across all six queries; "pizza recipe" correctly returns nothing | 6/6 top-1 | **8–12 ms** per search once warm (20–46 ms on a second laptop). **Cold:** the first search after a server start takes **~47 s** (importing torch, loading the model, embedding the user's messages), or ~80 s on a fresh machine that must also download the model (F3) | Threshold hid one relevant message in Q3 and Q5 (F2); Q1 still shows 2 loosely related messages above the threshold |
 | **Grounded answers** (A1–A3) | A1 "…Sunday at 6, as mentioned in [1]", A2 "…$180 round trip. [1]", A3 "I couldn't find that in your messages." Every answer cites its source or declines | **3/3** | **6–7 s** each | A3's search returned one irrelevant message (score 0.305); the model correctly refused to answer from it |
 | **Triage** (T1–T6) | Valid JSON from the local model **5/5** (no rules fallback needed); injection probe refused before the model | **5/6** (4/5 lanes + the refusal) | **7–8 s** per message once loaded; **219 s** for the first one | T3 career-fair reminder labelled `needs_you` with an invented deadline (F1); T4's promotion got a "deadline: end of the trial" |
+
+**Limits of this evaluation.** It runs on the 22 seeded demo messages of one account, so each
+search query has only 1–3 correct messages and one result changes recall by 0.33. The 0.25
+threshold was chosen on these same six queries (Q1–Q6), so the "after" numbers are an optimistic
+estimate of how it would do on unseen queries and a bigger inbox. A fair test needs a held-out set
+of queries over a real, larger mailbox. As A8 Step 2.5 showed, noise grows with the corpus.
+Triage (5 messages) and answers (3 questions) are spot checks, not accuracy estimates; the triage
+accuracy estimate is A6's 0.692 on 13 labelled messages.
 
 Per-input detail (expected vs actual):
 
@@ -235,9 +284,12 @@ query ("what did … say") is mostly about *who*; a long, specific message is mo
 threshold can't fit both short and long messages. The same message is found easily by a
 content question (A1 retrieved it at 0.664).
 
-**F3. Cold start: the first triage took 219 s.** Later ones took 7–8 s. *Why:* the model is
-loaded lazily, so the first request pays for reading ~5 GB of weights from disk into RAM (and
-downloading them on a fresh machine). In the demo this shows up as a long first wait.
+**F3. Cold start: the first triage took 219 s, and the first search ~47 s.** Later triages took
+7–8 s and later searches milliseconds. *Why:* both models are loaded lazily, so the first request
+pays for importing torch and reading the weights from disk into RAM (~5 GB for Granite, plus
+downloading them on a fresh machine: a first-ever search measured ~80 s). The first search also
+embeds all of the user's messages before it can rank them. In the demo this shows up as a long
+first wait. The millisecond figures in A9.5 are warm numbers and should be read that way.
 Mitigation now: the demo script warms the models up first (`docs/a9/DEMO.md`). Before deployment:
 load the model when the server starts, and serve it from a GPU.
 
@@ -471,5 +523,7 @@ templates/unopsis/ai_search.html A9: the search page (/ai/search/)
 unopsis/management/commands/evaluate_ai.py   A9: the evaluation (writes docs/a9/)
 unopsis/tests_ai_search.py       A9: tests (models mocked)
 docs/a9/                         A9: evaluation results and the demo script
+a8/                              A8: RAG system, 3 embedding models x 3 chunking strategies
+                                 (the evidence for the A9 embedding model, A9.3)
 docs/notes/notes.txt §19         Part 3: production reflection
 ```

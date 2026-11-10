@@ -170,6 +170,36 @@ class AnswerGuardrailTests(TestCase):
         with mock.patch.object(local_llm, "generate", return_value="   "):
             self.assertEqual(ask.answer_question("q?", self.ROWS)["status"], "failed")
 
+    def test_not_found_phrase_followed_by_a_cited_answer_is_shown(self):
+        # The A8 failure mode: the abstention sentence, then the correct, sourced fact.
+        raw = f"{prompts.NOT_FOUND_ANSWER} However, Sam rolled back migration 0004 [1]."
+        with mock.patch.object(local_llm, "generate", return_value=raw):
+            out = ask.answer_question("what happened to the deploy?", self.ROWS)
+        self.assertEqual(out["status"], "ok")
+        self.assertIn("rolled back migration 0004 [1]", out["answer"])
+        self.assertNotIn("couldn't find", out["answer"].lower())
+        self.assertEqual([c["n"] for c in out["cited"]], [1])
+        self.assertIn("also said it couldn't find", out["note"])
+
+    def test_not_found_phrase_with_an_uncited_remainder_stays_not_found(self):
+        for raw in (f"{prompts.NOT_FOUND_ANSWER} It might be on Sunday.",
+                    f"{prompts.NOT_FOUND_ANSWER} Maybe see [7].",          # cites nothing real
+                    "I couldn’t find that in your messages"):              # curly apostrophe, no period
+            with self.subTest(raw=raw), mock.patch.object(local_llm, "generate", return_value=raw):
+                out = ask.answer_question("when is dinner?", self.ROWS)
+                self.assertEqual(out["status"], "not_found")
+                self.assertEqual(out["answer"], prompts.NOT_FOUND_ANSWER)
+
+    @override_settings(AI_LOCAL_MAX_SECONDS=90)
+    def test_answer_cut_off_by_the_time_limit_is_not_shown(self):
+        # generate() returns a half-finished sentence after 95 s (90 s limit + prompt encoding).
+        with mock.patch.object(local_llm, "generate", return_value="Sam rolled back the [1] mig"), \
+                mock.patch.object(ask.time, "perf_counter", side_effect=[0.0, 95.0]):
+            out = ask.answer_question("what happened?", self.ROWS)
+        self.assertEqual(out["status"], "timeout")
+        self.assertEqual(out["answer"], "")
+        self.assertIn("time limit", out["note"])
+
     @override_settings(AI_LOCAL_ENABLED=False)
     def test_model_unavailable(self):
         out = ask.answer_question("q?", self.ROWS)
@@ -191,7 +221,7 @@ class EvaluateCommandTests(TestCase):
         with tempfile.TemporaryDirectory() as tmp, \
                 mock.patch.object(local_llm, "generate", return_value=answer):
             call_command("evaluate_ai", out=tmp, stdout=open(Path(tmp) / "log.txt", "w"))
-            report = (Path(tmp) / "evaluation_results.md").read_text()
+            report = (Path(tmp) / "evaluation_results.md").read_text(encoding="utf-8")
             self.assertTrue((Path(tmp) / "evaluation_results.json").exists())
         self.assertIn("before vs after", report)
         self.assertIn("Refused", report)          # T6, the injection probe

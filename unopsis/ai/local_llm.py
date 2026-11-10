@@ -79,7 +79,8 @@ def generate(chat, max_new_tokens=None, max_seconds=None):
 
     max_seconds (default settings.AI_LOCAL_MAX_SECONDS) is a hard time limit: transformers
     stops generating when it is reached and returns what it has, so a slow CPU can never hang a
-    request. A cut-off answer then fails validation and the caller's fallback takes over.
+    request. The caller handles a cut-off reply: cut-off triage JSON fails validation and the
+    rules answer; a grounded answer that ran into the limit is reported as "timeout" (ask.py).
     """
     loaded = _load()
     import torch
