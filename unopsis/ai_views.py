@@ -212,16 +212,20 @@ def _linked_answer(text, result_count):
     return mark_safe(_CITATION.sub(link, escape(text)))
 
 
-def _attach_threads(rows):
+def _attach_threads(rows, user):
     """
     For each result, the brief item that cites its message (newest brief first), so the page can
     link to that thread. One query for all results, not one per result.
+
+    Only `user`'s own brief items are considered, like every other query in the app: the rows
+    are already the user's messages, but an item belonging to someone else must never be linked
+    even if bad data ever made it cite one of them.
     """
     ids = [row["id"] for row in rows]
     if not ids:
         return rows
     first_item = {}
-    items = (BriefItem.objects.filter(messages__id__in=ids)
+    items = (BriefItem.objects.filter(messages__id__in=ids, brief__space__user=user)
              .select_related("brief__space")
              .prefetch_related("messages")
              .order_by("-brief__window_end", "rank"))
@@ -268,7 +272,7 @@ def app_search(request):
 
     outcome, answer = found["outcome"], found["answer"]
     if outcome:
-        _attach_threads(outcome["results"])
+        _attach_threads(outcome["results"], request.user)
     if answer is not None:
         answer = {**answer, "plain_note": ANSWER_NOTES.get(answer.get("status"), "")}
         if answer.get("answer"):

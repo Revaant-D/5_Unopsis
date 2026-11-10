@@ -146,6 +146,17 @@ class AppSearchTests(TestCase):
             if row["item"] is not None:
                 self.assertEqual(row["item"].brief.space.user, self.owner)
 
+    def test_thread_links_only_use_the_users_own_brief_items(self):
+        """Even if another account's item cited this user's message, it is never linked."""
+        mom1 = self.msg("w-mom1")
+        foreign = BriefItem.objects.filter(brief__space__user=self.other).first()
+        foreign.messages.add(mom1)          # bad data on purpose: a cross-account citation
+        with mock.patch.object(semantic_search, "search", return_value=outcome_for([mom1])):
+            response = self.client.get(URL, {"q": "did you eat"})
+        row = response.context["outcome"]["results"][0]
+        self.assertTrue(row["item"] is None or row["item"].brief.space.user == self.owner)
+        self.assertNotContains(response, reverse("app-thread", args=[foreign.brief.space.kind, foreign.pk]))
+
     # ------------------------------------------------------------------ the answer card
 
     def test_answer_citations_become_links_to_results(self):
