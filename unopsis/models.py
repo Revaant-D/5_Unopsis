@@ -412,3 +412,82 @@ class BriefItem(models.Model):
         four different list views, the brief page, the search results and the JSON API.
         """
         return reverse("item-detail", args=[self.pk])
+
+
+class AIEvent(models.Model):
+    """
+    One row per AI request: the observability table behind /analytics/.
+
+    This model sits deliberately OUTSIDE the Space -> Message -> Brief chain described at the
+    top of this file. Everything in that chain is product data a user owns and reads back.
+    An AIEvent is telemetry: append-only, never edited, never shown to the person who
+    generated it, and useful only in aggregate. Mixing it into the chain would imply a
+    relationship the data does not have.
+
+    Why these columns and not others -- each one exists to answer a question the dashboard
+    asks, and nothing is stored that no widget reads:
+
+    * `latency_ms` is wall-clock, which is what a user actually waits. `cpu_ms` is process
+      CPU time, which is what the host bills. On PythonAnywhere's free tier the account gets
+      100 CPU-seconds per day, so cpu_ms is not a proxy for cost here -- it IS the cost, and
+      it is the one resource that can take the site down.
+    * `cold_start` is recorded because the first generation after a restart loads Granite
+      into memory and takes minutes rather than seconds. Averaging it together with warm
+      requests produces a mean that describes no request that ever happened, which is why
+      the dashboard reports percentiles and splits these out.
+    * token counts are ESTIMATES (chars/4), flagged as such wherever they are displayed.
+      The local pipeline does not return usage counts, and inventing precision we do not
+      have would be worse than labelling the estimate.
+    * `query_text` holds the user's input ONLY for search, truncated, and is what the
+      "what are people asking" widget reads. Triage input is not stored: it is pasted
+      message content belonging to a third party, and keeping it would mean the telemetry
+      table quietly became a copy of people's mail.
+    """
+
+    class Feature(models.TextChoices):
+        TRIAGE = "triage", "Triage"
+        SEARCH = "search", "Semantic search"
+        ANSWER = "answer", "Grounded answer"
+        BRIEF = "brief", "Hybrid brief"
+
+    class Status(models.TextChoices):
+        OK = "ok", "Succeeded"
+        NO_MATCH = "no_match", "Nothing above threshold"
+        REFUSED = "refused", "Refused by guardrails"
+        RATE_LIMITED = "rate_limited", "Rate limited"
+        ERROR = "error", "Error"
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                             on_delete=models.SET_NULL, related_name="ai_events")
+    feature = models.CharField(max_length=16, choices=Feature.choices, db_index=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.OK,
+                              db_index=True)
+    model_name = models.CharField(max_length=120, blank=True)
+
+    latency_ms = models.PositiveIntegerField(default=0)
+    cpu_ms = models.PositiveIntegerField(default=0)
+    cold_start = models.BooleanField(default=False)
+
+    input_chars = models.PositiveIntegerField(default=0)
+    input_tokens_est = models.PositiveIntegerField(default=0)
+    output_tokens_est = models.PositiveIntegerField(default=0)
+
+    query_text = models.CharField(max_length=160, blank=True)
+    result_count = models.PositiveIntegerField(default=0)
+    top_score = models.FloatField(null=True, blank=True)
+    simulated = models.BooleanField(
+        default=False,
+        help_text="True for rows written by seed_ai_events. The dashboard labels these, so a "
+                  "reader is never shown simulated and measured traffic blended silently.")
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["feature", "created_at"])]
+
+    def __str__(self):
+        return f"{self.feature} {self.status} {self.latency_ms}ms"
+
+    @property
+    def total_tokens_est(self):
+        return self.input_tokens_est + self.output_tokens_est
