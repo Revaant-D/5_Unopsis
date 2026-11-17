@@ -1,0 +1,135 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>A10 Analytics Dashboard</title>
+<style>
+  @page { size: letter; margin: 11mm 12mm; }
+  * { box-sizing: border-box; }
+  body { font: 8.1pt/1.32 -apple-system,"Helvetica Neue",Arial,sans-serif; color:#15181c; margin:0; }
+  h1 { font-size: 13pt; margin: 0 0 1mm; letter-spacing:-.2px; }
+  h2 { font-size: 8.6pt; margin: 3.2mm 0 1.2mm; text-transform: uppercase;
+       letter-spacing:.6px; color:#0b5; color:#13674a; border-bottom:.6pt solid #cfd8d4;
+       padding-bottom:.7mm; }
+  .sub { color:#5a6670; font-size:7.5pt; margin:0 0 2mm; }
+  table { width:100%; border-collapse:collapse; font-size:7.1pt; }
+  th { text-align:left; background:#eef2f1; font-weight:600; }
+  th,td { border:.4pt solid #d3dbd8; padding:.9mm 1.4mm; vertical-align:top; }
+  td.q { width:26%; } td.w { width:22%; } td.d { width:30%; }
+  .cols { display:flex; gap:3mm; }
+  .cols > div { flex:1; }
+  ul { margin:.6mm 0 0; padding-left:3.4mm; }
+  li { margin-bottom:.5mm; }
+  .k { font-weight:600; }
+  .shots { display:flex; gap:2.5mm; margin-top:1.5mm; }
+  .shots figure { margin:0; flex:1; }
+  .shots img { width:100%; border:.5pt solid #c4cdc9; border-radius:1mm; }
+  figcaption { font-size:6.6pt; color:#5a6670; margin-top:.6mm; }
+  .note { font-size:6.9pt; color:#4a555e; margin-top:1mm; }
+  code { font-family:"SF Mono",Menlo,monospace; font-size:6.8pt; background:#eef2f1; padding:0 .6mm; }
+</style></head><body>
+
+<h1>A10 &mdash; Analytics Dashboard for the Unopsis AI System</h1>
+<p class="sub">Shreenjoy Sengupta (joys3) &middot; Team 5, Unopsis &middot; INFO 490 &mdash;
+monitoring three local AI features: <span class="k">triage</span> (Granite-3.3-2B),
+<span class="k">semantic search</span> (MiniLM-L6-v2) and <span class="k">grounded answers</span>.</p>
+
+<h2>Step 1 &mdash; Analytics questions</h2>
+<div class="cols">
+  <div><span class="k">System performance</span>
+    <ul>
+      <li><span class="k">P1.</span> How does latency vary across the three features?</li>
+      <li><span class="k">P2.</span> How large is the cold-start penalty, and how often is it paid?</li>
+      <li><span class="k">P3.</span> How consistent is response time &mdash; what is the p50&ndash;p95 spread?</li>
+    </ul></div>
+  <div><span class="k">User behaviour</span>
+    <ul>
+      <li><span class="k">U1.</span> Which feature is actually used, and at what hours?</li>
+      <li><span class="k">U2.</span> What are users really asking for?</li>
+      <li><span class="k">U3.</span> How often does a request <em>not</em> produce an answer, and why?</li>
+    </ul></div>
+  <div><span class="k">Cost</span>
+    <ul>
+      <li><span class="k">C1.</span> How close is daily CPU use to the 100&nbsp;s/day free-tier budget?</li>
+      <li><span class="k">C2.</span> Which feature costs most, per request and in total?</li>
+      <li><span class="k">C3.</span> At what traffic does the free tier stop being enough?</li>
+    </ul></div>
+</div>
+<p class="note">Cost is measured in <span class="k">CPU-seconds, not dollars</span>. These models run
+locally, so nothing is billed &mdash; but PythonAnywhere's free tier allows 100 CPU-seconds per day
+for the whole account, and exhausting it throttles the site. That is the real scarce resource, so it
+is the one the dashboard tracks. A hosted-API dollar equivalent is shown alongside for comparison.</p>
+
+<h2>Step 2 &mdash; Widget plan (question &rarr; widget &rarr; data required)</h2>
+<table>
+<tr><th>Question</th><th>Widget</th><th>Data required</th><th>Why this widget</th></tr>
+<tr><td class="q">P1 latency by feature</td><td class="w">Grouped bar (mean &amp; p95)</td>
+    <td class="d"><code>feature</code>, <code>latency_ms</code>, warm only</td>
+    <td>Mean and p95 side by side show the gap a single bar would hide.</td></tr>
+<tr><td class="q">P1/P3 trend</td><td class="w">Line chart, daily p50 &amp; p95</td>
+    <td class="d"><code>created_at</code>, <code>latency_ms</code></td>
+    <td>Two lines make a widening spread visible as it happens.</td></tr>
+<tr><td class="q">P2 cold start</td><td class="w">Summary table, cold vs warm</td>
+    <td class="d"><code>cold_start</code>, <code>latency_ms</code></td>
+    <td>Two populations, reported separately rather than averaged.</td></tr>
+<tr><td class="q">P3 consistency</td><td class="w">Histogram of warm latency</td>
+    <td class="d"><code>latency_ms</code>, binned</td>
+    <td>Consistency is a shape; a single number cannot show bimodality.</td></tr>
+<tr><td class="q">U1 usage</td><td class="w">Bar by feature + bar by hour</td>
+    <td class="d"><code>feature</code>, <code>created_at</code></td>
+    <td>Separates <em>what</em> is used from <em>when</em>.</td></tr>
+<tr><td class="q">U2 intent</td><td class="w">Horizontal bar, top terms</td>
+    <td class="d"><code>query_text</code> (search only), stopwords removed</td>
+    <td>Ranked categories read better horizontally.</td></tr>
+<tr><td class="q">U3 outcomes</td><td class="w">100&#37; stacked bar by feature</td>
+    <td class="d"><code>status</code> &times; <code>feature</code></td>
+    <td>Normalising compares failure <em>rates</em>, not volumes.</td></tr>
+<tr><td class="q">C1 budget</td><td class="w">Bar + budget rule line</td>
+    <td class="d">daily <code>SUM(cpu_ms)</code></td>
+    <td>CPU seconds mean nothing without the ceiling drawn on the same axis.</td></tr>
+<tr><td class="q">C2/C3 cost</td><td class="w">Cost table + headroom metric</td>
+    <td class="d"><code>cpu_ms</code>, token estimates, request counts</td>
+    <td>Per-request and total differ; a table shows both without a misleading chart.</td></tr>
+<tr><td class="q">All, at a glance</td><td class="w">4 summary metric cards</td>
+    <td class="d">rollups of the above</td>
+    <td>Answers "is anything wrong right now" before any chart is read.</td></tr>
+</table>
+
+<h2>Step 3 &mdash; Statistical thinking</h2>
+<ul>
+  <li><span class="k">Percentiles over means.</span> Latency here is strongly right-skewed: warm p50 is
+      <span class="k">242&nbsp;ms</span> but p95 is <span class="k">10,501&nbsp;ms</span>. The mean describes
+      no request that actually happened, so p50 (typical) and p95 (unlucky) are reported instead, and
+      their gap <em>is</em> the consistency measure for P3.</li>
+  <li><span class="k">Separating populations.</span> Cold starts (median <span class="k">118&nbsp;s</span>)
+      and warm requests (median <span class="k">242&nbsp;ms</span>) are two distributions, never averaged
+      together. Blending them is what produces a confident, meaningless number.</li>
+  <li><span class="k">Distributions, not just centres.</span> A histogram of warm latency shows the shape
+      a mean and a median both conceal.</li>
+  <li><span class="k">Normalised comparison across groups.</span> Outcomes are stacked to 100&#37; so a
+      feature with few requests is compared on failure <em>rate</em>, not raw count.</li>
+  <li><span class="k">Honest small-n handling.</span> The success-rate card prints "too few requests to be
+      meaningful" below 30 observations instead of a confident percentage.</li>
+  <li><span class="k">A stated linear projection.</span> C3 divides the 100&nbsp;s budget by mean CPU per
+      request to get a daily ceiling, with its assumptions written beside it &mdash; constant mean CPU,
+      no caching &mdash; so it reads as an upper bound, not a forecast.</li>
+</ul>
+
+<h2>Step 4 &mdash; Dashboard (screenshots)</h2>
+<div class="shots">
+  <figure><img src="screenshots/dashboard-top.png" alt="Dashboard summary cards and latency charts">
+    <figcaption>Summary cards and the P1/P3 latency widgets. Every chart prints the question it answers
+    above it, so no chart exists without a question behind it.</figcaption></figure>
+  <figure><img src="screenshots/dashboard-cost.png" alt="Cold start, cost table and headroom">
+    <figcaption>P2 cold-start table, C2 cost-per-feature table and the C3 headroom projection.</figcaption></figure>
+</div>
+<p class="note"><span class="k">What the dashboard already revealed.</span> Triage and grounded answers
+consume ~96&#37; of CPU while semantic search &mdash; the most-used feature &mdash; costs 117&nbsp;ms per
+request. At the observed mean of 3.62&nbsp;CPU-seconds per request, the free tier supports roughly
+<span class="k">27 requests/day</span>, i.e. about 1&times; current traffic: local LLM generation is not
+viable on this host at any real volume, while search effectively is free. It also caught a bug in its own
+instrumentation &mdash; a cold-start median of 1&nbsp;ms, which is impossible &mdash; traced to counting
+rule-based fallbacks as model loads.</p>
+<p class="note"><span class="k">Live:</span> <code>/analytics/</code> on the deployed site (login required).
+Test account <code>mohitg2</code> / <code>uiuc12345</code>. Code:
+<code>unopsis/analytics.py</code>, <code>analytics_views.py</code>, <code>ai/telemetry.py</code>,
+28 dedicated tests in <code>tests_analytics.py</code>.</p>
+
+</body></html>

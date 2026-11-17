@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% comment %}
+  analytics_dashboard.html: the Assignment 10 analytics dashboard.
+
+  Layout follows the assignment's rule that the dashboard is driven by questions, not by
+  charts. Each widget prints the question it answers directly above itself, so a reader never
+  has to guess why a chart is on the page -- and so a chart that answers no question has
+  nowhere to live.
+
+  The charts are drawn in the browser by static/js/vega-charts.js, the same file the
+  /vega-lite/ pages use. Specs come from /analytics/<name>.json with their data embedded,
+  which keeps this page to one request per chart and costs the server no rendering CPU.
+{% endcomment %}
+
+{% block title %}AI analytics{% endblock %}
+
+{% block content %}
+
+  <h2 class="h3 mb-1">AI analytics</h2>
+  <p class="text-muted">
+    System performance, user behaviour and cost for the three local AI features &mdash;
+    triage, semantic search and grounded answers. Window: last {{ days }} days.
+  </p>
+
+  {% if summary.total_requests == 0 %}
+    <div class="alert alert-warning">
+      No AI requests recorded in this window yet. Use the AI lab or semantic search, or run
+      <code>python manage.py seed_ai_events</code> to load a simulated history.
+    </div>
+  {% endif %}
+
+  {% if summary.simulated_pct %}
+    <p class="small text-muted">
+      <strong>Note:</strong> {{ summary.simulated_pct }}&#37; of rows in this
+      window are simulated (seeded) traffic, included so the widgets have enough data to show
+      a shape. Measured and simulated rows are stored with a flag and are never silently mixed.
+    </p>
+  {% endif %}
+
+  {# ---------------------------------------------------------- summary cards (P3, U3, C1) #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+      <div class="panel h-100">
+        <div class="text-muted small">Requests ({{ days }}d)</div>
+        <div class="h4 mb-0">{{ summary.total_requests }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="panel h-100">
+        <div class="text-muted small">Warm latency p50 / p95</div>
+        <div class="h4 mb-0">
+          {{ summary.p50_warm_ms|default:"&mdash;" }} / {{ summary.p95_warm_ms|default:"&mdash;" }} ms
+        </div>
+        <div class="small text-muted">{{ summary.cold_starts }} cold start{{ summary.cold_starts|pluralize }} excluded</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="panel h-100">
+        <div class="text-muted small">Success rate</div>
+        <div class="h4 mb-0">
+          {% if summary.success_rate is not None %}{{ summary.success_rate|floatformat:2 }}{% else %}&mdash;{% endif %}
+        </div>
+        <div class="small text-muted">
+          {% if not summary.success_rate_is_reliable %}
+            too few requests to be meaningful
+          {% else %}over {{ summary.total_requests }} requests{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="panel h-100">
+        <div class="text-muted small">CPU used today</div>
+        <div class="h4 mb-0">{{ summary.cpu_seconds_today }} s</div>
+        <div class="small text-muted">of {{ summary.cpu_budget_seconds }} s/day budget
+          ({{ summary.cpu_budget_pct }}&#37;)</div>
+      </div>
+    </div>
+  </div>
+
+  {# ---------------------------------------------------------- the question-led chart grid #}
+  <div class="row g-4">
+    {% for chart in charts %}
+      <div class="col-12 col-xl-6">
+        <div class="panel h-100">
+          <p class="small text-uppercase text-muted mb-1">{{ chart.question }}</p>
+          <figure class="chart-figure mb-0">
+            <div data-vega-spec="{% url 'analytics-chart-spec' chart.name %}?days={{ days }}"
+                 role="img" style="width: 100%;"
+                 aria-label="{{ chart.title }}. Answers: {{ chart.question }}"></div>
+          </figure>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# ---------------------------------------------------------- P2: the cold-start penalty #}
+  <h3 class="section-title mt-4">P2. How large is the cold-start penalty?</h3>
+  <p class="text-muted small">
+    The first generation after a restart loads the model into memory. These are two different
+    populations, so the dashboard reports them separately rather than averaging them into a
+    number that describes neither.
+  </p>
+  <table class="table table-sm table-tight">
+    <thead><tr>
+      <th scope="col">Request kind</th><th scope="col">n</th>
+      <th scope="col">Mean</th><th scope="col">Median</th><th scope="col">Slowest</th>
+    </tr></thead>
+    <tbody>
+      {% for row in cold_vs_warm %}
+        <tr>
+          <td>{{ row.kind }}</td><td>{{ row.n }}</td>
+          <td>{{ row.mean_ms }} ms</td><td>{{ row.p50_ms }} ms</td><td>{{ row.max_ms }} ms</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-muted">No requests in this window.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# ---------------------------------------------------------- C2 / C3: the cost table #}
+  <h3 class="section-title mt-4">C2. Which feature consumes the most, per request and in total?</h3>
+  <table class="table table-sm table-tight">
+    <thead><tr>
+      <th scope="col">Feature</th><th scope="col">Requests</th>
+      <th scope="col">Mean CPU</th><th scope="col">Total CPU</th>
+      <th scope="col">Tokens (est.)</th><th scope="col">Hosted-API equivalent</th>
+      <th scope="col">Share of daily budget</th>
+    </tr></thead>
+    <tbody>
+      {% for row in cost_table %}
+        <tr>
+          <td>{{ row.feature }}</td>
+          <td>{{ row.requests }}</td>
+          <td>{{ row.mean_cpu_ms }} ms</td>
+          <td>{{ row.total_cpu_seconds }} s</td>
+          <td>{{ row.tokens_est }}</td>
+          <td>${{ row.api_cost_equiv_usd }}</td>
+          <td>{{ row.cpu_share_of_daily_budget_pct }}&#37;</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="text-muted">No requests in this window.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="small text-muted">
+    These models run locally, so nothing here is billed. The hosted-API column is a
+    <em>comparison</em>: what this traffic would have cost at ${{ api_in_rate }}/1M input and
+    ${{ api_out_rate }}/1M output tokens. Token counts are estimated at four characters per
+    token, because the local pipeline returns no usage counts.
+  </p>
+
+  {# ---------------------------------------------------------- C3: headroom #}
+  {% if breakeven %}
+    <h3 class="section-title mt-4">C3. At what traffic does the free tier stop being enough?</h3>
+    <p>
+      At a mean of <strong>{{ breakeven.mean_cpu_ms }} ms</strong> of CPU per request, the
+      {{ summary.cpu_budget_seconds }} CPU-second daily budget supports about
+      <strong>{{ breakeven.max_requests_per_day }} requests/day</strong>. Current traffic is
+      {{ breakeven.requests_per_day_now }}/day, which is
+      <strong>{{ breakeven.headroom_x }}&times;</strong> headroom.
+    </p>
+    <p class="small text-muted">
+      A linear projection holding mean CPU constant. It ignores caching and concurrency, so
+      treat it as an upper bound on headroom rather than a forecast &mdash; and note that one
+      cold start costs more CPU than dozens of warm searches, so the ceiling falls sharply on
+      a day with several restarts.
+    </p>
+  {% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <script src="{% static 'js/vega-charts.js' %}"></script>
+{% endblock %}
