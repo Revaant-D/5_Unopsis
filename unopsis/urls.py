@@ -31,6 +31,8 @@ it in get_absolute_url(). The address can then change here without touching a si
     /api/deadlines/holidays/ api-deadline-holidays external API: Nager.Date public holidays
                                                     and long weekends, triangulated against
                                                     BriefItem.deadline_at
+    /analytics/              analytics-dashboard   AI analytics (A10), login-only
+    /analytics/<chart>.json  analytics-chart-spec  one dashboard widget's spec
     /vega-lite/<chart>/      vega-chart-page       one Vega-Lite chart on its own page
     /vega-lite/<chart>.json  vega-chart-spec       that chart's spec, data.url made absolute
     /vega-lite/<chart>.png   vega-chart-png        that chart rendered to PNG on the server
@@ -60,7 +62,7 @@ the converter becomes <slug:...>.
 
 from django.urls import path
 
-from . import ai_views, auth_views, views
+from . import ai_views, analytics_views, auth_views, views
 
 urlpatterns = [
     # ---- Section 1: home and the brief pages ----
@@ -121,6 +123,11 @@ urlpatterns = [
 
     # ---- Assignment 4, Part 1: every Vega-Lite chart as a page, a spec and an image ----
     # <str:chart> stops at "/" but not at ".", so "chart1.json" binds chart="chart1".
+    # Assignment 10: the analytics dashboard and one Vega-Lite spec per widget.
+    path("analytics/", analytics_views.dashboard, name="analytics-dashboard"),
+    path("analytics/<str:chart>.json", analytics_views.chart_spec,
+         name="analytics-chart-spec"),
+
     path("vega-lite/<str:chart>/", views.vega_chart_page, name="vega-chart-page"),
     path("vega-lite/<str:chart>.json", views.vega_chart_spec, name="vega-chart-spec"),
     path("vega-lite/<str:chart>.png", views.vega_chart_png, name="vega-chart-png"),

@@ -108,6 +108,10 @@
              href="{% url 'vega-chart-page' 'chart1' %}">Vega-Lite charts</a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if current == 'analytics-dashboard' %}active{% endif %}"
+             href="{% url 'analytics-dashboard' %}">AI analytics</a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link {% if current|slice:':4' == 'api-' %}active{% endif %}"
              href="{% url 'api-items' %}">JSON API</a>
         </li>
