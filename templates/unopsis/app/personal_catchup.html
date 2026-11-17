@@ -8,6 +8,7 @@
 {% block title %}Catch up{% endblock %}
 {% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
 {% block rail_foot %}
+  {% include "unopsis/app/_demo_badge.html" %}
   <p class="hint small mb-0">{{ quiet_places|length }} place{{ quiet_places|length|pluralize }} {{ quiet_places|length|pluralize:"was,were" }} quiet — summarized in one line, not one card each.</p>
 {% endblock %}
 {% block topbar %}{% if brief %}<span class="chip">Personal · {{ hours }}h away</span>{% endif %}{% endblock %}
@@ -18,7 +19,7 @@
   <p class="page-sub">There is no personal catch-up yet. Load the demo data with <code>python manage.py seed_demo</code>.</p>
 {% else %}
   {% for connection in broken %}{% include "unopsis/app/_error_banner.html" %}{% empty %}{% endfor %}
-  <h1 class="page-title">You were gone {{ hours }} hours.<br>Here's the short version.</h1>
+  <h1 class="page-title">You were gone {{ hours }} hours.<br><span class="soft">Here's the short version.</span></h1>
   <p class="meta">{{ brief.message_count }} messages · {{ place_count }} place{{ place_count|pluralize }} · {{ want_reply }} want a reply</p>
 
   {% if lead %}
@@ -28,9 +29,10 @@
         {% for chip in lead.chips %}<span class="meta">{{ chip.label }} · {{ chip.count }}</span>{% empty %}{% endfor %}
       </p>
       <p class="mb-1"><strong>{{ lead.title }}</strong></p>
-      <p>{{ lead.summary }}</p>
+      <p class="mb-2">{{ lead.summary }}</p>
+      {% if lead.primary.label %}<p class="meta mb-2">Suggested: {{ lead.primary.label|lowerfirst }}</p>{% endif %}
       <div class="d-flex flex-wrap gap-2">
-        <a class="btn-app btn-app--primary" href="{% url 'app-thread' 'personal' lead.pk %}">{{ lead.primary.label|default:"Reply in thread" }}</a>
+        <a class="btn-app btn-app--primary" href="{% url 'app-thread' 'personal' lead.pk %}">Open the thread →</a>
         <a class="btn-app" href="{% url 'app-thread' 'personal' lead.pk %}?show=all">Read the {{ lead.messages.all|length }} message{{ lead.messages.all|length|pluralize }}</a>
         <form method="post" action="{% url 'app-item-action' lead.pk %}">{% csrf_token %}
           <input type="hidden" name="action" value="dismiss">
@@ -54,9 +56,10 @@
           <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
             <input type="hidden" name="action" value="handle">
             <input type="hidden" name="return_to" value="catchup">
-            <button class="btn-app btn-app--primary" type="submit" title="Marks this handled in Unopsis — nothing is sent anywhere">{{ item.primary.label|default:"Done" }}</button>
+            <button class="btn-app btn-app--primary" type="submit" title="Marks this done in Unopsis. Nothing is sent anywhere.">Mark done</button>
           </form>
-          {% if item.deadline_at %}<button type="button" class="btn-app" disabled title="Unopsis is read-only — nothing is added on your behalf">Add to calendar</button>{% endif %}
+          {% if item.primary.label %}<span class="meta align-self-center">Suggested: {{ item.primary.label|lowerfirst }}</span>{% endif %}
+          {% if item.deadline_at %}<button type="button" class="btn-app" disabled title="Coming soon. For now Unopsis only reads; nothing is added on your behalf.">Add to calendar</button>{% endif %}
           <a class="meta align-self-center" href="{% url 'app-thread' 'personal' item.pk %}">see how it changed</a>
         </div>
       </div>

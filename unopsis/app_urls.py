@@ -4,7 +4,7 @@ unopsis/urls.py. Every name starts with "app-" so it can never collide with a co
 
     /                                          app-landing               product page; signed in -> brief
     /under-the-hood/                           under-the-hood            the course dashboard (views.home)
-    /signup/  /login/                          app-signup, app-login     static until A5
+    /signup/  /login/                          app-signup, app-login     redirect to the real pages
     /setup/world|sources|scope|tuning/         app-setup-*               the four setup steps
     /work/brief/building/                      app-work-building         first-run screen
     /work/brief/                               app-work-brief            today's brief
@@ -20,6 +20,7 @@ unopsis/urls.py. Every name starts with "app-" so it can never collide with a co
 """
 
 from django.urls import path, register_converter
+from django.views.generic import RedirectView
 
 from . import app_views, views
 
@@ -38,14 +39,15 @@ class WorldConverter:
 
 register_converter(WorldConverter, "world")
 
+from . import ai_views  # noqa: E402  (semantic search inside the app: /search/)
 urlpatterns = [
     # "/" is matched here first (this file is included before unopsis/urls.py), so the old
     # dashboard -- views.home, graded code, unchanged -- moves to /under-the-hood/. The name
     # "home" still reverses to "/" from unopsis/urls.py, so every {% url 'home' %} still works.
     path("", app_views.landing, name="app-landing"),
     path("under-the-hood/", views.home, name="under-the-hood"),
-    path("signup/", app_views.signup, name="app-signup"),
-    path("login/", app_views.login_page, name="app-login"),
+    path("signup/", RedirectView.as_view(pattern_name="signup", query_string=True), name="app-signup"),
+    path("login/", RedirectView.as_view(pattern_name="login", query_string=True), name="app-login"),
     path("setup/world/", app_views.setup_world, name="app-setup-world"),
     path("setup/sources/", app_views.setup_sources, name="app-setup-sources"),
     path("setup/scope/", app_views.setup_scope, name="app-setup-scope"),
@@ -62,4 +64,5 @@ urlpatterns = [
     path("personal/caught-up/", app_views.caught_up, name="app-personal-caught-up"),
     path("app/items/<int:pk>/action/", app_views.item_action, name="app-item-action"),
     path("journey/", app_views.journey, name="app-journey"),
+    path("search/", ai_views.app_search, name="app-search"),
 ]

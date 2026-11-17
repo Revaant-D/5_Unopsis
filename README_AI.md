@@ -13,8 +13,8 @@ guardrails and the Groq brief writer in detail) follows from
 | | Feature | Model (runs where) | Page | Role |
 |---|---|---|---|---|
 | 1 | **Message triage**: one message → `{lane, summary, deadline}` | `ibm-granite/granite-3.3-2b-instruct` via `transformers` (**local**) | `/ai/` (AI lab) | **Primary** |
-| 2 | **Semantic search**: find your messages by meaning | `sentence-transformers/all-MiniLM-L6-v2` (**local**) | `/ai/search/` | **Primary (new in A9)** |
-| 3 | **Grounded answers**: answer a question from the messages search found (RAG) | Same Granite model as triage (**local**) | `/ai/search/` with *Also answer* ticked | **Primary (new in A9)** |
+| 2 | **Semantic search**: find your messages by meaning | `sentence-transformers/all-MiniLM-L6-v2` (**local**) | `/search/` (in the app) and `/ai/search/` (lab view) | **Primary (new in A9)** |
+| 3 | **Grounded answers**: answer a question from the messages search found (RAG) | Same Granite model as triage (**local**) | `/search/` or `/ai/search/` with *Also answer* ticked | **Primary (new in A9)** |
 | 4 | **Brief writing**: triaged lines → headline and paragraphs | Groq `openai/gpt-oss-20b` (external API, free tier) | `/ai/briefs/<pk>/write/` | **Optional / secondary**: without a key, a template writer does this |
 
 Features 1–3 run entirely on the machine serving the app, with public Hugging Face models,

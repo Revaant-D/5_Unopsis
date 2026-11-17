@@ -80,7 +80,18 @@
     });
   }
 
-  // 5. Dismissable asides ("Keep reading without Slack").
+  // 5. The account menu: close it on an outside click or Escape. It opens without JavaScript.
+  var menu = document.querySelector("[data-account-menu]");
+  if (menu) {
+    document.addEventListener("click", function (event) {
+      if (menu.open && !menu.contains(event.target)) { menu.open = false; }
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); }
+    });
+  }
+
+  // 6. Dismissable asides ("Keep reading without Slack").
   document.querySelectorAll("[data-dismiss]").forEach(function (button) {
     button.addEventListener("click", function () {
       var box = button.closest("[data-dismissable]");

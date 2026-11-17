@@ -10,11 +10,11 @@
     <path d="M10 40 H26"/>
     <path d="M10 48 H26"/>
   </g>
-  <path d="M28 32 C34 32 34 20 40 20" stroke="#c44536" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M28 32 H40" stroke="#33658a" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M28 32 C34 32 34 44 40 44" stroke="#758e4f" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <circle cx="44" cy="20" r="4" fill="#c44536"/>
-  <circle cx="44" cy="32" r="4" fill="#33658a"/>
-  <circle cx="44" cy="44" r="4" fill="#758e4f"/>
+  <path d="M28 32 C34 32 34 20 40 20" stroke="#b83a2a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M28 32 H40" stroke="#2e5e7e" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M28 32 C34 32 34 44 40 44" stroke="#4e6e3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="44" cy="20" r="4" fill="#b83a2a"/>
+  <circle cx="44" cy="32" r="4" fill="#2e5e7e"/>
+  <circle cx="44" cy="44" r="4" fill="#4e6e3a"/>
   <rect x="52" y="14" width="4" height="36" rx="2" fill="#d98324"/>
 </svg>

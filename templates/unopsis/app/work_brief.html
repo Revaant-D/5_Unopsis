@@ -8,12 +8,7 @@
 {% block title %}Today's brief{% endblock %}
 {% block rail %}{% include "unopsis/app/_rail_world.html" %}{% endblock %}
 {% block rail_foot %}{% include "unopsis/app/_rail_world_foot.html" %}{% endblock %}
-{% block topbar %}
-  {% if brief %}
-    <span class="chip">read time {{ brief.read_seconds }}s</span>
-    <button type="button" class="btn-app btn-app--quiet" data-listen="#brief-body">Listen</button>
-  {% endif %}
-{% endblock %}
+{% block topbar %}{% endblock %}
 
 {% block app_content %}
 {% if not brief %}
@@ -22,48 +17,69 @@
     <code>python manage.py seed_demo</code>, or start from <a href="{% url 'app-setup-world' %}">setup</a>.</p>
 {% else %}
   {% for connection in broken %}{% include "unopsis/app/_error_banner.html" %}{% empty %}{% endfor %}
+
+  {# The masthead: the dateline of this edition, and the Listen control beside it. #}
+  <div class="masthead">
+    <span class="dateline">
+      <b>{{ brief.window_end|date:"l, F j" }}</b>
+      · {% with hour=brief.window_end|date:"G"|add:0 %}{% if hour < 12 %}Morning{% elif hour < 17 %}Afternoon{% else %}Evening{% endif %}{% endwith %} edition
+      · Covers {{ hours }} hours · {{ brief.message_count }} messages · {{ source_count }} sources
+      <span class="arrow">→</span> {{ needs|length }} surfaced
+    </span>
+    <span class="d-flex align-items-center gap-2">
+      <button type="button" class="btn-app" data-listen="#brief-body">Listen</button>
+      <span class="meta">read time {{ brief.read_seconds }}s</span>
+    </span>
+  </div>
+
   <div id="brief-body">
-    <p class="meta">Covers {{ hours }} hours · {{ brief.message_count }} messages · {{ source_count }} sources</p>
-    <h1 class="page-title">{{ brief.headline|default:"Here is your brief." }}{% if moving %}<br>Everything else is moving on its own.{% endif %}</h1>
-    <hr>
+    <h1 class="page-title page-title--lead">{{ brief.headline|default:"Here is your brief." }}{% if moving %}<br><span class="soft">Everything else is moving on its own.</span>{% endif %}</h1>
+    <hr class="rule-double mt-4 mb-0">
 
     {% for item in needs %}
-      <article class="mb-4">
-        <h2 class="h5"><span class="num">{{ forloop.counter }}</span> {{ item.title }}</h2>
-        <p class="mb-2" style="max-width: 44rem">{{ item.summary }}</p>
-        <p class="d-flex flex-wrap gap-2 mb-2">
-          {% for chip in item.chips %}<span class="chip">{{ chip.label }} · {{ chip.count }}</span>{% empty %}<span class="meta">no receipts cited</span>{% endfor %}
-        </p>
-        <div class="d-flex flex-wrap gap-2">
-          <a class="btn-app {% if forloop.first %}btn-app--primary{% endif %}" href="{% url 'app-work-focus' item.pk %}">Handle this →</a>
-          {% if forloop.first %}
-            <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
-              <input type="hidden" name="action" value="snooze">
-              <input type="hidden" name="return_to" value="brief">
-              <button class="btn-app btn-app--quiet" type="submit">Snooze to {{ snooze_to|time:"g:i A" }}</button>
-            </form>
-          {% endif %}
+      <article class="ed-item {% if forloop.first %}ed-item--lead{% endif %}">
+        <span class="ed-num"><span class="visually-hidden">Number </span>{{ forloop.counter|stringformat:"02d" }}</span>
+        <div>
+          <h2 class="ed-title">{{ item.title }}</h2>
+          <p class="ed-sum">{{ item.summary }}</p>
+          <p class="d-flex flex-wrap gap-2 mb-3">
+            {% for chip in item.chips %}<span class="chip">{{ chip.label }} · {{ chip.count }}</span>{% empty %}<span class="meta">no receipts cited</span>{% endfor %}
+            {% if item.deadline_at %}<span class="chip chip--due">Due {{ item.deadline_at|date:"D g:i A" }}</span>{% endif %}
+          </p>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn-app {% if forloop.first %}btn-app--primary{% endif %}" href="{% url 'app-work-focus' item.pk %}">Handle this →</a>
+            {% if forloop.first %}
+              <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}
+                <input type="hidden" name="action" value="snooze">
+                <input type="hidden" name="return_to" value="brief">
+                <button class="btn-app btn-app--quiet" type="submit">Snooze to {{ snooze_to|time:"g:i A" }}</button>
+              </form>
+            {% endif %}
+          </div>
         </div>
       </article>
     {% empty %}
-      <p class="hint">Nothing needs you right now. <a href="{% url 'app-work-handled' %}">See what you handled today</a>.</p>
+      <p class="hint mt-4">Nothing needs you right now. <a href="{% url 'app-work-handled' %}">See what you handled today</a>.</p>
     {% endfor %}
 
     {% if moving %}
-      <hr>
-      <h2 class="h6">Moving without you</h2>
-      {% for item in moving %}
-        <div class="list-row">
-          <span class="tile">{% if item.primary_message %}{{ item.primary_message.connection|provider_letter }}{% else %}·{% endif %}</span>
-          <span>{{ item.title }}</span>
-          {% if item.primary_message %}<time datetime="{{ item.primary_message.sent_at|date:'c' }}">{{ item.primary_message.sent_at|time:"g:i" }}</time>{% endif %}
+      <section class="mt-4">
+        <h2 class="h6">Moving without you</h2>
+        <div class="dispatch-grid">
+          {% for item in moving %}
+            <div class="dispatch-cell">
+              <span class="dl">{% if item.primary_message %}{{ item.primary_message.connection.get_provider_display }}{% if item.primary_message.scope_name %} · {{ item.primary_message.scope_name }}{% endif %} · <time datetime="{{ item.primary_message.sent_at|date:'c' }}">{{ item.primary_message.sent_at|time:"g:i A" }}</time>{% else %}Moving{% endif %}</span>
+              <a class="dt" href="{% url 'app-thread' 'work' item.pk %}">{{ item.title }}</a>
+              {% if item.summary %}<span class="meta">{{ item.summary }}</span>{% endif %}
+            </div>
+          {% empty %}{% endfor %}
         </div>
-      {% empty %}{% endfor %}
+      </section>
     {% endif %}
   </div>
 
-  <details class="hint mt-4">
-    <summary class="d-flex justify-content-between align-items-center">
+  <details class="colophon mt-4">
+    <summary class="d-flex justify-content-between align-items-center gap-2">
       <span>{{ quiet_count }} message{{ quiet_count|pluralize }} needed nothing from you.</span>
       <span class="btn-app btn-app--quiet">Show anyway</span>
     </summary>

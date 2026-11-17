@@ -47,16 +47,6 @@ def landing(request):
     return render(request, "unopsis/home.html", {"landing": True})
 
 
-def signup(request):
-    """Screen 1, "Create account" page. Static until A5: the page submits nothing."""
-    return render(request, "unopsis/app/auth.html", {"mode": "signup"})
-
-
-def login_page(request):
-    """Screen 1, "Sign in" page. Named login_page so it never shadows django.contrib.auth.login."""
-    return render(request, "unopsis/app/auth.html", {"mode": "login"})
-
-
 # ---- Setup (screens 2-5): read-only display of what is stored; "Continue" only navigates ----
 SETUP_STEPS = [
     (1, "Your world", "Work, personal or both — decides sources and ranking", "app-setup-world"),
@@ -88,10 +78,17 @@ def setup_world(request):
 
 @login_required
 def setup_sources(request):
-    """Screen 3: one tile per provider. Work's connection wins when both worlds link one."""
+    """
+    Screen 3: one tile per provider. Work's connection wins when both worlds link one.
+
+    Scoped to the signed-in account (B-5): every other app view already filters by the user's
+    spaces, and this one used to read Connection.objects unfiltered, which showed one
+    account's connected addresses to every other account.
+    """
     by_provider = {
         connection.provider: connection
-        for connection in Connection.objects.select_related("space").order_by("space__kind", "pk")
+        for connection in Connection.objects.filter(space__user=request.user)
+        .select_related("space").order_by("space__kind", "pk")
     }   # personal sorts before work, so a work connection overwrites a personal one
     tiles = [
         {"provider": value, "label": label, "connection": by_provider.get(value)}
@@ -321,8 +318,15 @@ def personal_catchup(request):
 
 @login_required
 def caught_up(request):
-    """Screen 13: the deliberate dead end -- what you did, and when the next read lands."""
+    """
+    Screen 13: the deliberate dead end -- what you did, and when the next read lands.
+
+    B-4: it only says "That was everything." when it is true. If Needs-you items are still
+    open (the user clicked "Mark me caught up" without handling them), the page says how many
+    still want a reply and links back, instead of claiming nothing that matters is unread.
+    """
     space, brief, now = _world(PERSONAL, request.user)
+    still = list(ui.lane_items(brief, NEEDS_YOU))
     done = (
         brief.items.filter(state=HANDLED).order_by("handled_at")
         if brief else BriefItem.objects.none()
@@ -330,6 +334,7 @@ def caught_up(request):
     return _render_world(
         request, "unopsis/app/caught_up.html", PERSONAL, "caught-up", space, brief, now,
         done=done,
+        still=still,
         work_next=ui.next_digest(ui.current_space(WORK, request.user), now),
     )
 
@@ -338,7 +343,7 @@ def journey(request):
     """Every screen in the order a new user meets them -- the screen flow, clickable."""
     first = ui.lane_items(ui.latest_brief(ui.current_space(WORK, request.user)), NEEDS_YOU).first()
     screens = [
-        ("Sign up", reverse("app-signup"), "The account, before any source is connected."),
+        ("Sign up", reverse("signup"), "The account, before any source is connected."),
         ("Setup 1 · Your world", reverse("app-setup-world"), "Work, personal, or both."),
         ("Setup 2 · Sources", reverse("app-setup-sources"), "The read-only accounts."),
         ("Setup 3 · What's read", reverse("app-setup-scope"), "Channels and labels."),

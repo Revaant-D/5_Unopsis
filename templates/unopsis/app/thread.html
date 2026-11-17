@@ -27,7 +27,7 @@
       <div class="app-card mb-3">
         <small class="meta">What happened, in order</small>
         <p class="mb-2">{{ item.summary }}</p>
-        {% if item.deadline_at %}<span class="chip chip--on">due {{ item.deadline_at|date:"D g:i A" }}</span>{% endif %}
+        {% if item.deadline_at %}<span class="chip chip--due">due {{ item.deadline_at|date:"D g:i A" }}</span>{% endif %}
       </div>
 
       <div class="d-flex justify-content-between align-items-center mb-2">
@@ -40,7 +40,7 @@
       {% for message in receipts %}
         <div class="d-flex gap-3 mb-2">
           <span class="avatar" title="{{ message.author.display_name }}">{{ message.author.display_name|initials }}</span>
-          <div class="app-card flex-grow-1 py-2">
+          <div class="receipt flex-grow-1">
             <small class="meta">{{ message.author.display_name }} · {{ message.connection.get_provider_display }}{% if message.scope_name %} {{ message.scope_name }}{% endif %} · {{ message.sent_at|date:"D g:i A" }}</small>
             <p class="mb-0">“{{ message.body }}”</p>
           </div>
@@ -66,7 +66,7 @@
           <button type="button" class="btn-app w-100 mb-2" data-copy="#draft">Copy text</button>
         {% endif %}
         {% for action in secondary %}
-          <button type="button" class="btn-app w-100 mb-2" disabled title="Unopsis is read-only — nothing is sent on your behalf">{{ action.label }}</button>
+          <button type="button" class="btn-app w-100 mb-2" disabled title="Coming soon. For now Unopsis only reads; nothing is sent on your behalf.">{{ action.label }}</button>
         {% empty %}{% endfor %}
         <p class="meta small">Read-only access — nothing is sent from here. You reply in {{ open_label|default:"the original app" }} and the item closes when you mark it handled.</p>
         <form method="post" action="{% url 'app-item-action' item.pk %}">{% csrf_token %}

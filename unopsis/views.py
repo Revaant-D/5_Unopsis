@@ -63,6 +63,28 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402  (must follow matplotlib.use)
 from matplotlib.ticker import MaxNLocator  # noqa: E402
 
+# The charts wear the site's "Morning Edition" palette (static/css/unopsis.css), so a PNG on
+# /insights/ reads as part of the page rather than as a default matplotlib export.
+CHART_INK = "#151413"
+CHART_INK_SOFT = "#5c564e"
+CHART_FAINT = "#8a8378"
+CHART_PAPER = "#fcfbf7"
+CHART_WORK = "#1d4e89"       # press ultramarine
+CHART_PERSONAL = "#8a5a12"   # ochre
+CHART_SERIES = ["#1d4e89", "#2e5e7e", "#4e6e3a", "#b83a2a", "#8a5a12", "#5c564e"]
+matplotlib.rcParams.update({
+    "font.family": ["Georgia", "DejaVu Serif", "serif"],
+    "text.color": CHART_INK,
+    "axes.labelcolor": CHART_INK_SOFT,
+    "axes.edgecolor": "#bfb5a4",
+    "axes.facecolor": CHART_PAPER,
+    "figure.facecolor": CHART_PAPER,
+    "savefig.facecolor": CHART_PAPER,
+    "xtick.color": CHART_INK_SOFT,
+    "ytick.color": CHART_INK_SOFT,
+    "legend.frameon": False,
+})
+
 import requests
 import vl_convert
 
@@ -827,9 +849,9 @@ def lane_chart_png(request):
             [counts.get((lane, kind), 0) for lane in lanes],
             width=width,
             label=SPACE_LABELS[kind],
-            color="#2f4858" if kind == Space.Kind.WORK else "#d98324",
+            color=CHART_WORK if kind == Space.Kind.WORK else CHART_PERSONAL,
         )
-        axes.bar_label(bars, fmt="%d", padding=2, fontsize=9, color="#5d6b7a")
+        axes.bar_label(bars, fmt="%d", padding=2, fontsize=9, color=CHART_INK_SOFT)
     # Counts are whole numbers, so the y axis must not offer 0.5 of an item.
     axes.yaxis.set_major_locator(MaxNLocator(integer=True))
     axes.set_title("Brief items by lane and space")
@@ -842,7 +864,7 @@ def lane_chart_png(request):
     axes.set_axisbelow(True)
     if not counts:
         axes.text(0.5, 0.5, "No items yet -- run seed_demo", ha="center",
-                  transform=axes.transAxes, color="#888")
+                  transform=axes.transAxes, color=CHART_FAINT)
     return _png_response(figure)
 
 
@@ -865,8 +887,8 @@ def provider_chart_png(request):
             sizes,
             autopct=lambda pct: f"{pct:.0f}%",
             startangle=110,
-            colors=["#2f4858", "#33658a", "#86bbd8", "#d98324", "#c44536", "#758e4f"],
-            wedgeprops={"edgecolor": "white", "linewidth": 1.5},
+            colors=CHART_SERIES,
+            wedgeprops={"edgecolor": CHART_PAPER, "linewidth": 1.5},
         )
         for text in autotexts:
             text.set_color("white")
@@ -875,7 +897,7 @@ def provider_chart_png(request):
                     title="Provider", loc="center left", bbox_to_anchor=(1, 0.5))
     else:
         axes.text(0.5, 0.5, "No messages yet -- run seed_demo", ha="center",
-                  transform=axes.transAxes, color="#888")
+                  transform=axes.transAxes, color=CHART_FAINT)
         axes.set_axis_off()
     axes.set_title("Raw messages by provider")
     return _png_response(figure)

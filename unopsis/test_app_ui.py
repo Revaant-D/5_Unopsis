@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from . import ui
 from .models import Brief, BriefItem, Connection, Message, Person, Space
-from .templatetags.app_ui import initials, provider_letter
+from .templatetags.app_ui import initials, lowerfirst, provider_letter
 
 # Every GET page that takes no pk. Later tasks append their route names here.
 APP_ROUTES = []
@@ -274,13 +274,15 @@ class TemplateFilterTests(TestCase):
         self.assertEqual(initials("Mom"), "M")
         self.assertEqual(initials(""), "?")
 
+    def test_lowerfirst(self):
+        self.assertEqual(lowerfirst("Approve payment"), "approve payment")
+        self.assertEqual(lowerfirst("Reply to Prof. Ramirez"), "reply to Prof. Ramirez")
+        self.assertEqual(lowerfirst(None), "")
+
     def test_provider_letter(self):
         self.assertEqual(provider_letter(Connection(provider="whatsapp_business")), "W")
         self.assertEqual(provider_letter("Gmail"), "G")
         self.assertEqual(provider_letter(None), "·")
-
-
-APP_ROUTES += ["app-signup", "app-login"]
 
 
 class ShellTests(SignedInAppClient, TestCase):
@@ -297,9 +299,53 @@ class ShellTests(SignedInAppClient, TestCase):
                 self.assertTemplateUsed(response, "base.html")
 
     def test_shell_links_back_to_the_course_pages(self):
-        html = self.client.get(reverse("app-signup")).content.decode()
+        html = self.client.get(reverse("app-setup-world")).content.decode()
         self.assertIn(f'href="{reverse("under-the-hood")}"', html)
         self.assertIn("Under the hood", html)
+
+    def test_the_top_bar_shows_who_is_signed_in_and_can_log_out(self):
+        """B-2: no "Sign in / Sign up" chip once signed in; an account menu instead."""
+        user = self.rows["work"].user
+        self.client.force_login(user)
+        html = self.client.get(reverse("app-work-brief")).content.decode()
+        topbar = html.split('class="app-topbar"', 1)[1].split("</header>", 1)[0]
+        self.assertNotIn("Sign in / Sign up", topbar)
+        self.assertIn(f"Signed in as <strong>{user.get_username()}</strong>", topbar)
+        self.assertIn(f'href="{reverse("under-the-hood")}"', topbar)
+        # Log out is a POST with a CSRF token: Django 5's LogoutView answers 405 to GET.
+        self.assertIn(f'action="{reverse("logout")}"', topbar)
+        self.assertIn('method="post"', topbar)
+        self.assertIn("csrfmiddlewaretoken", topbar)
+
+    def test_no_app_page_shows_course_language(self):
+        """B-8 / C-2: course provenance belongs in the README and the course footer, not the app."""
+        self.client.force_login(self.rows["work"].user)
+        for name in APP_ROUTES:
+            with self.subTest(route=name):
+                html = self.client.get(reverse(name)).content.decode()
+                for phrase in ("Assignment", "INFO 490", "previous assignment", "Demo only"):
+                    self.assertNotIn(phrase, html)
+        self.client.logout()
+        for name in ("login", "signup"):
+            with self.subTest(route=name):
+                self.assertNotContains(self.client.get(reverse(name)), "Assignment")
+
+    def test_every_signed_in_app_page_carries_the_demo_badge(self):
+        """F-1: the sample data is labelled as such, on every page that shows it."""
+        self.client.force_login(self.rows["work"].user)
+        for name in APP_ROUTES:
+            if name == "app-journey":   # the screen index, not a workspace page
+                continue
+            with self.subTest(route=name):
+                response = self.client.get(reverse(name))
+                self.assertContains(response, "Demo workspace")
+                self.assertContains(response, "Sources are simulated with sample data")
+
+    def test_the_sign_in_page_has_no_account_menu(self):
+        self.client.logout()
+        html = self.client.get(reverse("login")).content.decode()
+        self.assertNotIn("data-account-menu", html)
+        self.assertNotIn("Sign in / Sign up", html)
 
     def test_course_pages_keep_their_own_layout(self):
         response = self.client.get(reverse("brief-list"))
@@ -321,50 +367,60 @@ class ShellTests(SignedInAppClient, TestCase):
 
     def test_app_stylesheet_only_loads_inside_the_shell(self):
         from django.templatetags.static import static
-        self.assertContains(self.client.get(reverse("app-signup")), static("css/app.css"))
+        self.assertContains(self.client.get(reverse("app-setup-world")), static("css/app.css"))
         # "/" forwards a signed-in account to the app, so read the course frame as a visitor.
         self.client.logout()
         self.assertNotContains(self.client.get(reverse("home")), static("css/app.css"))
 
 
-class AuthScreenTests(SignedInAppClient, TestCase):
-    """A5 Part 1 wins over the wireframe: two separate pages, Django-shaped fields, Google only."""
+class AuthScreenTests(TestCase):
+    """
+    B-1: one sign-in page and one sign-up page. The old static mock-ups at /login/ and /signup/
+    now redirect to the real Django pages, which wear the app shell's look.
+    """
 
-    def test_login_and_signup_are_separate_pages(self):
+    def test_the_old_mock_up_addresses_redirect_to_the_real_pages(self):
+        for old, real in (("app-login", "login"), ("app-signup", "signup")):
+            with self.subTest(route=old):
+                self.assertRedirects(self.client.get(reverse(old)), reverse(real))
+
+    def test_the_redirect_keeps_the_next_destination(self):
+        response = self.client.get(reverse("app-login") + "?next=/reports/")
+        self.assertRedirects(response, reverse("login") + "?next=/reports/")
+
+    def test_real_pages_render_inside_the_app_shell_with_the_switch(self):
         for name, active, heading in (
-            ("app-signup", "Create account", "Know what happened, in one page a day."),
-            ("app-login", "Sign in", "Welcome back."),
+            ("signup", "Create account", "Create your account."),
+            ("login", "Sign in", "Welcome back."),
         ):
             with self.subTest(route=name):
                 response = self.client.get(reverse(name))
-                self.assertTemplateUsed(response, "unopsis/app/auth.html")
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "unopsis/app/shell.html")
                 self.assertContains(response, heading)
                 self.assertContains(response, f'aria-current="page">{active}<')
 
-    def test_fields_follow_django_auth_not_the_wireframe(self):
-        login = self.client.get(reverse("app-login")).content.decode()
-        signup = self.client.get(reverse("app-signup")).content.decode()
-        self.assertIn(">Username<", login)
-        self.assertIn(">Password<", login)
-        self.assertNotIn("Work email", login + signup)
-        for label in (">Username<", ">Email<", ">Password<", ">Confirm password<"):
-            self.assertIn(label, signup)
-
-    def test_auth_pages_submit_nothing(self):
-        for name in ("app-signup", "app-login"):
+    def test_the_real_pages_submit_a_form(self):
+        for name in ("signup", "login"):
             with self.subTest(route=name):
                 html = self.client.get(reverse(name)).content.decode()
-                self.assertNotIn('method="post"', html)
-                self.assertNotIn("name=", html.split("<main", 1)[1])   # no named inputs in the page
+                self.assertIn('method="post"', html)
+                self.assertIn("csrfmiddlewaretoken", html)
+                self.assertIn('name="username"', html)
+                self.assertIn('name="next"', html)
 
-    def test_google_button_on_both_pages_disabled_until_a5_and_no_microsoft(self):
-        for name in ("app-signup", "app-login"):
+    def test_no_mock_up_copy_survives(self):
+        for name in ("signup", "login"):
             with self.subTest(route=name):
                 html = self.client.get(reverse(name)).content.decode()
-                self.assertIn("Continue with Google", html)
-                self.assertIn("disabled", html)
+                self.assertNotIn("Demo only", html)
+                self.assertNotIn("Assignment", html)
                 self.assertNotIn("Microsoft", html)
-                self.assertNotIn("Digest", html)   # discrepancy 1: the brand is Unopsis
+                self.assertIn("Continue with Google", html)
+
+    def test_next_survives_the_switch_between_pages(self):
+        html = self.client.get(reverse("login") + "?next=/reports/").content.decode()
+        self.assertIn(f'href="{reverse("signup")}?next=/reports/"', html)
 
 
 APP_ROUTES += ["app-setup-world", "app-setup-sources", "app-setup-scope", "app-setup-tuning"]
@@ -401,6 +457,27 @@ class SetupTests(SignedInAppClient, TestCase):
         self.assertContains(response, "Request a source")
         self.assertContains(response, "Teams")                  # discrepancy 5
         self.assertContains(response, "2 connected")
+
+    def test_sources_shows_only_the_signed_in_accounts_connections(self):
+        """B-5: two accounts with different connections each see only their own."""
+        other = User.objects.create_user("someone-else")
+        other_work = Space.objects.create(user=other, kind=Space.Kind.WORK)
+        Connection.objects.create(space=other_work, provider="outlook",
+                                  external_account="other@elsewhere.example")
+        Connection.objects.create(space=other_work, provider="gmail",
+                                  external_account="other-gmail@elsewhere.example")
+
+        mine = self.client.get(reverse("app-setup-sources"))
+        self.assertContains(mine, "me@work.example")
+        self.assertNotContains(mine, "elsewhere.example")
+
+        self.client.force_login(other)
+        theirs = self.client.get(reverse("app-setup-sources"))
+        self.assertContains(theirs, "other@elsewhere.example")
+        self.assertContains(theirs, "other-gmail@elsewhere.example")
+        for leak in ("me@work.example", "acme.slack.com", "me#0001"):
+            with self.subTest(leak=leak):
+                self.assertNotContains(theirs, leak)
 
     def test_scope_shows_included_scopes_and_the_reading_load(self):
         response = self.client.get(reverse("app-setup-scope"))
@@ -686,8 +763,11 @@ class HandledTests(SignedInAppClient, TestCase):
     def test_counts_what_is_left_and_offers_each_primary_action(self):
         response = self.client.get(self.url)
         self.assertContains(response, "2 things left. About 4 minutes.")
-        self.assertContains(response, "Approve the wording")
-        self.assertContains(response, ">Confirm<")
+        # B-3: the suggestion is text; the button says what it really does.
+        self.assertContains(response, "Suggested: approve the wording")
+        self.assertContains(response, "Suggested: confirm")
+        self.assertContains(response, ">Mark done<", count=2)
+        self.assertNotContains(response, ">Confirm<")
         self.assertContains(response, 'value="handle"')
 
     def test_handled_today_lists_what_was_closed(self):
@@ -738,6 +818,9 @@ class PersonalTests(SignedInAppClient, TestCase):
         self.assertContains(response, "Maya asked for your launch numbers")
         self.assertContains(response, f'href="{reverse("app-thread", args=["personal", self.rows["mention"].pk])}"')
         self.assertContains(response, 'value="dismiss"')        # "Ignore"
+        # B-3: no button promises to reply; the suggestion is shown as text.
+        self.assertContains(response, "Suggested: reply in thread")
+        self.assertNotContains(response, ">Reply in thread<")
 
     def test_rail_ranks_places_and_flags_the_broken_source(self):
         response = self.client.get(reverse("app-personal-catchup"))
@@ -760,8 +843,18 @@ class PersonalTests(SignedInAppClient, TestCase):
         self.assertContains(response, "Maya asked for your launch numbers")
         # The next work digest depends on the wall clock (08:00 or 16:30 UTC), so accept either.
         self.assertRegex(response.content.decode(), r"Work brief (8:00 AM|4:30 PM)")
-        self.assertContains(response, f'href="{reverse("app-setup-world")}"')
-        self.assertContains(response, f'href="{reverse("app-journey")}"')
+        # B-4: the demo-tour buttons are gone from the product's dead end.
+        self.assertNotContains(response, "See the whole journey")
+        self.assertNotContains(response, "Restart from setup")
+
+    def test_caught_up_does_not_claim_everything_while_a_reply_is_still_wanted(self):
+        """B-4: "Mark me caught up" is a link, so the page itself has to check."""
+        response = self.client.get(reverse("app-personal-caught-up"))
+        self.assertContains(response, "1 still wants a reply.")
+        self.assertContains(response, "Maya asked for your launch numbers")
+        self.assertContains(response, f'href="{reverse("app-personal-catchup")}"')
+        self.assertNotContains(response, "That was everything.")
+        self.assertNotContains(response, "Nothing is unread that matters")
 
 
 class EmptyPersonalTests(SignedInAppClient, TestCase):
@@ -783,7 +876,7 @@ class JourneyAndHomeTests(SignedInAppClient, TestCase):
 
     def test_journey_links_every_screen_in_order(self):
         html = self.client.get(reverse("app-journey")).content.decode()
-        order = ["app-signup", "app-setup-world", "app-setup-sources", "app-setup-scope",
+        order = ["signup", "app-setup-world", "app-setup-sources", "app-setup-scope",
                  "app-setup-tuning", "app-work-building", "app-work-brief", "app-work-handled",
                  "app-personal-building", "app-personal-catchup", "app-personal-caught-up"]
         positions = [html.index(f'href="{reverse(name)}"') for name in order]
@@ -794,8 +887,8 @@ class JourneyAndHomeTests(SignedInAppClient, TestCase):
     def test_a_visitor_can_only_sign_in_or_sign_up_from_home(self):
         self.client.logout()   # A5: this class signs in by default; a visitor does not
         response = self.client.get(reverse("home"))
-        self.assertContains(response, f'href="{reverse("app-signup")}"')
-        self.assertContains(response, f'href="{reverse("app-login")}"')
+        self.assertContains(response, f'href="{reverse("signup")}"')
+        self.assertContains(response, f'href="{reverse("login")}"')
         for name in ("app-work-brief", "app-personal-catchup", "app-journey"):
             with self.subTest(route=name):
                 self.assertNotContains(response, f'href="{reverse(name)}"')
@@ -882,10 +975,11 @@ class LandingTests(SignedInAppClient, TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "unopsis/home.html")
-        self.assertContains(response, "Know what happened, in one page a day.")
+        # The second half of the headline is set in italic (Morning Edition), hence the <em>.
+        self.assertContains(response, "Know what happened, <em>in one page a day.</em>")
         self.assertContains(response, "It reads")
-        self.assertContains(response, f'href="{reverse("app-signup")}"')
-        self.assertContains(response, f'href="{reverse("app-login")}"')
+        self.assertContains(response, f'href="{reverse("signup")}"')
+        self.assertContains(response, f'href="{reverse("login")}"')
         self.assertNotContains(response, "What is in the database right now")
 
     def test_a_signed_in_user_goes_straight_to_their_brief(self):

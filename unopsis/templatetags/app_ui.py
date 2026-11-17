@@ -13,6 +13,14 @@ def initials(name):
 
 
 @register.filter
+def lowerfirst(value):
+    """ "Approve payment" -> "approve payment", for "Suggested: ..." after a colon.
+    Only the first letter changes, so names keep their capitals ("Reply to Prof. Ramirez")."""
+    text = str(value or "")
+    return text[:1].lower() + text[1:]
+
+
+@register.filter
 def provider_letter(value):
     """The one-letter source tile: a Connection or a label -> "G", "S", "W"; nothing -> "·"."""
     if value is None:
