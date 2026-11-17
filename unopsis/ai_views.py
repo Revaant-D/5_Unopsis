@@ -222,7 +222,7 @@ def _search_and_answer(request, form):
                               cold_start=not local_llm.is_loaded()) as aev:
             answer = ask.answer_question(outcome["cleaned"], outcome["results"])
             aev.loaded_after(local_llm.is_loaded())
-            aev.ok(output_text=(answer or {}).get("text", ""), result_count=len(rows))
+            aev.ok(output_text=(answer or {}).get("answer", ""), result_count=len(rows))
         found["answer"] = answer
     return found, 200
 
