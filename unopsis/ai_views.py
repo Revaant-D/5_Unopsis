@@ -24,7 +24,8 @@ from django.core.cache import cache
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
-from .ai import ask, groq_client, guardrails, local_llm, pipeline, semantic_search
+from .ai import (ask, groq_client, guardrails, local_llm, pipeline, semantic_search,
+                 telemetry)
 from .views import owned_briefs
 
 
@@ -77,19 +78,31 @@ def ai_lab(request):
     form = TriageForm(request.POST or None)
     result, refused, status_code = None, [], 200
     if request.method == "POST":
-        if _over_limit(request.user):
-            form.add_error(None, "Too many AI requests this minute. Wait a moment and try again.")
-            status_code = 429
-        elif form.is_valid():
-            cleaned = guardrails.clean_message_text(form.cleaned_data["text"])
-            refused = guardrails.find_injection(cleaned)
-            if refused:
-                status_code = 400
+        # Cold start is decided BEFORE the call: once triage() returns, the model is loaded
+        # either way, and the dashboard's whole point is to keep those two populations apart.
+        cold = not local_llm.is_loaded()
+        with telemetry.record("triage", request.user,
+                              model_name=local_llm.model_name(), cold_start=cold) as ev:
+            if _over_limit(request.user):
+                form.add_error(None,
+                               "Too many AI requests this minute. Wait a moment and try again.")
+                status_code = 429
+                ev.outcome("rate_limited")
+            elif form.is_valid():
+                cleaned = guardrails.clean_message_text(form.cleaned_data["text"])
+                ev.add_input(cleaned)
+                refused = guardrails.find_injection(cleaned)
+                if refused:
+                    status_code = 400
+                    ev.outcome("refused")
+                else:
+                    result = local_llm.triage(cleaned)
+                    result["cleaned"] = cleaned
+                    ev.loaded_after(local_llm.is_loaded())
+                    ev.ok(output_text=result.get("raw") or result.get("summary") or "")
             else:
-                result = local_llm.triage(cleaned)
-                result["cleaned"] = cleaned
-        else:
-            status_code = 400
+                status_code = 400
+                ev.outcome("error")
     context = {
         "form": form,
         "result": result,
@@ -106,9 +119,16 @@ def ai_brief_write(request, pk):
     """Feature 2: the hybrid pipeline for one of the user's own briefs."""
     brief = get_object_or_404(owned_briefs(request.user).select_related("space"), pk=pk)
     if _over_limit(request.user):
+        with telemetry.record("brief", request.user) as ev:
+            ev.outcome("rate_limited")
         return render(request, "unopsis/ai_brief.html",
                       {"brief": brief, "limited": True, "status": _status()}, status=429)
-    outcome = pipeline.run_hybrid_brief(brief)
+    with telemetry.record("brief", request.user,
+                          model_name=getattr(settings, "GROQ_MODEL", "") or local_llm.model_name(),
+                          cold_start=not local_llm.is_loaded()) as ev:
+        outcome = pipeline.run_hybrid_brief(brief)
+        ev.loaded_after(local_llm.is_loaded())
+        ev.ok(output_text=str((outcome or {}).get("brief", {}).get("body", "")))
     return render(request, "unopsis/ai_brief.html",
                   {"brief": brief, "outcome": outcome, "status": _status()})
 
@@ -139,19 +159,42 @@ def ai_search(request):
     context = {"form": form, "status": _status(), "outcome": None, "answer": None, "error": ""}
     status_code = 200
     if request.GET and form.is_valid() and form.cleaned_data["q"]:
-        try:
-            outcome = semantic_search.search(request.user, form.cleaned_data["q"])
-        except semantic_search.InvalidQuery as exc:
-            context["error"], status_code = str(exc), 400
-        else:
-            context["outcome"] = outcome
-            if form.cleaned_data["ask"]:
-                if _over_limit(request.user):
-                    context["answer"] = {"status": "limited", "note":
-                                         "Too many AI requests this minute. Wait a moment and try again."}
-                    status_code = 429
-                else:
-                    context["answer"] = ask.answer_question(outcome["cleaned"], outcome["results"])
+        query = form.cleaned_data["q"]
+        with telemetry.record("search", request.user, query=query,
+                              model_name=semantic_search.model_name(),
+                              cold_start=not semantic_search.is_loaded()) as sev:
+            try:
+                outcome = semantic_search.search(request.user, query)
+            except semantic_search.InvalidQuery as exc:
+                context["error"], status_code = str(exc), 400
+                sev.outcome("error")
+                outcome = None
+            else:
+                context["outcome"] = outcome
+                rows = outcome.get("results") or []
+                # "Nothing above the similarity threshold" is a distinct outcome from an
+                # error: retrieval worked and correctly declined. U3 depends on telling
+                # those apart, so the dashboard can show refusals as a feature, not a fault.
+                sev.loaded_after(semantic_search.is_loaded())
+                sev.outcome("ok" if rows else "no_match",
+                            result_count=len(rows),
+                            top_score=rows[0].get("score") if rows else None)
+        if outcome is not None and form.cleaned_data["ask"]:
+            if _over_limit(request.user):
+                context["answer"] = {"status": "limited", "note":
+                                     "Too many AI requests this minute. Wait a moment and try again."}
+                status_code = 429
+                with telemetry.record("answer", request.user, query=query) as aev:
+                    aev.outcome("rate_limited")
+            else:
+                with telemetry.record("answer", request.user, query=query,
+                                      model_name=local_llm.model_name(),
+                                      cold_start=not local_llm.is_loaded()) as aev:
+                    answer = ask.answer_question(outcome["cleaned"], outcome["results"])
+                    aev.loaded_after(local_llm.is_loaded())
+                    context["answer"] = answer
+                    aev.ok(output_text=(answer or {}).get("text", ""),
+                           result_count=len(outcome.get("results") or []))
     elif request.GET and form.is_valid():
         context["error"], status_code = "Type a few words to search for.", 400
     elif request.GET:
